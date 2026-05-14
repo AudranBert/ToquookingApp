@@ -44,12 +44,12 @@ export async function exportElementAsPng(element: HTMLElement, filename: string)
   downloadBlob(await elementToPngBlob(element), filename);
 }
 
-export async function shareElementAsPng(element: HTMLElement, filename: string, recipeName: string, url: string) {
+export async function shareElementAsPng(element: HTMLElement, filename: string, title: string, text: string) {
   const blob = await elementToPngBlob(element);
   const file = new File([blob], filename, { type: "image/png" });
   const shareData: ShareData = {
-    title: recipeName,
-    text: `Recette Toque: ${recipeName}\n${url}`,
+    title,
+    text,
     files: [file],
   };
 
@@ -65,16 +65,12 @@ export async function exportElementAsPdf(element: HTMLElement, filename: string)
   downloadBlob(await elementToPdfBlob(element), filename);
 }
 
-export function exportTextFile(text: string, filename: string) {
-  downloadBlob(new Blob([text], { type: "text/plain;charset=utf-8" }), filename);
-}
-
-export async function shareElementAsPdf(element: HTMLElement, filename: string, recipeName: string) {
+export async function shareElementAsPdf(element: HTMLElement, filename: string, title: string, text = `Recette Toque: ${title}`) {
   const blob = await elementToPdfBlob(element);
   const file = new File([blob], filename, { type: "application/pdf" });
   const shareData: ShareData = {
-    title: recipeName,
-    text: `Recette Toque: ${recipeName}`,
+    title,
+    text,
     files: [file],
   };
 
@@ -96,7 +92,7 @@ export function recipeFileName(recipe: Recipe, extension: "pdf" | "png" | "json"
   return `${slug || "recette"}.${extension}`;
 }
 
-export function basicFileName(label: string, extension: "pdf" | "png" | "txt") {
+export function basicFileName(label: string, extension: "pdf" | "png") {
   const slug = label
     .toLowerCase()
     .normalize("NFD")

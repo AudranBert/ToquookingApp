@@ -139,7 +139,7 @@ export function App() {
         printRef.current,
         recipeFileName(selectedRecipe, "png"),
         selectedRecipe.name,
-        shareUrl,
+        `Recette Toque: ${selectedRecipe.name}\n${shareUrl}`,
       );
 
       if (result === "downloaded") {

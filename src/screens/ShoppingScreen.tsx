@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useMemo, useRef, useState } from "react";
-import { FileDown, FileText, ImageDown, Plus, Search, ShoppingBasket } from "lucide-react";
-import { basicFileName, exportElementAsPdf, exportElementAsPng, exportTextFile } from "../exporters";
+import { FileDown, FileImage, MessageSquareText, Plus, Search, ShoppingBasket } from "lucide-react";
+import { basicFileName, shareElementAsPdf, shareElementAsPng } from "../exporters";
 import type { Recipe, ShoppingItem } from "../types";
 import { normalizeText } from "../utils/text";
 
@@ -57,32 +57,55 @@ export function ShoppingScreen({
     [recipes, selectedRecipeIds],
   );
   const exportDate = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(new Date());
-  const exportFilename = basicFileName("liste de courses", "txt").replace(".txt", "");
+  const exportFilename = basicFileName("liste de courses", "png").replace(".png", "");
   const canExport = items.length > 0;
 
-  async function handleExportText() {
+  async function handleShareText() {
     if (!canExport) return;
-    exportTextFile(formatShoppingListText(items, selectedRecipes, exportDate), `${exportFilename}.txt`);
-    onStatus("Liste de courses telechargee en texte.");
-  }
-
-  async function handleExportImage() {
-    if (!exportRef.current || !canExport) return;
     try {
-      await exportElementAsPng(exportRef.current, `${exportFilename}.png`);
-      onStatus("Image de la liste de courses telechargee.");
-    } catch {
-      onStatus("L'export image n'a pas abouti.");
+      const result = await shareShoppingListText(formatShoppingListText(items, selectedRecipes, exportDate));
+      if (result === "copied") onStatus("Texte de la liste de courses copie.");
+      if (result === "sms") onStatus("Ouverture de l'app SMS.");
+      if (result === "manual") onStatus("Texte pret a copier.");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      onStatus("Le partage texte n'a pas abouti.");
     }
   }
 
-  async function handleExportPdf() {
+  async function handleShareImage() {
     if (!exportRef.current || !canExport) return;
     try {
-      await exportElementAsPdf(exportRef.current, `${exportFilename}.pdf`);
-      onStatus("PDF de la liste de courses telecharge.");
-    } catch {
-      onStatus("L'export PDF n'a pas abouti.");
+      const result = await shareElementAsPng(
+        exportRef.current,
+        `${exportFilename}.png`,
+        "Liste de courses",
+        "Liste de courses Toque",
+      );
+      if (result === "downloaded") {
+        onStatus("PNG telecharge. Le partage natif n'est pas disponible sur cet appareil.");
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      onStatus("Le partage n'a pas abouti.");
+    }
+  }
+
+  async function handleSharePdf() {
+    if (!exportRef.current || !canExport) return;
+    try {
+      const result = await shareElementAsPdf(
+        exportRef.current,
+        `${exportFilename}.pdf`,
+        "Liste de courses",
+        "Liste de courses Toque",
+      );
+      if (result === "downloaded") {
+        onStatus("PDF telecharge. Le partage natif n'est pas disponible sur cet appareil.");
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      onStatus("Le partage PDF n'a pas abouti.");
     }
   }
 
@@ -94,16 +117,16 @@ export function ShoppingScreen({
           <h2>Sélectionne des recettes</h2>
         </div>
         <div className="action-bar">
-          <button className="button" onClick={handleExportText} disabled={!canExport} title="Exporter en texte">
-            <FileText size={18} /> Texte
-          </button>
-          <button className="button" onClick={handleExportImage} disabled={!canExport} title="Exporter en image PNG">
-            <ImageDown size={18} /> Image
-          </button>
-          <button className="button" onClick={handleExportPdf} disabled={!canExport} title="Exporter en PDF">
+          <button className="button" onClick={handleSharePdf} disabled={!canExport} title="Exporter en PDF">
             <FileDown size={18} /> PDF
           </button>
-          <button className="button button--primary" onClick={onGenerate}>
+          <button className="button" onClick={handleShareImage} disabled={!canExport} title="Partager ou telecharger le PNG">
+            <FileImage size={18} /> PNG
+          </button>
+          <button className="button button--primary" onClick={handleShareText} disabled={!canExport} title="Partager par SMS">
+            <MessageSquareText size={18} /> SMS
+          </button>
+          <button className="button" onClick={onGenerate}>
             <ShoppingBasket size={18} /> Générer
           </button>
         </div>
@@ -243,4 +266,57 @@ function formatShoppingListText(items: ShoppingItem[], recipes: Recipe[], export
   });
 
   return `${lines.join("\n")}\n`;
+}
+
+async function shareShoppingListText(text: string) {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "Liste de courses", text });
+      return "shared";
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") throw error;
+    }
+  }
+
+  if (isLikelyMobile()) {
+    window.location.href = `sms:?&body=${encodeURIComponent(text)}`;
+    return "sms";
+  }
+
+  try {
+    await copyText(text);
+    return "copied";
+  } catch {
+    window.prompt("Copie le texte de la liste de courses :", text);
+    return "manual";
+  }
+}
+
+async function copyText(text: string) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Fall through for browsers that expose the Clipboard API but block it.
+    }
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-10000px";
+  document.body.append(textarea);
+  textarea.select();
+
+  try {
+    if (!document.execCommand("copy")) throw new Error("Copy failed");
+  } finally {
+    textarea.remove();
+  }
+}
+
+function isLikelyMobile() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
