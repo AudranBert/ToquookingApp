@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ChefHat, Clock, Filter, Flame, Search, X } from "lucide-react";
 import { POPULAR_RECIPE_ORIGINS, RECIPE_ORIGIN_GROUPS, RECIPE_ORIGINS } from "../origins";
 import { RecipeDetail } from "../components/RecipeDetail";
@@ -114,6 +114,19 @@ function LibrarySidebar({
   seasonalRecipeCount: number;
   seasonMonthName: string;
 }) {
+  const [advancedOpen, setAdvancedOpen] = useState(() =>
+    typeof window === "undefined" ? true : window.matchMedia("(min-width: 861px)").matches,
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 861px)");
+    const handleChange = () => setAdvancedOpen(mediaQuery.matches);
+
+    handleChange();
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
   return (
     <aside className="panel sidebar">
       <div className="filters">
@@ -127,6 +140,23 @@ function LibrarySidebar({
             placeholder="Nom, ingrédient, tag"
           />
         </label>
+        <p className="muted recipe-count">
+          {filteredCount} recette(s)
+          {filters.seasonalThreshold > 0
+            ? ` avec au moins ${filters.seasonalThreshold} ingrédient(s) de saison en ${seasonMonthName}`
+            : ""}
+        </p>
+        <details
+          className="advanced-filters"
+          open={advancedOpen}
+          onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}
+        >
+          <summary>
+            <span className="label-with-icon">
+              <Filter size={16} /> Filtres
+            </span>
+          </summary>
+          <div className="advanced-filters__body">
         <div className="tag-filter">
           <div className="origin-filter__header">
             <span className="label-with-icon">
@@ -201,19 +231,14 @@ function LibrarySidebar({
             ))}
           </select>
         </label>
+            {filters.seasonalThreshold === 0 && (
+              <p className="muted">
+                {seasonalRecipeCount} recette(s) contiennent au moins un ingrédient de saison en {seasonMonthName}.
+              </p>
+            )}
+          </div>
+        </details>
       </div>
-
-      <p className="muted">
-        {filteredCount} recette(s)
-        {filters.seasonalThreshold > 0
-          ? ` avec au moins ${filters.seasonalThreshold} ingrédient(s) de saison en ${seasonMonthName}`
-          : ""}
-      </p>
-      {filters.seasonalThreshold === 0 && (
-        <p className="muted">
-          {seasonalRecipeCount} recette(s) contiennent au moins un ingrédient de saison en {seasonMonthName}.
-        </p>
-      )}
     </aside>
   );
 }
