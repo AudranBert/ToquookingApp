@@ -1,12 +1,13 @@
-import { BookOpen, Import, ShoppingBasket } from "lucide-react";
+import { BookOpen, Import, Plus, ShoppingBasket } from "lucide-react";
 import type { Panel } from "../types";
 
 type Props = {
   activePanel: Panel;
   onPanelChange: (panel: Panel) => void;
+  onNewRecipe: () => void;
 };
 
-export function AppHeader({ activePanel, onPanelChange }: Props) {
+export function AppHeader({ activePanel, onPanelChange, onNewRecipe }: Props) {
   return (
     <header className="app-header">
       <div>
@@ -19,6 +20,12 @@ export function AppHeader({ activePanel, onPanelChange }: Props) {
           onClick={() => onPanelChange("library")}
         >
           <BookOpen size={18} /> Recettes
+        </button>
+        <button
+          className={activePanel === "form" ? "button button--primary" : "button"}
+          onClick={onNewRecipe}
+        >
+          <Plus size={18} /> Ajouter
         </button>
         <button
           className={activePanel === "shopping" ? "button button--primary" : "button"}

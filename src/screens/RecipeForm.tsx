@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Dispatch, FormEvent, KeyboardEvent, SetStateAction } from "react";
-import { Check, RefreshCcw, Replace, Plus, X } from "lucide-react";
+import { Check, Link, Plus, RefreshCcw, Replace, X } from "lucide-react";
 import { RECIPE_ORIGINS } from "../origins";
 import type { Ingredient, RecipeDraft, ReimportMode } from "../types";
 import { createId } from "../utils/id";
@@ -13,6 +13,9 @@ type Props = {
   onCreateTag: (name: string) => void;
   onRenameTag: (oldName: string, newName: string) => void;
   onDeleteTag: (name: string) => void;
+  importUrl: string;
+  onImportUrlChange: (url: string) => void;
+  onImport: () => void;
   onReimport: (mode: ReimportMode) => void;
   onSubmit: (event: FormEvent) => void;
   onCancel: () => void;
@@ -27,6 +30,9 @@ export function RecipeForm({
   onCreateTag,
   onRenameTag,
   onDeleteTag,
+  importUrl,
+  onImportUrlChange,
+  onImport,
   onSubmit,
   onCancel,
   onReimport,
@@ -93,6 +99,23 @@ export function RecipeForm({
           </button>
         </div>
       </div>
+
+      {!editing && (
+        <section className="form-section form-section--import">
+          <label htmlFor="new-recipe-import-url">Importer depuis un lien</label>
+          <div className="inline-control">
+            <input
+              id="new-recipe-import-url"
+              value={importUrl}
+              onChange={(event) => onImportUrlChange(event.target.value)}
+              placeholder="Marmiton, CuisineAZ, YouTube..."
+            />
+            <button className="button button--primary" onClick={onImport} type="button">
+              <Link size={18} /> Importer
+            </button>
+          </div>
+        </section>
+      )}
 
       <ReimportControls
         sourceUrl={draft.sourceUrl ?? ""}

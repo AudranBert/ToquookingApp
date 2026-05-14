@@ -86,7 +86,7 @@ export function App() {
 
   return (
     <main className="app-shell">
-      <AppHeader activePanel={activePanel} onPanelChange={setActivePanel} />
+      <AppHeader activePanel={activePanel} onPanelChange={setActivePanel} onNewRecipe={startNewRecipe} />
 
       {status.status && (
         <div className="notice" role="status">
@@ -123,16 +123,12 @@ export function App() {
             onExport: exportSelected,
             onSelectRecipe: setSelectedId,
             onShowList: () => setSelectedId(null),
-            onNewRecipe: startNewRecipe,
           }}
           filteredRecipes={filters.filteredRecipes}
           selectedRecipe={selectedRecipe}
           seasonalMatchCounts={filters.seasonalMatchCounts}
           seasonalRecipeIds={filters.seasonalRecipeIds}
           seasonMonthName={seasonMonthName}
-          importUrl={draftApi.importUrl}
-          onImportUrlChange={draftApi.setImportUrl}
-          onImport={handleAssistedImport}
           printRef={printRef}
         />
       )}
@@ -159,6 +155,9 @@ export function App() {
             await tagApi.deleteTag(name);
             draftApi.setDraft((current) => ({ ...current, tags: current.tags.filter((tag) => tag !== name) }));
           }}
+          importUrl={draftApi.importUrl}
+          onImportUrlChange={draftApi.setImportUrl}
+          onImport={handleAssistedImport}
           onCancel={() => setActivePanel("library")}
           onReimport={draftApi.reimport}
           onSubmit={handleSubmit}

@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 import { useMemo, useState } from "react";
-import { ArrowLeft, ChefHat, Clock, Filter, Flame, Link, Plus, Search, X } from "lucide-react";
+import { ArrowLeft, ChefHat, Clock, Filter, Flame, Search, X } from "lucide-react";
 import { POPULAR_RECIPE_ORIGINS, RECIPE_ORIGIN_GROUPS, RECIPE_ORIGINS } from "../origins";
 import { RecipeDetail } from "../components/RecipeDetail";
 import { SEASONAL_THRESHOLDS, SEASONAL_THRESHOLD_LABELS } from "../constants";
@@ -34,7 +34,6 @@ export type LibraryRecipeActions = {
   onExport: (format: "pdf" | "png") => void;
   onSelectRecipe: (id: string) => void;
   onShowList: () => void;
-  onNewRecipe: () => void;
 };
 
 type Props = {
@@ -46,9 +45,6 @@ type Props = {
   seasonalMatchCounts: Map<string, number>;
   seasonalRecipeIds: Set<string>;
   seasonMonthName: string;
-  importUrl: string;
-  onImportUrlChange: (url: string) => void;
-  onImport: () => void;
   printRef: RefObject<HTMLDivElement>;
 };
 
@@ -61,9 +57,6 @@ export function LibraryScreen({
   seasonalMatchCounts,
   seasonalRecipeIds,
   seasonMonthName,
-  importUrl,
-  onImportUrlChange,
-  onImport,
   printRef,
 }: Props) {
   return (
@@ -74,10 +67,6 @@ export function LibraryScreen({
         filteredCount={filteredRecipes.length}
         seasonalRecipeCount={seasonalRecipeIds.size}
         seasonMonthName={seasonMonthName}
-        importUrl={importUrl}
-        onImportUrlChange={onImportUrlChange}
-        onImport={onImport}
-        onNewRecipe={actions.onNewRecipe}
       />
 
       {selectedRecipe ? (
@@ -112,42 +101,15 @@ function LibrarySidebar({
   filteredCount,
   seasonalRecipeCount,
   seasonMonthName,
-  importUrl,
-  onImportUrlChange,
-  onImport,
-  onNewRecipe,
 }: {
   filters: LibraryFilters;
   handlers: LibraryFilterHandlers;
   filteredCount: number;
   seasonalRecipeCount: number;
   seasonMonthName: string;
-  importUrl: string;
-  onImportUrlChange: (url: string) => void;
-  onImport: () => void;
-  onNewRecipe: () => void;
 }) {
   return (
     <aside className="panel sidebar">
-      <div className="field-group">
-        <label htmlFor="import-url">Importer depuis un lien</label>
-        <div className="inline-control">
-          <input
-            id="import-url"
-            value={importUrl}
-            onChange={(event) => onImportUrlChange(event.target.value)}
-            placeholder="Marmiton, CuisineAZ, YouTube..."
-          />
-          <button className="button button--icon" onClick={onImport} title="Importer">
-            <Link size={18} />
-          </button>
-        </div>
-      </div>
-
-      <button className="button button--primary button--full" onClick={onNewRecipe}>
-        <Plus size={18} /> Nouvelle recette
-      </button>
-
       <div className="filters">
         <label>
           <span className="label-with-icon">
