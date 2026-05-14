@@ -55,12 +55,17 @@ function extractRecipeFromJsonLd(json: unknown): ParsedRecipe | null {
 }
 
 export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 12000);
+
   try {
     const endpoint = `/api/import?url=${encodeURIComponent(url)}`;
-    const response = await fetch(endpoint);
+    const response = await fetch(endpoint, { signal: controller.signal });
     if (response.ok) return response.json();
   } catch {
     // Local static builds do not always have the serverless endpoint.
+  } finally {
+    window.clearTimeout(timer);
   }
 
   if (/youtube\.com|youtu\.be/.test(url)) {
@@ -75,7 +80,11 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
   try {
     const response = await fetch(url);
     const html = await response.text();
-    const jsonLdScripts = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+    const jsonLdScripts = [
+      ...html.matchAll(
+        /<script[^>]+type=["'](?:application\/ld\+json|application&#x2F;ld&#x2B;json)["'][^>]*>([\s\S]*?)<\/script>/gi,
+      ),
+    ];
     for (const match of jsonLdScripts) {
       const parsed = extractRecipeFromJsonLd(JSON.parse(match[1]));
       if (parsed) return { ...parsed, sourceUrl: url };

@@ -139,20 +139,24 @@ export function App() {
     if (!importUrl.trim()) return;
     setStatus("Import en cours...");
 
-    const parsed = await importRecipeFromUrl(importUrl.trim());
-    setDraft({
-      ...createEmptyDraft(),
-      ...parsed,
-      sourceUrl: parsed.sourceUrl ?? importUrl.trim(),
-      videoUrl: parsed.videoUrl,
-      tags: parsed.tags ?? [],
-      ingredients: parsed.ingredients?.length ? parsed.ingredients : [{ id: createId(), name: "" }],
-      instructions: parsed.instructions?.length ? parsed.instructions : [""],
-    });
-    setEditingId(null);
-    setImportWarnings(parsed.warnings ?? []);
-    setActivePanel("form");
-    setStatus("Import préparé. Vérifie les champs avant d'enregistrer.");
+    try {
+      const parsed = await importRecipeFromUrl(importUrl.trim());
+      setDraft({
+        ...createEmptyDraft(),
+        ...parsed,
+        sourceUrl: parsed.sourceUrl ?? importUrl.trim(),
+        videoUrl: parsed.videoUrl,
+        tags: parsed.tags ?? [],
+        ingredients: parsed.ingredients?.length ? parsed.ingredients : [{ id: createId(), name: "" }],
+        instructions: parsed.instructions?.length ? parsed.instructions : [""],
+      });
+      setEditingId(null);
+      setImportWarnings(parsed.warnings ?? []);
+      setActivePanel("form");
+      setStatus("Import préparé. Vérifie les champs avant d'enregistrer.");
+    } catch {
+      setStatus("Import impossible pour ce lien. Tu peux quand même remplir la recette manuellement.");
+    }
   }
 
   async function importBackup(file: File) {
