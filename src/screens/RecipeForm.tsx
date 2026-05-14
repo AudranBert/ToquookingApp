@@ -319,6 +319,11 @@ function TagField({
     }
   }
 
+  function createGlobalTag() {
+    onCreateTag(input);
+    setInput("");
+  }
+
   return (
     <label className="tag-field">
       Tags
@@ -347,7 +352,7 @@ function TagField({
         />
       </div>
       {input.trim() && !allTags.some((tag) => tag.toLowerCase() === input.trim().toLowerCase()) && (
-        <button className="button button--ghost tag-field__create" type="button" onClick={() => onCreateTag(input)}>
+        <button className="button button--ghost tag-field__create" type="button" onClick={createGlobalTag}>
           <Plus size={16} /> Ajouter "{input.trim()}" a la liste
         </button>
       )}
