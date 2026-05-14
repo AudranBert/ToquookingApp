@@ -13,6 +13,7 @@ export type ImportedRecipe = {
   origin?: string;
   servings?: number;
   prepTime?: number;
+  restTime?: number;
   cookTime?: number;
   totalTime?: number;
   imageUrl?: string;
@@ -94,8 +95,24 @@ function metadataValues(recipe: RecipeNode) {
 
 function minutes(value: unknown) {
   if (typeof value !== "string") return undefined;
-  const iso = value.match(/PT(?:(\d+)H)?(?:(\d+)M)?/i);
-  if (iso) return Number(iso[1] || 0) * 60 + Number(iso[2] || 0);
+  const iso = value.match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/i);
+  if (iso) return Number(iso[1] || 0) * 24 * 60 + Number(iso[2] || 0) * 60 + Number(iso[3] || 0);
+  return textMinutes(value);
+}
+
+function textMinutes(value: string) {
+  if (!/\d/.test(value) || value.trim() === "-") return undefined;
+
+  const dayMatch = value.match(/(\d+)\s*j(?:our)?s?/i);
+  const hourMatch = value.match(/(\d+)\s*h(?:eures?)?\s*(?:(\d+)\s*(?:min|mn)?)?/i);
+  const minuteMatch = value.match(/(\d+)\s*(?:min|mn|minutes?)/i);
+  const total =
+    Number(dayMatch?.[1] ?? 0) * 24 * 60 +
+    Number(hourMatch?.[1] ?? 0) * 60 +
+    Number(hourMatch?.[2] ?? minuteMatch?.[1] ?? 0);
+
+  if (total > 0) return total;
+
   const simple = value.match(/(\d+)/);
   return simple ? Number(simple[1]) : undefined;
 }
@@ -161,7 +178,13 @@ function recipeVideoUrl(recipe: RecipeNode) {
   return textArray(firstVideo)[0];
 }
 
-function recipeNodeToImport(recipe: RecipeNode, url: string): ImportedRecipe {
+function marmitonRestTime(html: string) {
+  const text = cleanText(html);
+  const match = text.match(/Repos\s*:\s*(.+?)\s+(?:Cuisson\s*:|Étape\s+1|Etape\s+1)/i);
+  return match ? textMinutes(match[1]) : undefined;
+}
+
+function recipeNodeToImport(recipe: RecipeNode, url: string, html: string): ImportedRecipe {
   return {
     name: textArray(recipe.name)[0],
     sourceUrl: url,
@@ -172,6 +195,7 @@ function recipeNodeToImport(recipe: RecipeNode, url: string): ImportedRecipe {
     instructions: recipeInstructions(recipe),
     servings: servings(recipe.recipeYield),
     prepTime: minutes(recipe.prepTime),
+    restTime: minutes(recipe.restTime ?? recipe.restingTime ?? recipe.reposTime) ?? marmitonRestTime(html),
     cookTime: minutes(recipe.cookTime),
     totalTime: minutes(recipe.totalTime),
     imageUrl: textArray(recipe.image)[0],
@@ -222,7 +246,7 @@ export async function importRecipeFromSourceUrl(url: string): Promise<ImportedRe
       };
     }
 
-    return recipeNodeToImport(recipe, url);
+    return recipeNodeToImport(recipe, url, html);
   } catch {
     return {
       sourceUrl: url,

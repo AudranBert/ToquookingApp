@@ -82,6 +82,7 @@ export function RecipeDetail({
         <div className="meta-list">
           {hasValue(recipe.servings) && <span>{recipe.servings} personne(s)</span>}
           {hasPositiveValue(recipe.prepTime) && <span>Préparation {recipe.prepTime} min</span>}
+          {hasPositiveValue(recipe.restTime) && <span>Repos {recipe.restTime} min</span>}
           {hasPositiveValue(recipe.cookTime) && <span>Cuisson {recipe.cookTime} min</span>}
           {hasPositiveValue(recipe.totalTime) && <span>Total {recipe.totalTime} min</span>}
         </div>

@@ -175,6 +175,7 @@ export function RecipeForm({
         <TextField label="Vidéo" value={draft.videoUrl ?? ""} onChange={(videoUrl) => updateField("videoUrl", videoUrl)} />
         <NumberField label="Personnes" value={draft.servings} onChange={(servings) => updateField("servings", servings)} />
         <NumberField label="Préparation" value={draft.prepTime} onChange={(prepTime) => updateField("prepTime", prepTime)} />
+        <NumberField label="Repos" value={draft.restTime} onChange={(restTime) => updateField("restTime", restTime)} />
         <NumberField label="Cuisson" value={draft.cookTime} onChange={(cookTime) => updateField("cookTime", cookTime)} />
         <NumberField label="Temps total" value={draft.totalTime} onChange={(totalTime) => updateField("totalTime", totalTime)} />
       </div>

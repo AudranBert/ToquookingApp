@@ -127,6 +127,7 @@ function formatMeta(recipe: Recipe) {
   const meta = [
     recipe.servings ? `${recipe.servings} personne(s)` : "",
     recipe.prepTime ? `Preparation ${recipe.prepTime} min` : "",
+    recipe.restTime ? `Repos ${recipe.restTime} min` : "",
     recipe.cookTime ? `Cuisson ${recipe.cookTime} min` : "",
     recipe.totalTime ? `Total ${recipe.totalTime} min` : "",
   ].filter(Boolean);

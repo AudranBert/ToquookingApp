@@ -101,6 +101,7 @@ function mergeBlanks(current: RecipeDraft, imported: RecipeDraft): RecipeDraft {
     videoUrl: current.videoUrl || imported.videoUrl,
     servings: current.servings ?? imported.servings,
     prepTime: current.prepTime ?? imported.prepTime,
+    restTime: current.restTime ?? imported.restTime,
     cookTime: current.cookTime ?? imported.cookTime,
     totalTime: current.totalTime ?? imported.totalTime,
     notes: current.notes || imported.notes,

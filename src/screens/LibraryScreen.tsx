@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ChefHat, Clock, Filter, Flame, Search, X } from "lucide-react";
+import { ArrowLeft, ChefHat, Clock, Filter, Flame, Hourglass, Search, X } from "lucide-react";
 import { POPULAR_RECIPE_ORIGINS, RECIPE_ORIGIN_GROUPS, RECIPE_ORIGINS } from "../origins";
 import { RecipeDetail } from "../components/RecipeDetail";
 import { SEASONAL_THRESHOLDS, SEASONAL_THRESHOLD_LABELS } from "../constants";
@@ -394,6 +394,11 @@ function RecipeGrid({
             {recipe.cookTime ? (
               <span aria-label={`Cuisson ${recipe.cookTime} min`} title="Cuisson">
                 <Flame size={15} /> {recipe.cookTime} min
+              </span>
+            ) : null}
+            {recipe.restTime ? (
+              <span aria-label={`Repos ${recipe.restTime} min`} title="Repos">
+                <Hourglass size={15} /> {recipe.restTime} min
               </span>
             ) : null}
             <span aria-label={`Total ${recipe.totalTime ? `${recipe.totalTime} min` : "non renseigné"}`} title="Total">

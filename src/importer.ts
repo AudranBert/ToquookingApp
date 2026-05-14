@@ -53,8 +53,24 @@ function cleanText(value: unknown) {
 
 function parseDurationToMinutes(value: unknown) {
   if (typeof value !== "string") return undefined;
-  const iso = value.match(/PT(?:(\d+)H)?(?:(\d+)M)?/i);
-  if (iso) return Number(iso[1] || 0) * 60 + Number(iso[2] || 0);
+  const iso = value.match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/i);
+  if (iso) return Number(iso[1] || 0) * 24 * 60 + Number(iso[2] || 0) * 60 + Number(iso[3] || 0);
+  return parseDurationText(value);
+}
+
+function parseDurationText(value: string) {
+  if (!/\d/.test(value) || value.trim() === "-") return undefined;
+
+  const dayMatch = value.match(/(\d+)\s*j(?:our)?s?/i);
+  const hourMatch = value.match(/(\d+)\s*h(?:eures?)?\s*(?:(\d+)\s*(?:min|mn)?)?/i);
+  const minuteMatch = value.match(/(\d+)\s*(?:min|mn|minutes?)/i);
+  const total =
+    Number(dayMatch?.[1] ?? 0) * 24 * 60 +
+    Number(hourMatch?.[1] ?? 0) * 60 +
+    Number(hourMatch?.[2] ?? minuteMatch?.[1] ?? 0);
+
+  if (total > 0) return total;
+
   const simple = value.match(/(\d+)/);
   return simple ? Number(simple[1]) : undefined;
 }
@@ -113,6 +129,7 @@ function extractRecipeFromJsonLd(json: unknown): ParsedRecipe | null {
     instructions: instructionValues.filter(Boolean),
     servings: servings(recipe.recipeYield),
     prepTime: parseDurationToMinutes(recipe.prepTime),
+    restTime: parseDurationToMinutes(recipe.restTime ?? recipe.restingTime ?? recipe.reposTime),
     cookTime: parseDurationToMinutes(recipe.cookTime),
     totalTime: parseDurationToMinutes(recipe.totalTime),
     imageUrl: images[0],
@@ -140,6 +157,12 @@ function servings(value: unknown) {
 function recipeVideoUrl(recipe: Record<string, unknown>) {
   const firstVideo = Array.isArray(recipe.video) ? recipe.video[0] : recipe.video;
   return arrayify(firstVideo)[0];
+}
+
+function marmitonRestTime(html: string) {
+  const text = cleanText(html);
+  const match = text.match(/Repos\s*:\s*(.+?)\s+(?:Cuisson\s*:|Étape\s+1|Etape\s+1)/i);
+  return match ? parseDurationText(match[1]) : undefined;
 }
 
 export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
@@ -179,7 +202,7 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
         const warnings = parsed.name?.trim()
           ? undefined
           : ["Aucun nom détecté dans la recette importée. Renseigne-le manuellement."];
-        return { ...parsed, sourceUrl: url, warnings };
+        return { ...parsed, restTime: parsed.restTime ?? marmitonRestTime(html), sourceUrl: url, warnings };
       }
     }
   } catch {

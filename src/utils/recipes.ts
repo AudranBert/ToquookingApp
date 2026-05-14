@@ -34,6 +34,7 @@ export function recipeToDraft(recipe: Recipe): RecipeDraft {
     videoUrl: recipe.videoUrl,
     servings: recipe.servings,
     prepTime: recipe.prepTime,
+    restTime: recipe.restTime,
     cookTime: recipe.cookTime,
     totalTime: recipe.totalTime,
     notes: recipe.notes,
