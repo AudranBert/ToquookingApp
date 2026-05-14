@@ -1,6 +1,8 @@
 type ImportedIngredient = {
   id: string;
   name: string;
+  quantity?: string;
+  unit?: string;
 };
 
 export type ImportedRecipe = {
@@ -22,6 +24,61 @@ type RecipeNode = Record<string, unknown>;
 function createId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+const KNOWN_UNITS = [
+  "cuillères à soupe",
+  "cuillère à soupe",
+  "cuillères à café",
+  "cuillère à café",
+  "c. à soupe",
+  "c. à café",
+  "gousses",
+  "gousse",
+  "pincées",
+  "pincée",
+  "verres",
+  "verre",
+  "sachets",
+  "sachet",
+  "boîtes",
+  "boîte",
+  "tranches",
+  "tranche",
+  "feuilles",
+  "feuille",
+  "branches",
+  "branche",
+  "bouquets",
+  "bouquet",
+  "pots",
+  "pot",
+  "kg",
+  "g",
+  "l",
+  "cl",
+  "ml",
+];
+
+function parseIngredientLine(line: string): ImportedIngredient {
+  const trimmed = line.trim().replace(/\s+/g, " ");
+  const match = trimmed.match(/^(\d+(?:[,.]\d+)?|½|¼|¾|⅓|⅔)\s+(.+)$/);
+
+  if (!match) return { id: createId(), name: trimmed };
+
+  const [, quantity, rest] = match;
+  const unit = KNOWN_UNITS.find((candidate) => rest.toLowerCase().startsWith(`${candidate} `));
+
+  if (!unit) {
+    return { id: createId(), quantity, name: rest };
+  }
+
+  return {
+    id: createId(),
+    quantity,
+    unit,
+    name: rest.slice(unit.length).trim().replace(/^d['’]\s*|^de\s+|^du\s+|^des\s+/, ""),
+  };
 }
 
 function textArray(value: unknown) {
@@ -84,7 +141,7 @@ function recipeNodeToImport(recipe: RecipeNode, url: string): ImportedRecipe {
   return {
     name: typeof recipe.name === "string" ? recipe.name : undefined,
     sourceUrl: url,
-    ingredients: textArray(recipe.recipeIngredient).map((name) => ({ id: createId(), name })),
+    ingredients: textArray(recipe.recipeIngredient).map(parseIngredientLine),
     instructions,
     servings: typeof recipe.recipeYield === "string" ? Number.parseInt(recipe.recipeYield, 10) || undefined : undefined,
     prepTime: minutes(recipe.prepTime),

@@ -1,4 +1,5 @@
 import type { ParsedRecipe } from "./types";
+import { parseIngredientLine } from "./utils/ingredients";
 import { createId } from "./utils/id";
 
 function parseDurationToMinutes(value: unknown) {
@@ -44,7 +45,7 @@ function extractRecipeFromJsonLd(json: unknown): ParsedRecipe | null {
 
   return {
     name: typeof recipe.name === "string" ? recipe.name : undefined,
-    ingredients: arrayify(recipe.recipeIngredient).map((name) => ({ id: createId(), name })),
+    ingredients: arrayify(recipe.recipeIngredient).map(parseIngredientLine),
     instructions: instructionValues.filter(Boolean),
     servings: typeof recipe.recipeYield === "string" ? Number.parseInt(recipe.recipeYield, 10) || undefined : undefined,
     prepTime: parseDurationToMinutes(recipe.prepTime),

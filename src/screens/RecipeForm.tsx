@@ -1,5 +1,5 @@
 import type { Dispatch, FormEvent, SetStateAction } from "react";
-import { Check, Plus, X } from "lucide-react";
+import { Check, RefreshCcw, Replace, Plus, X } from "lucide-react";
 import type { Ingredient, RecipeDraft } from "../types";
 import { createId } from "../utils/id";
 
@@ -7,12 +7,13 @@ type Props = {
   draft: RecipeDraft;
   editing: boolean;
   warnings: string[];
+  onReimport: (mode: "replace" | "fill-blanks") => void;
   onSubmit: (event: FormEvent) => void;
   onCancel: () => void;
   setDraft: Dispatch<SetStateAction<RecipeDraft>>;
 };
 
-export function RecipeForm({ draft, editing, warnings, onSubmit, onCancel, setDraft }: Props) {
+export function RecipeForm({ draft, editing, warnings, onSubmit, onCancel, onReimport, setDraft }: Props) {
   function updateIngredient(id: string, field: keyof Ingredient, value: string) {
     setDraft((current) => ({
       ...current,
@@ -39,6 +40,16 @@ export function RecipeForm({ draft, editing, warnings, onSubmit, onCancel, setDr
         </div>
       </div>
 
+      <div className="reimport-bar">
+        <TextField label="Lien source" value={draft.sourceUrl ?? ""} onChange={(sourceUrl) => setDraft((current) => ({ ...current, sourceUrl }))} />
+        <button className="button" onClick={() => onReimport("fill-blanks")} type="button">
+          <RefreshCcw size={18} /> Compléter les champs vides
+        </button>
+        <button className="button button--ghost" onClick={() => onReimport("replace")} type="button">
+          <Replace size={18} /> Remplacer depuis le lien
+        </button>
+      </div>
+
       {warnings.length > 0 && (
         <div className="notice notice--warning">
           {warnings.map((warning) => (
@@ -55,7 +66,6 @@ export function RecipeForm({ draft, editing, warnings, onSubmit, onCancel, setDr
           placeholder="plat, chaud, dessert..."
           onChange={(value) => setDraft((current) => ({ ...current, tags: value.split(",").map((tag) => tag.trim()) }))}
         />
-        <TextField label="Source" value={draft.sourceUrl ?? ""} onChange={(sourceUrl) => setDraft((current) => ({ ...current, sourceUrl }))} />
         <TextField label="Vidéo" value={draft.videoUrl ?? ""} onChange={(videoUrl) => setDraft((current) => ({ ...current, videoUrl }))} />
         <TextField label="Image" value={draft.imageUrl ?? ""} onChange={(imageUrl) => setDraft((current) => ({ ...current, imageUrl }))} />
         <NumberField label="Personnes" value={draft.servings} onChange={(servings) => setDraft((current) => ({ ...current, servings }))} />

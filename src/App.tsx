@@ -21,6 +21,8 @@ import {
 import type { Recipe, RecipeDraft, ShoppingItem } from "./types";
 import { createId } from "./utils/id";
 
+type ReimportMode = "replace" | "fill-blanks";
+
 export function App() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -93,8 +95,8 @@ export function App() {
   async function saveRecipe(event: React.FormEvent) {
     event.preventDefault();
     const cleaned = cleanRecipeDraft(draft);
-    if (!cleaned.name || !cleaned.ingredients.length || !cleaned.instructions.length) {
-      setStatus("Ajoute au minimum un nom, un ingrédient et une étape.");
+    if (!cleaned.name) {
+      setStatus("Ajoute au minimum un nom.");
       return;
     }
 
@@ -141,21 +143,33 @@ export function App() {
 
     try {
       const parsed = await importRecipeFromUrl(importUrl.trim());
-      setDraft({
-        ...createEmptyDraft(),
-        ...parsed,
-        sourceUrl: parsed.sourceUrl ?? importUrl.trim(),
-        videoUrl: parsed.videoUrl,
-        tags: parsed.tags ?? [],
-        ingredients: parsed.ingredients?.length ? parsed.ingredients : [{ id: createId(), name: "" }],
-        instructions: parsed.instructions?.length ? parsed.instructions : [""],
-      });
+      setDraft(importedRecipeToDraft(parsed, importUrl.trim()));
       setEditingId(null);
       setImportWarnings(parsed.warnings ?? []);
       setActivePanel("form");
       setStatus("Import préparé. Vérifie les champs avant d'enregistrer.");
     } catch {
       setStatus("Import impossible pour ce lien. Tu peux quand même remplir la recette manuellement.");
+    }
+  }
+
+  async function reimportDraft(mode: ReimportMode) {
+    const url = draft.sourceUrl?.trim();
+    if (!url) {
+      setStatus("Ajoute un lien source avant de réimporter.");
+      return;
+    }
+
+    setStatus("Réimport en cours...");
+
+    try {
+      const parsed = await importRecipeFromUrl(url);
+      const imported = importedRecipeToDraft(parsed, url);
+      setDraft((current) => (mode === "replace" ? imported : mergeDraftBlanks(current, imported)));
+      setImportWarnings(parsed.warnings ?? []);
+      setStatus(mode === "replace" ? "Champs remplacés depuis le lien." : "Champs vides complétés depuis le lien.");
+    } catch {
+      setStatus("Réimport impossible pour ce lien.");
     }
   }
 
@@ -229,6 +243,7 @@ export function App() {
           editing={Boolean(editingId)}
           warnings={importWarnings}
           onCancel={() => setActivePanel("library")}
+          onReimport={reimportDraft}
           onSubmit={saveRecipe}
           setDraft={setDraft}
         />
@@ -258,5 +273,41 @@ export function App() {
         />
       )}
     </main>
+  );
+}
+
+function importedRecipeToDraft(parsed: Partial<RecipeDraft> & { warnings?: string[] }, fallbackUrl: string): RecipeDraft {
+  return {
+    ...createEmptyDraft(),
+    ...parsed,
+    sourceUrl: parsed.sourceUrl ?? fallbackUrl,
+    videoUrl: parsed.videoUrl,
+    tags: parsed.tags ?? [],
+    ingredients: parsed.ingredients?.length ? parsed.ingredients : [{ id: createId(), name: "" }],
+    instructions: parsed.instructions?.length ? parsed.instructions : [""],
+  };
+}
+
+function mergeDraftBlanks(current: RecipeDraft, imported: RecipeDraft): RecipeDraft {
+  return {
+    ...current,
+    name: current.name || imported.name,
+    sourceUrl: current.sourceUrl || imported.sourceUrl,
+    videoUrl: current.videoUrl || imported.videoUrl,
+    servings: current.servings ?? imported.servings,
+    prepTime: current.prepTime ?? imported.prepTime,
+    cookTime: current.cookTime ?? imported.cookTime,
+    totalTime: current.totalTime ?? imported.totalTime,
+    notes: current.notes || imported.notes,
+    imageUrl: current.imageUrl || imported.imageUrl,
+    tags: current.tags.length ? current.tags : imported.tags,
+    ingredients: hasFilledIngredients(current) ? current.ingredients : imported.ingredients,
+    instructions: current.instructions.some((step) => step.trim()) ? current.instructions : imported.instructions,
+  };
+}
+
+function hasFilledIngredients(draft: RecipeDraft) {
+  return draft.ingredients.some((ingredient) =>
+    [ingredient.quantity, ingredient.unit, ingredient.name, ingredient.note].some((value) => value?.trim()),
   );
 }
