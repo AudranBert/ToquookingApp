@@ -3,6 +3,54 @@ import { findKnownRecipeOrigin } from "./origins";
 import { parseIngredientLine } from "./utils/ingredients";
 import { createId } from "./utils/id";
 
+const HTML_ENTITIES: Record<string, string> = {
+  amp: "&",
+  apos: "'",
+  copy: "(c)",
+  eacute: "é",
+  egrave: "è",
+  ecirc: "ê",
+  agrave: "à",
+  acirc: "â",
+  icirc: "î",
+  iuml: "ï",
+  ocirc: "ô",
+  ugrave: "ù",
+  ucirc: "û",
+  ccedil: "ç",
+  nbsp: " ",
+  quot: '"',
+};
+
+function decodeHtmlEntities(value: string) {
+  let decoded = value;
+  for (let pass = 0; pass < 3; pass += 1) {
+    const next = decoded.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (entity, code: string) => {
+      const key = code.toLowerCase();
+      if (key.startsWith("#x")) {
+        const character = Number.parseInt(key.slice(2), 16);
+        return Number.isFinite(character) ? String.fromCodePoint(character) : entity;
+      }
+      if (key.startsWith("#")) {
+        const character = Number.parseInt(key.slice(1), 10);
+        return Number.isFinite(character) ? String.fromCodePoint(character) : entity;
+      }
+      return HTML_ENTITIES[key] ?? entity;
+    });
+    if (next === decoded) break;
+    decoded = next;
+  }
+  return decoded;
+}
+
+function cleanText(value: unknown) {
+  if (value == null) return "";
+  return decodeHtmlEntities(String(value))
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function parseDurationToMinutes(value: unknown) {
   if (typeof value !== "string") return undefined;
   const iso = value.match(/PT(?:(\d+)H)?(?:(\d+)M)?/i);
@@ -12,8 +60,17 @@ function parseDurationToMinutes(value: unknown) {
 }
 
 function arrayify(value: unknown): string[] {
-  if (Array.isArray(value)) return value.map(String).filter(Boolean);
-  if (typeof value === "string") return value.split(/\n|;/).map((item) => item.trim()).filter(Boolean);
+  if (Array.isArray(value)) return value.flatMap(arrayify).filter(Boolean);
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value)
+      .split(/\n|;/)
+      .map(cleanText)
+      .filter(Boolean);
+  }
+  if (value && typeof value === "object") {
+    const node = value as Record<string, unknown>;
+    return arrayify(node.url ?? node.contentUrl ?? node.embedUrl ?? node.text ?? node.name);
+  }
   return [];
 }
 
@@ -43,27 +100,46 @@ function extractRecipeFromJsonLd(json: unknown): ParsedRecipe | null {
   if (!recipe) return null;
 
   const instructionValues = Array.isArray(recipe.recipeInstructions)
-    ? recipe.recipeInstructions.map((item) => {
-        if (typeof item === "string") return item;
-        if (item && typeof item === "object" && "text" in item) return String(item.text);
-        return "";
-      })
+    ? recipe.recipeInstructions.flatMap(instructionText)
     : arrayify(recipe.recipeInstructions);
 
   const images = arrayify(recipe.image);
 
   return {
-    name: typeof recipe.name === "string" ? recipe.name : undefined,
+    name: arrayify(recipe.name)[0],
     origin: findKnownRecipeOrigin(arrayify(recipe.recipeCuisine)),
     tags: metadataValues(recipe),
     ingredients: arrayify(recipe.recipeIngredient).map(parseIngredientLine),
     instructions: instructionValues.filter(Boolean),
-    servings: typeof recipe.recipeYield === "string" ? Number.parseInt(recipe.recipeYield, 10) || undefined : undefined,
+    servings: servings(recipe.recipeYield),
     prepTime: parseDurationToMinutes(recipe.prepTime),
     cookTime: parseDurationToMinutes(recipe.cookTime),
     totalTime: parseDurationToMinutes(recipe.totalTime),
     imageUrl: images[0],
+    videoUrl: recipeVideoUrl(recipe),
   };
+}
+
+function instructionText(item: unknown): string[] {
+  if (typeof item === "string") return arrayify(item);
+  if (!item || typeof item !== "object") return [];
+
+  const node = item as Record<string, unknown>;
+  const nested = node.itemListElement ?? node.steps ?? node.recipeInstructions;
+  if (nested) return arrayify(node.text ?? node.name).concat(Array.isArray(nested) ? nested.flatMap(instructionText) : instructionText(nested));
+
+  return arrayify(node.text ?? node.name);
+}
+
+function servings(value: unknown) {
+  const first = arrayify(value)[0];
+  if (!first) return undefined;
+  return Number.parseInt(first, 10) || undefined;
+}
+
+function recipeVideoUrl(recipe: Record<string, unknown>) {
+  const firstVideo = Array.isArray(recipe.video) ? recipe.video[0] : recipe.video;
+  return arrayify(firstVideo)[0];
 }
 
 export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {

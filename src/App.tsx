@@ -276,6 +276,7 @@ export function App() {
           onGenerate={shopping.regenerate}
           onItemChange={shopping.setItems}
           onSelectionChange={shopping.setSelectedIds}
+          onStatus={status.setStatus}
         />
       )}
 

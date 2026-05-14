@@ -21,10 +21,66 @@ export type ImportedRecipe = {
 
 type RecipeNode = Record<string, unknown>;
 
+const HTML_ENTITIES: Record<string, string> = {
+  amp: "&",
+  apos: "'",
+  copy: "(c)",
+  eacute: "é",
+  egrave: "è",
+  ecirc: "ê",
+  agrave: "à",
+  acirc: "â",
+  icirc: "î",
+  iuml: "ï",
+  ocirc: "ô",
+  ugrave: "ù",
+  ucirc: "û",
+  ccedil: "ç",
+  nbsp: " ",
+  quot: '"',
+};
+
+function decodeHtmlEntities(value: string) {
+  let decoded = value;
+  for (let pass = 0; pass < 3; pass += 1) {
+    const next = decoded.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (entity, code: string) => {
+      const key = code.toLowerCase();
+      if (key.startsWith("#x")) {
+        const character = Number.parseInt(key.slice(2), 16);
+        return Number.isFinite(character) ? String.fromCodePoint(character) : entity;
+      }
+      if (key.startsWith("#")) {
+        const character = Number.parseInt(key.slice(1), 10);
+        return Number.isFinite(character) ? String.fromCodePoint(character) : entity;
+      }
+      return HTML_ENTITIES[key] ?? entity;
+    });
+    if (next === decoded) break;
+    decoded = next;
+  }
+  return decoded;
+}
+
+function cleanText(value: unknown) {
+  if (value == null) return "";
+  return decodeHtmlEntities(String(value))
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function textArray(value: unknown) {
-  if (Array.isArray(value)) return value.map(String).filter(Boolean);
-  if (typeof value === "string") return value.split(/\n|;/).map((item) => item.trim()).filter(Boolean);
-  if (value && typeof value === "object" && "url" in value && typeof value.url === "string") return [value.url];
+  if (Array.isArray(value)) return value.flatMap(textArray).filter(Boolean);
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value)
+      .split(/\n|;/)
+      .map(cleanText)
+      .filter(Boolean);
+  }
+  if (value && typeof value === "object") {
+    const node = value as RecipeNode;
+    return textArray(node.url ?? node.contentUrl ?? node.embedUrl ?? node.text ?? node.name);
+  }
   return [];
 }
 
@@ -52,8 +108,9 @@ function parseJsonLd(html: string) {
   ];
 
   for (const script of scripts) {
-    try {
-      const json = JSON.parse(script[1]);
+    for (const scriptBody of [script[1], decodeHtmlEntities(script[1])]) {
+      try {
+        const json = JSON.parse(scriptBody);
       const nodes = Array.isArray(json) ? json : [json];
       const graph = nodes.flatMap((node) =>
         node && typeof node === "object" && Array.isArray((node as RecipeNode)["@graph"])
@@ -67,33 +124,53 @@ function parseJsonLd(html: string) {
       });
 
       if (recipe && typeof recipe === "object") return recipe as RecipeNode;
-    } catch {
-      continue;
+      } catch {
+        continue;
+      }
     }
   }
 
   return null;
 }
 
-function recipeNodeToImport(recipe: RecipeNode, url: string): ImportedRecipe {
-  const instructions = Array.isArray(recipe.recipeInstructions)
-    ? recipe.recipeInstructions
-        .map((item: unknown) => {
-          if (typeof item === "string") return item;
-          if (item && typeof item === "object" && "text" in item) return String(item.text);
-          return "";
-        })
-        .filter(Boolean)
-    : textArray(recipe.recipeInstructions);
+function instructionText(item: unknown): string[] {
+  if (typeof item === "string") return textArray(item);
+  if (!item || typeof item !== "object") return [];
 
+  const node = item as RecipeNode;
+  const nested = node.itemListElement ?? node.steps ?? node.recipeInstructions;
+  if (nested) return textArray(node.text ?? node.name).concat(Array.isArray(nested) ? nested.flatMap(instructionText) : instructionText(nested));
+
+  return textArray(node.text ?? node.name);
+}
+
+function recipeInstructions(recipe: RecipeNode) {
+  return Array.isArray(recipe.recipeInstructions)
+    ? recipe.recipeInstructions.flatMap(instructionText).filter(Boolean)
+    : textArray(recipe.recipeInstructions);
+}
+
+function servings(value: unknown) {
+  const first = textArray(value)[0];
+  if (!first) return undefined;
+  return Number.parseInt(first, 10) || undefined;
+}
+
+function recipeVideoUrl(recipe: RecipeNode) {
+  const firstVideo = Array.isArray(recipe.video) ? recipe.video[0] : recipe.video;
+  return textArray(firstVideo)[0];
+}
+
+function recipeNodeToImport(recipe: RecipeNode, url: string): ImportedRecipe {
   return {
-    name: typeof recipe.name === "string" ? recipe.name : undefined,
+    name: textArray(recipe.name)[0],
     sourceUrl: url,
+    videoUrl: recipeVideoUrl(recipe),
     origin: findKnownRecipeOrigin(textArray(recipe.recipeCuisine)),
     tags: metadataValues(recipe),
     ingredients: textArray(recipe.recipeIngredient).map(parseIngredientLine),
-    instructions,
-    servings: typeof recipe.recipeYield === "string" ? Number.parseInt(recipe.recipeYield, 10) || undefined : undefined,
+    instructions: recipeInstructions(recipe),
+    servings: servings(recipe.recipeYield),
     prepTime: minutes(recipe.prepTime),
     cookTime: minutes(recipe.cookTime),
     totalTime: minutes(recipe.totalTime),

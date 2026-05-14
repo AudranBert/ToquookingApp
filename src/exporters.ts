@@ -65,6 +65,10 @@ export async function exportElementAsPdf(element: HTMLElement, filename: string)
   downloadBlob(await elementToPdfBlob(element), filename);
 }
 
+export function exportTextFile(text: string, filename: string) {
+  downloadBlob(new Blob([text], { type: "text/plain;charset=utf-8" }), filename);
+}
+
 export async function shareElementAsPdf(element: HTMLElement, filename: string, recipeName: string) {
   const blob = await elementToPdfBlob(element);
   const file = new File([blob], filename, { type: "application/pdf" });
@@ -90,6 +94,16 @@ export function recipeFileName(recipe: Recipe, extension: "pdf" | "png" | "json"
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
   return `${slug || "recette"}.${extension}`;
+}
+
+export function basicFileName(label: string, extension: "pdf" | "png" | "txt") {
+  const slug = label
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  return `${slug || "export"}.${extension}`;
 }
 
 async function tryShare(shareData: ShareData) {

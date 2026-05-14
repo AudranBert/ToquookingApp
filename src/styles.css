@@ -189,6 +189,12 @@ label {
   border-color: var(--color-accent);
 }
 
+.button:disabled,
+.file-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .button--primary {
   color: var(--color-primary-text);
   background: var(--color-primary);
@@ -836,6 +842,73 @@ label {
 
 .shopping-item--done input[aria-label="Ligne de course"] {
   color: #777;
+  text-decoration: line-through;
+}
+
+.shopping-export-canvas {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  width: 760px;
+  pointer-events: none;
+}
+
+.shopping-export-sheet {
+  display: grid;
+  gap: var(--space-5);
+  width: 760px;
+  min-height: 980px;
+  padding: 44px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.shopping-export-sheet__header,
+.shopping-export-sheet__recipes {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.shopping-export-sheet__header h2,
+.shopping-export-sheet__recipes h3,
+.shopping-export-sheet__recipes p {
+  margin-bottom: 0;
+}
+
+.shopping-export-sheet__items {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.shopping-export-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 34px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.shopping-export-row__check {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.shopping-export-row__label {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.shopping-export-row__label--done {
+  color: var(--color-muted);
   text-decoration: line-through;
 }
 
