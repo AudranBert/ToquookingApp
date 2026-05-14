@@ -1,6 +1,7 @@
-import { normalizeText } from "../seasonal";
 import type { Ingredient, Recipe, RecipeDraft, ShoppingItem } from "../types";
 import { createId } from "./id";
+import { canonicalIngredientKey, ingredientSearchText } from "./ingredients";
+import { normalizeText } from "./text";
 
 export const emptyRecipeDraft: RecipeDraft = {
   name: "",
@@ -75,7 +76,7 @@ export function recipeMatchesQuery(recipe: Recipe, query: string) {
     [
       recipe.name,
       recipe.tags.join(" "),
-      recipe.ingredients.map((ingredient) => ingredient.name).join(" "),
+      recipe.ingredients.map((ingredient) => ingredientSearchText(ingredient.name)).join(" "),
       recipe.instructions.join(" "),
     ].join(" "),
   );
@@ -88,7 +89,7 @@ export function buildShoppingList(recipes: Recipe[]) {
 
   recipes.forEach((recipe) => {
     recipe.ingredients.forEach((ingredient) => {
-      const key = normalizeText(ingredient.name);
+      const key = canonicalIngredientKey(ingredient.name);
       const label = ingredientLabel(ingredient);
       const existing = grouped.get(key);
 

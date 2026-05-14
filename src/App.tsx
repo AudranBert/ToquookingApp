@@ -20,6 +20,7 @@ import {
 } from "./utils/recipes";
 import type { Recipe, RecipeDraft, ShoppingItem } from "./types";
 import { createId } from "./utils/id";
+import { ingredientSearchText } from "./utils/ingredients";
 
 type ReimportMode = "replace" | "fill-blanks";
 
@@ -61,7 +62,7 @@ export function App() {
         const seasonMatches =
           !seasonalOnly ||
           recipeContainsSeasonalIngredient(
-            recipe.ingredients.map((ingredient) => ingredient.name),
+            recipe.ingredients.map((ingredient) => ingredientSearchText(ingredient.name)),
             seasonalIngredients,
           );
 

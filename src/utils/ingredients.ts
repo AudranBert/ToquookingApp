@@ -1,5 +1,6 @@
 import type { Ingredient } from "../types";
 import { createId } from "./id";
+import { normalizeText } from "./text";
 
 const KNOWN_UNITS = [
   "cuillères à soupe",
@@ -60,4 +61,61 @@ export function parseIngredientLine(line: string): Ingredient {
     unit,
     name: rest.slice(unit.length).trim().replace(/^d['’]\s*|^de\s+|^du\s+|^des\s+/, ""),
   };
+}
+
+const INGREDIENT_FAMILIES: Record<string, string[]> = {
+  concombre: ["concombre", "concombres"],
+  yaourt: [
+    "yaourt",
+    "yaourts",
+    "yaourt nature",
+    "yaourts nature",
+    "yaourts natures",
+    "yaourt brasse",
+    "yaourts brasses",
+    "yaourt nature brasse",
+    "yaourts natures brasses",
+  ],
+  fraise: ["fraise", "fraises"],
+  citron: ["citron", "citrons", "jus de citron", "zeste de citron"],
+  menthe: ["menthe", "feuilles de menthe", "feuille de menthe"],
+  sucre: ["sucre", "sucre de canne", "sucre de canne liquide", "cassonade"],
+  ail: ["ail", "gousse ail", "gousses ail"],
+  huile_olive: ["huile olive", "huile d olive", "huile d olives"],
+  vinaigre: ["vinaigre", "vinaigre vin", "vinaigre de vin", "vinaigre de vin blanc"],
+};
+
+const FAMILY_VARIANTS = Object.entries(INGREDIENT_FAMILIES)
+  .flatMap(([family, variants]) => variants.map((variant) => ({ family, variant: normalizeText(variant) })))
+  .sort((a, b) => b.variant.length - a.variant.length);
+
+export function canonicalIngredientKey(value: string) {
+  const normalized = normalizeText(value);
+  const match = FAMILY_VARIANTS.find(({ variant }) => containsWords(normalized, variant));
+
+  if (match) return match.family;
+
+  return normalized
+    .split(" ")
+    .map(singularizeToken)
+    .join(" ");
+}
+
+export function ingredientSearchText(value: string) {
+  return `${normalizeText(value)} ${canonicalIngredientKey(value).replace(/_/g, " ")}`;
+}
+
+function containsWords(value: string, candidate: string) {
+  return new RegExp(`(^| )${escapeRegExp(candidate)}( |$)`).test(value);
+}
+
+function singularizeToken(value: string) {
+  if (value.endsWith("aux") && value.length > 4) return `${value.slice(0, -3)}al`;
+  if (value.endsWith("es") && value.length > 4) return value.slice(0, -2);
+  if (value.endsWith("s") && value.length > 3) return value.slice(0, -1);
+  return value;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
