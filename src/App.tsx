@@ -43,6 +43,11 @@ export function App() {
     setActivePanel("form");
   }
 
+  function showRecipesList() {
+    setSelectedId(null);
+    setActivePanel("library");
+  }
+
   function startEdit(recipe: Recipe) {
     draftApi.startEdit(recipe);
     setActivePanel("form");
@@ -86,7 +91,12 @@ export function App() {
 
   return (
     <main className="app-shell">
-      <AppHeader activePanel={activePanel} onPanelChange={setActivePanel} onNewRecipe={startNewRecipe} />
+      <AppHeader
+        activePanel={activePanel}
+        onPanelChange={setActivePanel}
+        onShowRecipes={showRecipesList}
+        onNewRecipe={startNewRecipe}
+      />
 
       {status.status && (
         <div className="notice" role="status">

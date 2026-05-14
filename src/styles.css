@@ -140,6 +140,30 @@ label {
   text-transform: uppercase;
 }
 
+.app-title {
+  display: block;
+  margin: 0;
+  padding: 0;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: clamp(2.25rem, 6vw, 4rem);
+  font-weight: 700;
+  line-height: 0.95;
+  text-align: left;
+}
+
+.app-title:hover {
+  color: var(--color-accent);
+}
+
+.app-title:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
 .muted {
   color: var(--color-muted);
 }

@@ -1,6 +1,6 @@
 {
-  "name": "Toque - Carnet de recettes",
-  "short_name": "Toque",
+  "name": "Toquooking - Carnet de recettes",
+  "short_name": "Toquooking",
   "description": "Hub local-first pour sauvegarder, filtrer et partager des recettes.",
   "start_url": "/",
   "display": "standalone",

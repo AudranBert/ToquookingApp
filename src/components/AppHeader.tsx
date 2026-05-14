@@ -4,15 +4,18 @@ import type { Panel } from "../types";
 type Props = {
   activePanel: Panel;
   onPanelChange: (panel: Panel) => void;
+  onShowRecipes: () => void;
   onNewRecipe: () => void;
 };
 
-export function AppHeader({ activePanel, onPanelChange, onNewRecipe }: Props) {
+export function AppHeader({ activePanel, onPanelChange, onShowRecipes, onNewRecipe }: Props) {
   return (
     <header className="app-header">
       <div>
-        <span className="eyebrow">Carnet local-first</span>
-        <h1>Toque</h1>
+        <span className="eyebrow">Carnet local de recettes - DEV</span>
+        <button className="app-title" onClick={onShowRecipes} type="button">
+          Toquooking
+        </button>
       </div>
       <nav className="nav-tabs" aria-label="Navigation principale">
         <button
