@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { X } from "lucide-react";
-import { exportElementAsPdf, exportElementAsPng, recipeFileName } from "./exporters";
+import { exportElementAsPdf, exportElementAsPng, recipeFileName, shareElementAsPng } from "./exporters";
+import { db } from "./db";
 import { MONTH_NAMES } from "./seasonal";
 import { AppHeader } from "./components/AppHeader";
 import { BackupScreen } from "./screens/BackupScreen";
@@ -9,6 +10,12 @@ import { LibraryScreen } from "./screens/LibraryScreen";
 import { RecipeForm } from "./screens/RecipeForm";
 import { ShoppingScreen } from "./screens/ShoppingScreen";
 import { downloadRecipesBackup } from "./utils/backup";
+import {
+  clearRecipeShareFromLocation,
+  createRecipeShareUrl,
+  readRecipeShareFromLocation,
+  sharedRecipeToImport,
+} from "./utils/recipeShare";
 import { useStatus } from "./hooks/useStatus";
 import { useRecipes } from "./hooks/useRecipes";
 import { useRecipeFilters } from "./hooks/useRecipeFilters";
@@ -27,6 +34,7 @@ export function App() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<Panel>("library");
+  const [handledSharedRecipe, setHandledSharedRecipe] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -34,6 +42,34 @@ export function App() {
       navigator.serviceWorker.register("/sw.js").catch(() => undefined);
     }
   }, []);
+
+  useEffect(() => {
+    if (handledSharedRecipe) return;
+    const sharedRecipe = readRecipeShareFromLocation();
+    if (!sharedRecipe) {
+      setHandledSharedRecipe(true);
+      return;
+    }
+
+    setHandledSharedRecipe(true);
+    clearRecipeShareFromLocation();
+
+    if (!window.confirm(`Ajouter "${sharedRecipe.name}" a ton carnet Toque ?`)) return;
+
+    db.recipes
+      .toArray()
+      .then((existingRecipes) => {
+        const importedRecipe = sharedRecipeToImport(sharedRecipe, existingRecipes);
+        return db.recipes.put(importedRecipe).then(() => importedRecipe);
+      })
+      .then(async (importedRecipe) => {
+        await refresh();
+        setSelectedId(importedRecipe.id);
+        setActivePanel("library");
+        status.setStatus("Recette importee.");
+      })
+      .catch(() => status.setStatus("Impossible d'importer cette recette."));
+  }, [handledSharedRecipe, refresh, status]);
 
   const selectedRecipe = selectedId ? recipes.find((recipe) => recipe.id === selectedId) : undefined;
   const seasonMonthName = MONTH_NAMES[new Date().getMonth()];
@@ -89,6 +125,29 @@ export function App() {
     }
   }
 
+  async function shareSelected() {
+    if (!selectedRecipe || !printRef.current) return;
+    const shareUrl = createRecipeShareUrl(selectedRecipe);
+
+    try {
+      const result = await shareElementAsPng(
+        printRef.current,
+        recipeFileName(selectedRecipe, "png"),
+        selectedRecipe.name,
+        shareUrl,
+      );
+
+      if (result === "downloaded") {
+        status.setStatus("PNG telecharge. Le partage natif n'est pas disponible sur cet appareil.");
+      } else if (result === "shared-link") {
+        status.setStatus("Lien de recette partage.");
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      status.setStatus("Le partage n'a pas abouti.");
+    }
+  }
+
   return (
     <main className="app-shell">
       <AppHeader
@@ -131,6 +190,7 @@ export function App() {
             onDelete: handleDelete,
             onDuplicate: handleDuplicate,
             onExport: exportSelected,
+            onShare: shareSelected,
             onSelectRecipe: setSelectedId,
             onShowList: () => setSelectedId(null),
           }}

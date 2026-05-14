@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { BookOpen, Edit3, FileDown, FileImage, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Edit3, FileDown, FileImage, Plus, Share2, Trash2 } from "lucide-react";
 import type { Recipe } from "../types";
 import { currentSeasonalIngredients, recipeContainsSeasonalIngredient } from "../seasonal";
 import { proxiedImageUrl } from "../utils/images";
@@ -13,9 +13,10 @@ type Props = {
   onDelete: (recipe: Recipe) => void;
   onDuplicate: (recipe: Recipe) => void;
   onExport: (format: "pdf" | "png") => void;
+  onShare: () => void;
 };
 
-export function RecipeDetail({ recipe, printRef, onEdit, onDelete, onDuplicate, onExport }: Props) {
+export function RecipeDetail({ recipe, printRef, onEdit, onDelete, onDuplicate, onExport, onShare }: Props) {
   if (!recipe) {
     return (
       <section className="empty-state panel">
@@ -40,6 +41,9 @@ export function RecipeDetail({ recipe, printRef, onEdit, onDelete, onDuplicate, 
         </button>
         <button className="button" onClick={() => onExport("png")} title="Exporter en PNG">
           <FileImage size={18} /> PNG
+        </button>
+        <button className="button button--primary" onClick={onShare} title="Partager la recette">
+          <Share2 size={18} /> Partager
         </button>
         <button className="button button--danger" onClick={() => onDelete(recipe)} title="Supprimer">
           <Trash2 size={18} /> Supprimer
