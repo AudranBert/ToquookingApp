@@ -1,7 +1,9 @@
 import type { RefObject } from "react";
 import { BookOpen, Edit3, FileDown, FileImage, Plus, Trash2 } from "lucide-react";
 import type { Recipe } from "../types";
+import { currentSeasonalIngredients, recipeContainsSeasonalIngredient } from "../seasonal";
 import { proxiedImageUrl } from "../utils/images";
+import { isPantryIngredient } from "../utils/ingredients";
 import { ingredientLabel } from "../utils/recipes";
 
 type Props = {
@@ -68,7 +70,15 @@ export function RecipeDetail({ recipe, printRef, onEdit, onDelete, onDuplicate, 
             <h3>Ingrédients</h3>
             <ul>
               {recipe.ingredients.map((ingredient) => (
-                <li key={ingredient.id}>{ingredientLabel(ingredient)}</li>
+                <li className="ingredient-status-row" key={ingredient.id}>
+                  <span>{ingredientLabel(ingredient)}</span>
+                  <span className="ingredient-badges">
+                    {recipeContainsSeasonalIngredient([ingredient.name], currentSeasonalIngredients()) && (
+                      <span className="chip chip--seasonal">De saison</span>
+                    )}
+                    {isPantryIngredient(ingredient) && <span className="chip chip--pantry">Placard</span>}
+                  </span>
+                </li>
               ))}
             </ul>
           </section>

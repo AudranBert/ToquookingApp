@@ -1,3 +1,5 @@
+import { canonicalIngredientKey } from "./utils/ingredients";
+
 export type SeasonalCategory = "fruits-legumes" | "poissons-fruits-de-mer";
 
 export type SeasonalMonth = {
@@ -249,6 +251,11 @@ export function currentSeasonalIngredients(date = new Date()) {
 }
 
 export function recipeContainsSeasonalIngredient(ingredientNames: string[], seasonals: string[]) {
-  const haystack = normalizeText(ingredientNames.join(" "));
-  return seasonals.some((ingredient) => haystack.includes(normalizeText(ingredient)));
+  return countSeasonalIngredientMatches(ingredientNames, seasonals) > 0;
+}
+
+export function countSeasonalIngredientMatches(ingredientNames: string[], seasonals: string[]) {
+  const ingredientKeys = new Set(ingredientNames.map(canonicalIngredientKey));
+  const seasonalKeys = new Set(seasonals.map(canonicalIngredientKey));
+  return [...ingredientKeys].filter((ingredient) => seasonalKeys.has(ingredient)).length;
 }

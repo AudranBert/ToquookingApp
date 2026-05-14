@@ -76,6 +76,7 @@ export function ShoppingScreen({
                   )
                 }
               />
+              {item.pantry && <span className="chip chip--pantry">Placard</span>}
             </label>
           ))}
           <button className="button button--ghost button--full" onClick={onAddItem}>

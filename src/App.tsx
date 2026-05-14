@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { db } from "./db";
 import { exportElementAsPdf, exportElementAsPng, recipeFileName } from "./exporters";
 import { importRecipeFromUrl } from "./importer";
-import { currentSeasonalIngredients, recipeContainsSeasonalIngredient } from "./seasonal";
+import { countSeasonalIngredientMatches, currentSeasonalIngredients, MONTH_NAMES } from "./seasonal";
 import { AppHeader, type Panel } from "./components/AppHeader";
 import { BackupScreen } from "./screens/BackupScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
@@ -20,9 +20,9 @@ import {
 } from "./utils/recipes";
 import type { Recipe, RecipeDraft, ShoppingItem } from "./types";
 import { createId } from "./utils/id";
-import { ingredientSearchText } from "./utils/ingredients";
 
 type ReimportMode = "replace" | "fill-blanks";
+type SeasonalThreshold = 0 | 1 | 3;
 
 export function App() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -31,7 +31,7 @@ export function App() {
   const [draft, setDraft] = useState<RecipeDraft>(createEmptyDraft);
   const [query, setQuery] = useState("");
   const [tagFilter, setTagFilter] = useState("");
-  const [seasonalOnly, setSeasonalOnly] = useState(false);
+  const [seasonalThreshold, setSeasonalThreshold] = useState<SeasonalThreshold>(0);
   const [importUrl, setImportUrl] = useState("");
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
   const [shoppingIds, setShoppingIds] = useState<string[]>([]);
@@ -47,28 +47,43 @@ export function App() {
     }
   }, []);
 
-  const selectedRecipe = recipes.find((recipe) => recipe.id === selectedId) ?? recipes[0];
+  const selectedRecipe = selectedId ? recipes.find((recipe) => recipe.id === selectedId) : undefined;
   const seasonalIngredients = currentSeasonalIngredients();
+  const seasonMonthName = MONTH_NAMES[new Date().getMonth()];
 
   const allTags = useMemo(
     () => [...new Set(recipes.flatMap((recipe) => recipe.tags))].sort((a, b) => a.localeCompare(b, "fr")),
     [recipes],
   );
 
+  const seasonalMatchCounts = useMemo(
+    () =>
+      new Map(
+        recipes.map((recipe) => [
+          recipe.id,
+          countSeasonalIngredientMatches(
+            recipe.ingredients.map((ingredient) => ingredient.name),
+            seasonalIngredients,
+          ),
+        ]),
+      ),
+    [recipes, seasonalIngredients],
+  );
+
+  const seasonalRecipeIds = useMemo(
+    () => new Set([...seasonalMatchCounts].filter(([, count]) => count > 0).map(([id]) => id)),
+    [seasonalMatchCounts],
+  );
+
   const filteredRecipes = useMemo(
     () =>
       recipes.filter((recipe) => {
         const tagMatches = !tagFilter || recipe.tags.includes(tagFilter);
-        const seasonMatches =
-          !seasonalOnly ||
-          recipeContainsSeasonalIngredient(
-            recipe.ingredients.map((ingredient) => ingredientSearchText(ingredient.name)),
-            seasonalIngredients,
-          );
+        const seasonMatches = seasonalThreshold === 0 || (seasonalMatchCounts.get(recipe.id) ?? 0) >= seasonalThreshold;
 
         return recipeMatchesQuery(recipe, query) && tagMatches && seasonMatches;
       }),
-    [recipes, query, tagFilter, seasonalIngredients, seasonalOnly],
+    [recipes, query, tagFilter, seasonalThreshold, seasonalMatchCounts],
   );
 
   const selectedShoppingRecipes = recipes.filter((recipe) => shoppingIds.includes(recipe.id));
@@ -111,7 +126,7 @@ export function App() {
 
     await db.recipes.put(recipe);
     await refreshRecipes(recipe.id);
-    setSelectedId(recipe.id);
+    setSelectedId(null);
     setActivePanel("library");
     setStatus(editingId ? "Recette mise à jour." : "Recette enregistrée.");
   }
@@ -221,7 +236,10 @@ export function App() {
           importUrl={importUrl}
           query={query}
           selectedRecipe={selectedRecipe}
-          seasonalOnly={seasonalOnly}
+          seasonalMatchCounts={seasonalMatchCounts}
+          seasonalRecipeIds={seasonalRecipeIds}
+          seasonalThreshold={seasonalThreshold}
+          seasonMonthName={seasonMonthName}
           tagFilter={tagFilter}
           printRef={printRef}
           onDelete={deleteRecipe}
@@ -232,8 +250,9 @@ export function App() {
           onImportUrlChange={setImportUrl}
           onNewRecipe={startNewRecipe}
           onQueryChange={setQuery}
-          onSeasonalOnlyChange={setSeasonalOnly}
+          onSeasonalThresholdChange={setSeasonalThreshold}
           onSelectRecipe={setSelectedId}
+          onShowList={() => setSelectedId(null)}
           onTagFilterChange={setTagFilter}
         />
       )}

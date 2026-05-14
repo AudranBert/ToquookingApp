@@ -41,4 +41,5 @@ export type ShoppingItem = {
   label: string;
   checked: boolean;
   recipeIds: string[];
+  pantry?: boolean;
 };

@@ -239,8 +239,10 @@ label {
   gap: var(--space-6);
 }
 
-.layout--library {
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+.library-view {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: var(--space-6);
 }
 
 .layout--split {
@@ -308,6 +310,63 @@ label {
   min-width: 0;
 }
 
+.detail-pane {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.detail-pane > .button {
+  justify-self: start;
+}
+
+.recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+  align-content: start;
+}
+
+.recipe-card-button {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+  min-height: 100%;
+  padding: var(--space-3);
+  text-align: left;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+}
+
+.recipe-card-button img,
+.recipe-card-placeholder {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: #f6ead8;
+  border-radius: var(--radius-sm);
+}
+
+.recipe-card-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.recipe-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  color: var(--color-muted);
+}
+
+.recipe-card-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 .recipe-card {
   padding: clamp(18px, 3vw, 34px);
   background: var(--color-surface);
@@ -343,6 +402,32 @@ label {
   background: #f6ead8;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
+}
+
+.chip--seasonal {
+  color: #335620;
+  background: #e7f3de;
+  border-color: #b8d49f;
+}
+
+.chip--pantry {
+  color: #5b4a22;
+  background: #f4ead0;
+  border-color: #d9bf7c;
+}
+
+.ingredient-status-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: start;
+}
+
+.ingredient-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  justify-content: flex-end;
 }
 
 .recipe-columns {
@@ -448,7 +533,7 @@ label {
     width: 100%;
   }
 
-  .layout--library,
+  .library-view,
   .layout--split,
   .recipe-columns,
   .form-grid,

@@ -1,6 +1,6 @@
 import type { Ingredient, Recipe, RecipeDraft, ShoppingItem } from "../types";
 import { createId } from "./id";
-import { canonicalIngredientKey, ingredientSearchText } from "./ingredients";
+import { canonicalIngredientKey, ingredientSearchText, isPantryIngredient } from "./ingredients";
 import { normalizeText } from "./text";
 
 export const emptyRecipeDraft: RecipeDraft = {
@@ -104,9 +104,10 @@ export function buildShoppingList(recipes: Recipe[]) {
         label,
         checked: false,
         recipeIds: [recipe.id],
+        pantry: isPantryIngredient(ingredient),
       });
     });
   });
 
-  return [...grouped.values()].sort((a, b) => a.label.localeCompare(b.label, "fr"));
+  return [...grouped.values()].sort((a, b) => Number(a.pantry) - Number(b.pantry) || a.label.localeCompare(b.label, "fr"));
 }

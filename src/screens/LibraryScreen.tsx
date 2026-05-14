@@ -1,7 +1,10 @@
 import type { RefObject } from "react";
-import { Filter, Link, Plus, Search } from "lucide-react";
+import { ArrowLeft, Clock, Filter, Link, Plus, Search, Users } from "lucide-react";
 import { RecipeDetail } from "../components/RecipeDetail";
 import type { Recipe } from "../types";
+import { proxiedImageUrl } from "../utils/images";
+
+type SeasonalThreshold = 0 | 1 | 3;
 
 type Props = {
   allTags: string[];
@@ -9,7 +12,10 @@ type Props = {
   importUrl: string;
   query: string;
   selectedRecipe?: Recipe;
-  seasonalOnly: boolean;
+  seasonalMatchCounts: Map<string, number>;
+  seasonalRecipeIds: Set<string>;
+  seasonalThreshold: SeasonalThreshold;
+  seasonMonthName: string;
   tagFilter: string;
   printRef: RefObject<HTMLDivElement>;
   onDelete: (recipe: Recipe) => void;
@@ -20,8 +26,9 @@ type Props = {
   onImportUrlChange: (url: string) => void;
   onNewRecipe: () => void;
   onQueryChange: (query: string) => void;
-  onSeasonalOnlyChange: (enabled: boolean) => void;
+  onSeasonalThresholdChange: (threshold: SeasonalThreshold) => void;
   onSelectRecipe: (id: string) => void;
+  onShowList: () => void;
   onTagFilterChange: (tag: string) => void;
 };
 
@@ -31,7 +38,10 @@ export function LibraryScreen({
   importUrl,
   query,
   selectedRecipe,
-  seasonalOnly,
+  seasonalMatchCounts,
+  seasonalRecipeIds,
+  seasonalThreshold,
+  seasonMonthName,
   tagFilter,
   printRef,
   onDelete,
@@ -42,12 +52,13 @@ export function LibraryScreen({
   onImportUrlChange,
   onNewRecipe,
   onQueryChange,
-  onSeasonalOnlyChange,
+  onSeasonalThresholdChange,
   onSelectRecipe,
+  onShowList,
   onTagFilterChange,
 }: Props) {
   return (
-    <section className="layout layout--library">
+    <section className="library-view">
       <aside className="panel sidebar">
         <div className="field-group">
           <label htmlFor="import-url">Importer depuis un lien</label>
@@ -88,35 +99,99 @@ export function LibraryScreen({
               ))}
             </select>
           </label>
-          <label className="check-control">
-            <input checked={seasonalOnly} onChange={(event) => onSeasonalOnlyChange(event.target.checked)} type="checkbox" />
-            <span>Ingrédients de saison</span>
+          <label>
+            Ingrédients de saison
+            <select
+              value={seasonalThreshold}
+              onChange={(event) => onSeasonalThresholdChange(Number(event.target.value) as SeasonalThreshold)}
+            >
+              <option value={0}>Toutes les recettes</option>
+              <option value={1}>Au moins 1</option>
+              <option value={3}>Au moins 3</option>
+            </select>
           </label>
         </div>
 
-        <div className="recipe-list">
-          {filteredRecipes.length === 0 && <p className="muted">Aucune recette pour ces filtres.</p>}
-          {filteredRecipes.map((recipe) => (
-            <button
-              key={recipe.id}
-              className={recipe.id === selectedRecipe?.id ? "recipe-row recipe-row--active" : "recipe-row"}
-              onClick={() => onSelectRecipe(recipe.id)}
-            >
-              <strong>{recipe.name}</strong>
-              <span>{recipe.ingredients.length} ingrédient(s)</span>
-            </button>
-          ))}
-        </div>
+        <p className="muted">
+          {filteredRecipes.length} recette(s)
+          {seasonalThreshold > 0 ? ` avec au moins ${seasonalThreshold} ingrédient(s) de saison en ${seasonMonthName}` : ""}
+        </p>
+        {seasonalThreshold === 0 && (
+          <p className="muted">
+            {seasonalRecipeIds.size} recette(s) contiennent au moins un ingrédient de saison en {seasonMonthName}.
+          </p>
+        )}
       </aside>
 
-      <RecipeDetail
-        recipe={selectedRecipe}
-        printRef={printRef}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onDuplicate={onDuplicate}
-        onExport={onExport}
-      />
+      {selectedRecipe ? (
+        <div className="detail-pane">
+          <button className="button button--ghost" onClick={onShowList}>
+            <ArrowLeft size={18} /> Toutes les recettes
+          </button>
+          <RecipeDetail
+            recipe={selectedRecipe}
+            printRef={printRef}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onDuplicate={onDuplicate}
+            onExport={onExport}
+          />
+        </div>
+      ) : (
+        <RecipeGrid recipes={filteredRecipes} seasonalMatchCounts={seasonalMatchCounts} seasonalRecipeIds={seasonalRecipeIds} onSelectRecipe={onSelectRecipe} />
+      )}
+    </section>
+  );
+}
+
+function RecipeGrid({
+  recipes,
+  seasonalMatchCounts,
+  seasonalRecipeIds,
+  onSelectRecipe,
+}: {
+  recipes: Recipe[];
+  seasonalMatchCounts: Map<string, number>;
+  seasonalRecipeIds: Set<string>;
+  onSelectRecipe: (id: string) => void;
+}) {
+  if (recipes.length === 0) {
+    return (
+      <section className="empty-state panel">
+        <h2>Aucune recette</h2>
+        <p>Ajoute une recette ou modifie les filtres.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="recipe-grid" aria-label="Toutes les recettes">
+      {recipes.map((recipe) => (
+        <button className="recipe-card-button" key={recipe.id} onClick={() => onSelectRecipe(recipe.id)}>
+          {recipe.imageUrl ? <img src={proxiedImageUrl(recipe.imageUrl)} alt="" /> : <div className="recipe-card-placeholder" />}
+          <span className="recipe-card-title">{recipe.name}</span>
+          <span className="recipe-card-meta">
+            <span>
+              <Users size={15} /> {recipe.servings ?? "-"}
+            </span>
+            <span>
+              <Clock size={15} /> {recipe.totalTime ? `${recipe.totalTime} min` : "-"}
+            </span>
+          </span>
+          {(recipe.tags.length > 0 || seasonalRecipeIds.has(recipe.id)) && (
+            <span className="chip-list">
+              {seasonalRecipeIds.has(recipe.id) && (
+                <span className="chip chip--seasonal">{seasonalMatchCounts.get(recipe.id)} de saison</span>
+              )}
+              {recipe.tags.slice(0, 4).map((tag) => (
+                <span className="chip" key={tag}>
+                  {tag}
+                </span>
+              ))}
+            </span>
+          )}
+        </button>
+      ))}
     </section>
   );
 }
