@@ -6,8 +6,10 @@ import { recipeMatchesQuery } from "../utils/recipes";
 
 export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
   const [query, setQuery] = useState("");
-  const [tagFilter, setTagFilter] = useState("");
+  const [tagFilters, setTagFilters] = useState<string[]>([]);
   const [originFilter, setOriginFilter] = useState("");
+  const [noHeatingOnly, setNoHeatingOnly] = useState(false);
+  const [maxTotalTime, setMaxTotalTime] = useState<number | undefined>();
   const [seasonalThreshold, setSeasonalThreshold] = useState<SeasonalThreshold>(0);
 
   const seasonalIngredients = currentSeasonalIngredients();
@@ -34,22 +36,35 @@ export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
   const filteredRecipes = useMemo(
     () =>
       recipes.filter((recipe) => {
-        const tagMatches = !tagFilter || recipe.tags.includes(tagFilter);
+        const tagMatches = tagFilters.every((tag) => recipe.tags.includes(tag));
         const originMatches = originMatchesFilter(recipe.origin, originFilter);
+        const heatingMatches = !noHeatingOnly || !recipe.cookTime;
+        const totalTimeMatches = !maxTotalTime || Boolean(recipe.totalTime && recipe.totalTime <= maxTotalTime);
         const seasonMatches =
           seasonalThreshold === 0 || (seasonalMatchCounts.get(recipe.id) ?? 0) >= seasonalThreshold;
-        return recipeMatchesQuery(recipe, query) && tagMatches && originMatches && seasonMatches;
+        return (
+          recipeMatchesQuery(recipe, query) &&
+          tagMatches &&
+          originMatches &&
+          heatingMatches &&
+          totalTimeMatches &&
+          seasonMatches
+        );
       }),
-    [recipes, query, tagFilter, originFilter, seasonalThreshold, seasonalMatchCounts],
+    [recipes, query, tagFilters, originFilter, noHeatingOnly, maxTotalTime, seasonalThreshold, seasonalMatchCounts],
   );
 
   return {
     query,
     setQuery,
-    tagFilter,
-    setTagFilter,
+    tagFilters,
+    setTagFilters,
     originFilter,
     setOriginFilter,
+    noHeatingOnly,
+    setNoHeatingOnly,
+    maxTotalTime,
+    setMaxTotalTime,
     seasonalThreshold,
     setSeasonalThreshold,
     allTags: globalTags,

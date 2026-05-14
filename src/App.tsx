@@ -101,15 +101,19 @@ export function App() {
         <LibraryScreen
           filters={{
             query: filters.query,
-            tagFilter: filters.tagFilter,
+            tagFilters: filters.tagFilters,
             originFilter: filters.originFilter,
+            noHeatingOnly: filters.noHeatingOnly,
+            maxTotalTime: filters.maxTotalTime,
             seasonalThreshold: filters.seasonalThreshold,
             allTags: filters.allTags,
           }}
           filterHandlers={{
             onQueryChange: filters.setQuery,
-            onTagFilterChange: filters.setTagFilter,
+            onTagFiltersChange: filters.setTagFilters,
             onOriginFilterChange: filters.setOriginFilter,
+            onNoHeatingOnlyChange: filters.setNoHeatingOnly,
+            onMaxTotalTimeChange: filters.setMaxTotalTime,
             onSeasonalThresholdChange: filters.setSeasonalThreshold,
           }}
           actions={{

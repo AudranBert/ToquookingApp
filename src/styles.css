@@ -371,6 +371,17 @@ label {
   gap: var(--space-1);
 }
 
+.tag-filter {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.tag-filter__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
 .origin-filter__option {
   min-height: 32px;
   padding: 6px 9px;
@@ -386,6 +397,17 @@ label {
   color: var(--color-primary-text);
   background: var(--color-primary);
   border-color: var(--color-primary);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.checkbox-row input {
+  width: auto;
+  min-height: 0;
 }
 
 .check-control input,

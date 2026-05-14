@@ -10,16 +10,20 @@ import { normalizeText } from "../utils/text";
 
 export type LibraryFilters = {
   query: string;
-  tagFilter: string;
+  tagFilters: string[];
   originFilter: string;
+  noHeatingOnly: boolean;
+  maxTotalTime?: number;
   seasonalThreshold: SeasonalThreshold;
   allTags: string[];
 };
 
 export type LibraryFilterHandlers = {
   onQueryChange: (query: string) => void;
-  onTagFilterChange: (tag: string) => void;
+  onTagFiltersChange: (tags: string[]) => void;
   onOriginFilterChange: (origin: string) => void;
+  onNoHeatingOnlyChange: (enabled: boolean) => void;
+  onMaxTotalTimeChange: (minutes?: number) => void;
   onSeasonalThresholdChange: (threshold: SeasonalThreshold) => void;
 };
 
@@ -155,18 +159,63 @@ function LibrarySidebar({
             placeholder="Nom, ingrédient, tag"
           />
         </label>
+        <div className="tag-filter">
+          <div className="origin-filter__header">
+            <span className="label-with-icon">
+              <Filter size={16} /> Tags
+            </span>
+            {filters.tagFilters.length > 0 && (
+              <button className="origin-filter__clear" type="button" onClick={() => handlers.onTagFiltersChange([])}>
+                <X size={14} /> Effacer
+              </button>
+            )}
+          </div>
+          <div className="tag-filter__options">
+            {filters.allTags.length > 0 ? (
+              filters.allTags.map((tag) => {
+                const selected = filters.tagFilters.includes(tag);
+                return (
+                  <button
+                    className={`origin-filter__option${selected ? " origin-filter__option--active" : ""}`}
+                    key={tag}
+                    type="button"
+                    onClick={() =>
+                      handlers.onTagFiltersChange(
+                        selected ? filters.tagFilters.filter((selectedTag) => selectedTag !== tag) : [...filters.tagFilters, tag],
+                      )
+                    }
+                    aria-pressed={selected}
+                  >
+                    {tag}
+                  </button>
+                );
+              })
+            ) : (
+              <p className="empty-inline">Aucun tag.</p>
+            )}
+          </div>
+        </div>
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={filters.noHeatingOnly}
+            onChange={(event) => handlers.onNoHeatingOnlyChange(event.target.checked)}
+          />
+          <span>No heating</span>
+        </label>
         <label>
-          <span className="label-with-icon">
-            <Filter size={16} /> Tag
-          </span>
-          <select value={filters.tagFilter} onChange={(event) => handlers.onTagFilterChange(event.target.value)}>
-            <option value="">Tous les tags</option>
-            {filters.allTags.map((tag) => (
-              <option key={tag} value={tag}>
-                {tag}
-              </option>
-            ))}
-          </select>
+          Total ≤ X min
+          <input
+            type="number"
+            min="1"
+            inputMode="numeric"
+            value={filters.maxTotalTime ?? ""}
+            onChange={(event) => {
+              const minutes = Number(event.target.value);
+              handlers.onMaxTotalTimeChange(minutes > 0 ? minutes : undefined);
+            }}
+            placeholder="Minutes"
+          />
         </label>
         <OriginFilterPicker value={filters.originFilter} onChange={handlers.onOriginFilterChange} />
         <label>
