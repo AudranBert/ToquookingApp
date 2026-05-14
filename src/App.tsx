@@ -9,11 +9,12 @@ import { BackupScreen } from "./screens/BackupScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
 import { RecipeForm } from "./screens/RecipeForm";
 import { ShoppingScreen } from "./screens/ShoppingScreen";
-import { downloadRecipesBackup } from "./utils/backup";
+import { downloadRecipesBackup, shareSingleRecipeBackup } from "./utils/backup";
 import {
   clearRecipeShareFromLocation,
   createRecipeShareUrl,
   readRecipeShareFromLocation,
+  shareRecipeText,
   sharedRecipeToImport,
 } from "./utils/recipeShare";
 import { useStatus } from "./hooks/useStatus";
@@ -148,6 +149,31 @@ export function App() {
     }
   }
 
+  async function shareSelectedText() {
+    if (!selectedRecipe) return;
+
+    try {
+      const result = await shareRecipeText(selectedRecipe);
+      if (result === "copied") status.setStatus("Texte de la recette copie.");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      status.setStatus("Le partage texte n'a pas abouti.");
+    }
+  }
+
+  async function exportSelectedRecipeFile() {
+    if (!selectedRecipe) return;
+    try {
+      const result = await shareSingleRecipeBackup(selectedRecipe);
+      if (result === "downloaded") {
+        status.setStatus("Fichier recette telecharge. Il peut etre importe depuis Sauvegarde.");
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      status.setStatus("Le partage du fichier n'a pas abouti.");
+    }
+  }
+
   return (
     <main className="app-shell">
       <AppHeader
@@ -191,6 +217,8 @@ export function App() {
             onDuplicate: handleDuplicate,
             onExport: exportSelected,
             onShare: shareSelected,
+            onShareText: shareSelectedText,
+            onExportRecipeFile: exportSelectedRecipeFile,
             onSelectRecipe: setSelectedId,
             onShowList: () => setSelectedId(null),
           }}

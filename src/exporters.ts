@@ -76,7 +76,7 @@ export async function exportElementAsPdf(element: HTMLElement, filename: string)
   pdf.save(filename);
 }
 
-export function recipeFileName(recipe: Recipe, extension: "pdf" | "png") {
+export function recipeFileName(recipe: Recipe, extension: "pdf" | "png" | "json") {
   const slug = recipe.name
     .toLowerCase()
     .normalize("NFD")

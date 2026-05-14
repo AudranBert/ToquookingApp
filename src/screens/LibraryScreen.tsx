@@ -33,6 +33,8 @@ export type LibraryRecipeActions = {
   onDuplicate: (recipe: Recipe) => void;
   onExport: (format: "pdf" | "png") => void;
   onShare: () => void;
+  onShareText: () => void;
+  onExportRecipeFile: () => void;
   onSelectRecipe: (id: string) => void;
   onShowList: () => void;
 };
@@ -83,6 +85,8 @@ export function LibraryScreen({
             onDuplicate={actions.onDuplicate}
             onExport={actions.onExport}
             onShare={actions.onShare}
+            onShareText={actions.onShareText}
+            onExportRecipeFile={actions.onExportRecipeFile}
           />
         </div>
       ) : (

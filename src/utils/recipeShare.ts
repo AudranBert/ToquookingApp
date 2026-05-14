@@ -1,6 +1,6 @@
 import type { Recipe, RecipeDraft } from "../types";
 import { createId } from "./id";
-import { cleanRecipeDraft, nowIso, recipeToDraft } from "./recipes";
+import { cleanRecipeDraft, ingredientLabel, nowIso, recipeToDraft } from "./recipes";
 
 const SHARE_HASH_KEY = "toqueRecipe";
 
@@ -40,6 +40,41 @@ export function sharedRecipeToImport(recipe: Recipe, existingRecipes: Recipe[]):
   };
 }
 
+export function recipeToShareText(recipe: Recipe) {
+  const lines = [
+    recipe.name,
+    "",
+    formatMeta(recipe),
+    recipe.tags.length ? `Tags: ${recipe.tags.join(", ")}` : "",
+    recipe.origin ? `Origine: ${recipe.origin}` : "",
+    "",
+    "Ingredients:",
+    ...recipe.ingredients.map((ingredient) => `- ${ingredientLabel(ingredient)}`),
+    "",
+    "Instructions:",
+    ...recipe.instructions.map((step, index) => `${index + 1}. ${step}`),
+    recipe.notes ? "" : "",
+    recipe.notes ? "Notes:" : "",
+    recipe.notes ?? "",
+    recipe.sourceUrl ? "" : "",
+    recipe.sourceUrl ? `Source: ${recipe.sourceUrl}` : "",
+    recipe.videoUrl ? `Video: ${recipe.videoUrl}` : "",
+  ];
+
+  return lines.filter((line, index, allLines) => line || allLines[index - 1]).join("\n").trim();
+}
+
+export async function shareRecipeText(recipe: Recipe) {
+  const text = recipeToShareText(recipe);
+  if (navigator.share) {
+    await navigator.share({ title: recipe.name, text });
+    return "shared";
+  }
+
+  await navigator.clipboard.writeText(text);
+  return "copied";
+}
+
 function encodeRecipeSharePayload(recipe: Recipe) {
   const json = JSON.stringify(recipeToDraft(recipe));
   const bytes = new TextEncoder().encode(json);
@@ -72,4 +107,15 @@ function decodeRecipeSharePayload(payload: string): Recipe | null {
 
 function recipeImportKey(recipe: Pick<Recipe, "name" | "sourceUrl">) {
   return `${recipe.name.trim().toLowerCase()} ${recipe.sourceUrl?.trim().toLowerCase() ?? ""}`;
+}
+
+function formatMeta(recipe: Recipe) {
+  const meta = [
+    recipe.servings ? `${recipe.servings} personne(s)` : "",
+    recipe.prepTime ? `Preparation ${recipe.prepTime} min` : "",
+    recipe.cookTime ? `Cuisson ${recipe.cookTime} min` : "",
+    recipe.totalTime ? `Total ${recipe.totalTime} min` : "",
+  ].filter(Boolean);
+
+  return meta.length ? meta.join(" | ") : "";
 }
