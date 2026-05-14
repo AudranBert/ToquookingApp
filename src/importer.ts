@@ -1,4 +1,5 @@
 import type { ParsedRecipe } from "./types";
+import { findKnownRecipeOrigin } from "./origins";
 import { parseIngredientLine } from "./utils/ingredients";
 import { createId } from "./utils/id";
 
@@ -14,6 +15,14 @@ function arrayify(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(String).filter(Boolean);
   if (typeof value === "string") return value.split(/\n|;/).map((item) => item.trim()).filter(Boolean);
   return [];
+}
+
+function metadataValues(recipe: Record<string, unknown>) {
+  return [
+    ...arrayify(recipe.keywords),
+    ...arrayify(recipe.recipeCategory),
+    ...arrayify(recipe.recipeCuisine),
+  ].map((value) => value.trim()).filter(Boolean);
 }
 
 function extractRecipeFromJsonLd(json: unknown): ParsedRecipe | null {
@@ -45,6 +54,8 @@ function extractRecipeFromJsonLd(json: unknown): ParsedRecipe | null {
 
   return {
     name: typeof recipe.name === "string" ? recipe.name : undefined,
+    origin: findKnownRecipeOrigin(arrayify(recipe.recipeCuisine)),
+    tags: metadataValues(recipe),
     ingredients: arrayify(recipe.recipeIngredient).map(parseIngredientLine),
     instructions: instructionValues.filter(Boolean),
     servings: typeof recipe.recipeYield === "string" ? Number.parseInt(recipe.recipeYield, 10) || undefined : undefined,

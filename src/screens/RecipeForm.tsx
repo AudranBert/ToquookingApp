@@ -10,13 +10,28 @@ type Props = {
   editing: boolean;
   warnings: string[];
   allTags: string[];
+  onCreateTag: (name: string) => void;
+  onRenameTag: (oldName: string, newName: string) => void;
+  onDeleteTag: (name: string) => void;
   onReimport: (mode: ReimportMode) => void;
   onSubmit: (event: FormEvent) => void;
   onCancel: () => void;
   setDraft: Dispatch<SetStateAction<RecipeDraft>>;
 };
 
-export function RecipeForm({ draft, editing, warnings, allTags, onSubmit, onCancel, onReimport, setDraft }: Props) {
+export function RecipeForm({
+  draft,
+  editing,
+  warnings,
+  allTags,
+  onCreateTag,
+  onRenameTag,
+  onDeleteTag,
+  onSubmit,
+  onCancel,
+  onReimport,
+  setDraft,
+}: Props) {
   function updateField<K extends keyof RecipeDraft>(field: K, value: RecipeDraft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
   }
@@ -98,6 +113,9 @@ export function RecipeForm({ draft, editing, warnings, allTags, onSubmit, onCanc
         <TagField
           tags={draft.tags}
           allTags={allTags}
+          onCreateTag={onCreateTag}
+          onRenameTag={onRenameTag}
+          onDeleteTag={onDeleteTag}
           onChange={(tags) => updateField("tags", tags)}
         />
         <label>
@@ -253,10 +271,16 @@ function TextField({
 function TagField({
   tags,
   allTags,
+  onCreateTag,
+  onRenameTag,
+  onDeleteTag,
   onChange,
 }: {
   tags: string[];
   allTags: string[];
+  onCreateTag: (name: string) => void;
+  onRenameTag: (oldName: string, newName: string) => void;
+  onDeleteTag: (name: string) => void;
   onChange: (tags: string[]) => void;
 }) {
   const [input, setInput] = useState("");
@@ -277,7 +301,8 @@ function TagField({
       return;
     }
     const match = allTags.find((existing) => existing.toLowerCase() === tag.toLowerCase());
-    onChange([...tags, match ?? tag]);
+    if (!match) return;
+    onChange([...tags, match]);
     setInput("");
   }
 
@@ -321,11 +346,40 @@ function TagField({
           placeholder={tags.length === 0 ? "plat, chaud, dessert..." : ""}
         />
       </div>
+      {input.trim() && !allTags.some((tag) => tag.toLowerCase() === input.trim().toLowerCase()) && (
+        <button className="button button--ghost tag-field__create" type="button" onClick={() => onCreateTag(input)}>
+          <Plus size={16} /> Ajouter "{input.trim()}" a la liste
+        </button>
+      )}
       <datalist id="recipe-tags">
         {suggestions.map((tag) => (
           <option key={tag} value={tag} />
         ))}
       </datalist>
+      <details className="tag-manager">
+        <summary>Gerer la liste globale</summary>
+        <div className="tag-manager__list">
+          {allTags.map((tag) => (
+            <span className="tag-manager__row" key={tag}>
+              <span>{tag}</span>
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={() => {
+                  const next = window.prompt("Nouveau nom du tag", tag);
+                  if (next) onRenameTag(tag, next);
+                }}
+              >
+                Renommer
+              </button>
+              <button className="button button--danger" type="button" onClick={() => onDeleteTag(tag)}>
+                Supprimer
+              </button>
+            </span>
+          ))}
+          {allTags.length === 0 && <span className="muted">Aucun tag pour l'instant.</span>}
+        </div>
+      </details>
     </label>
   );
 }

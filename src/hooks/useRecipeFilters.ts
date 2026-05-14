@@ -4,18 +4,13 @@ import { countSeasonalIngredientMatches, currentSeasonalIngredients } from "../s
 import { originMatchesFilter } from "../origins";
 import { recipeMatchesQuery } from "../utils/recipes";
 
-export function useRecipeFilters(recipes: Recipe[]) {
+export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
   const [query, setQuery] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [originFilter, setOriginFilter] = useState("");
   const [seasonalThreshold, setSeasonalThreshold] = useState<SeasonalThreshold>(0);
 
   const seasonalIngredients = currentSeasonalIngredients();
-
-  const allTags = useMemo(
-    () => [...new Set(recipes.flatMap((recipe) => recipe.tags))].sort((a, b) => a.localeCompare(b, "fr")),
-    [recipes],
-  );
 
   const seasonalMatchCounts = useMemo(
     () =>
@@ -57,7 +52,7 @@ export function useRecipeFilters(recipes: Recipe[]) {
     setOriginFilter,
     seasonalThreshold,
     setSeasonalThreshold,
-    allTags,
+    allTags: globalTags,
     seasonalMatchCounts,
     seasonalRecipeIds,
     filteredRecipes,

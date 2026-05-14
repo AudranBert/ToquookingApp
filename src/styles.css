@@ -466,7 +466,7 @@ label {
 .recipe-card-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  gap: var(--space-2);
   color: var(--color-muted);
 }
 
@@ -474,6 +474,7 @@ label {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  white-space: nowrap;
 }
 
 .recipe-card {
@@ -573,6 +574,39 @@ label {
   padding: 4px;
   background: transparent;
   font: inherit;
+}
+
+.tag-field__create {
+  justify-self: start;
+  min-height: 34px;
+  padding: 6px 9px;
+}
+
+.tag-manager {
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.tag-manager summary {
+  cursor: pointer;
+}
+
+.tag-manager__list {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.tag-manager__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2);
+  color: var(--color-text);
+  background: rgba(255, 253, 247, 0.72);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
 .ingredient-status-row {

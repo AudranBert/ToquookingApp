@@ -14,13 +14,15 @@ import { useRecipes } from "./hooks/useRecipes";
 import { useRecipeFilters } from "./hooks/useRecipeFilters";
 import { useRecipeDraft } from "./hooks/useRecipeDraft";
 import { useShoppingList } from "./hooks/useShoppingList";
+import { useTags } from "./hooks/useTags";
 import type { Panel, Recipe } from "./types";
 
 export function App() {
   const status = useStatus();
-  const { recipes, save, remove, duplicate, importBackup } = useRecipes(status);
-  const filters = useRecipeFilters(recipes);
-  const draftApi = useRecipeDraft(status);
+  const { recipes, refresh, save, remove, duplicate, importBackup } = useRecipes(status);
+  const tagApi = useTags(recipes, status, refresh);
+  const filters = useRecipeFilters(recipes, tagApi.allTags);
+  const draftApi = useRecipeDraft(status, tagApi.allTags);
   const shopping = useShoppingList(recipes, status);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -136,7 +138,23 @@ export function App() {
           draft={draftApi.draft}
           editing={Boolean(draftApi.editingId)}
           warnings={draftApi.importWarnings}
-          allTags={filters.allTags}
+          allTags={tagApi.allTags}
+          onCreateTag={async (name) => {
+            const tag = await tagApi.createTag(name);
+            if (tag) draftApi.setDraft((current) => ({ ...current, tags: [...current.tags, tag] }));
+          }}
+          onRenameTag={async (oldName, newName) => {
+            const tag = await tagApi.renameTag(oldName, newName);
+            draftApi.setDraft((current) => ({
+              ...current,
+              tags: current.tags.map((currentTag) => (currentTag === oldName ? tag : currentTag)),
+            }));
+          }}
+          onDeleteTag={async (name) => {
+            if (!window.confirm(`Supprimer le tag "${name}" de toutes les recettes ?`)) return;
+            await tagApi.deleteTag(name);
+            draftApi.setDraft((current) => ({ ...current, tags: current.tags.filter((tag) => tag !== name) }));
+          }}
           onCancel={() => setActivePanel("library")}
           onReimport={draftApi.reimport}
           onSubmit={handleSubmit}
@@ -158,7 +176,7 @@ export function App() {
 
       {activePanel === "backup" && (
         <BackupScreen
-          onExport={() => downloadRecipesBackup(recipes)}
+          onExport={() => downloadRecipesBackup(recipes, tagApi.allTags)}
           onImport={handleBackupImport}
         />
       )}

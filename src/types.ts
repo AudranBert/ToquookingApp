@@ -25,6 +25,12 @@ export type Recipe = {
   updatedAt: string;
 };
 
+export type RecipeTag = {
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type RecipeDraft = Omit<Recipe, "id" | "createdAt" | "updatedAt">;
 
 export type ParsedRecipe = Partial<RecipeDraft> & {
@@ -34,6 +40,7 @@ export type ParsedRecipe = Partial<RecipeDraft> & {
 export type BackupFile = {
   version: 1;
   exportedAt: string;
+  tags?: string[];
   recipes: Recipe[];
 };
 

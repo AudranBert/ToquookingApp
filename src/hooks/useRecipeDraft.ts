@@ -3,9 +3,10 @@ import { importRecipeFromUrl } from "../importer";
 import type { ParsedRecipe, Recipe, RecipeDraft, ReimportMode } from "../types";
 import { createId } from "../utils/id";
 import { createEmptyDraft, recipeToDraft } from "../utils/recipes";
+import { normalizeText } from "../utils/text";
 import type { StatusApi } from "./useStatus";
 
-export function useRecipeDraft(status: StatusApi) {
+export function useRecipeDraft(status: StatusApi, allTags: string[]) {
   const [draft, setDraft] = useState<RecipeDraft>(createEmptyDraft);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
@@ -30,7 +31,7 @@ export function useRecipeDraft(status: StatusApi) {
 
     try {
       const parsed = await importRecipeFromUrl(url);
-      setDraft(parsedToDraft(parsed, url));
+      setDraft(parsedToDraft(parsed, url, allTags));
       setEditingId(null);
       setImportWarnings(parsed.warnings ?? []);
       status.setStatus("Import préparé. Vérifie les champs avant d'enregistrer.");
@@ -51,7 +52,7 @@ export function useRecipeDraft(status: StatusApi) {
 
     try {
       const parsed = await importRecipeFromUrl(url);
-      const imported = parsedToDraft(parsed, url);
+      const imported = parsedToDraft(parsed, url, allTags);
       setDraft((current) => (mode === "replace" ? imported : mergeBlanks(current, imported)));
       setImportWarnings(parsed.warnings ?? []);
       status.setStatus(
@@ -76,13 +77,13 @@ export function useRecipeDraft(status: StatusApi) {
   };
 }
 
-function parsedToDraft(parsed: ParsedRecipe, fallbackUrl: string): RecipeDraft {
+function parsedToDraft(parsed: ParsedRecipe, fallbackUrl: string, allTags: string[]): RecipeDraft {
   return {
     ...createEmptyDraft(),
     ...parsed,
     sourceUrl: parsed.sourceUrl ?? fallbackUrl,
     videoUrl: parsed.videoUrl,
-    tags: parsed.tags ?? [],
+    tags: matchKnownTags(parsed.tags ?? [], allTags),
     ingredients: parsed.ingredients?.length ? parsed.ingredients : [{ id: createId(), name: "" }],
     instructions: parsed.instructions?.length ? parsed.instructions : [""],
   };
@@ -100,10 +101,23 @@ function mergeBlanks(current: RecipeDraft, imported: RecipeDraft): RecipeDraft {
     totalTime: current.totalTime ?? imported.totalTime,
     notes: current.notes || imported.notes,
     imageUrl: current.imageUrl || imported.imageUrl,
+    origin: current.origin || imported.origin,
     tags: current.tags.length ? current.tags : imported.tags,
     ingredients: hasFilledIngredients(current) ? current.ingredients : imported.ingredients,
     instructions: current.instructions.some((step) => step.trim()) ? current.instructions : imported.instructions,
   };
+}
+
+function matchKnownTags(importedTags: string[], allTags: string[]) {
+  const known = new Map(allTags.map((tag) => [normalizeText(tag), tag]));
+  const matched = new Map<string, string>();
+
+  importedTags.forEach((tag) => {
+    const exact = known.get(normalizeText(tag));
+    if (exact) matched.set(normalizeText(exact), exact);
+  });
+
+  return [...matched.values()];
 }
 
 function hasFilledIngredients(draft: RecipeDraft) {

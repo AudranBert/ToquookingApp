@@ -108,6 +108,23 @@ export const RECIPE_ORIGIN_GROUPS = [
   },
 ];
 
+export function findKnownRecipeOrigin(values: string[]) {
+  const normalizedOrigins = new Map(RECIPE_ORIGINS.map((origin) => [normalizeText(origin), origin]));
+
+  for (const value of values) {
+    const direct = normalizedOrigins.get(normalizeText(value));
+    if (direct) return direct;
+  }
+
+  for (const value of values) {
+    const normalizedValue = normalizeText(value);
+    const contained = RECIPE_ORIGINS.find((origin) => normalizedValue.includes(normalizeText(origin)));
+    if (contained) return contained;
+  }
+
+  return undefined;
+}
+
 const ORIGIN_PARENTS: Record<string, string[]> = {
   Afrique: ["Algérie", "Maroc", "Tunisie"],
   Amériques: ["Canada", "États-Unis", "Mexique", "Guadeloupe", "Guyane", "Martinique"],

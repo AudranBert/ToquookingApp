@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 import { useMemo, useState } from "react";
-import { ArrowLeft, Clock, Filter, Link, Plus, Search, Users, X } from "lucide-react";
+import { ArrowLeft, ChefHat, Clock, Filter, Flame, Link, Plus, Search, X } from "lucide-react";
 import { POPULAR_RECIPE_ORIGINS, RECIPE_ORIGIN_GROUPS, RECIPE_ORIGINS } from "../origins";
 import { RecipeDetail } from "../components/RecipeDetail";
 import { SEASONAL_THRESHOLDS, SEASONAL_THRESHOLD_LABELS } from "../constants";
@@ -346,10 +346,15 @@ function RecipeGrid({
           <span className="recipe-card-title">{recipe.name}</span>
           {recipe.origin && <span className="muted">{recipe.origin}</span>}
           <span className="recipe-card-meta">
-            <span>
-              <Users size={15} /> {recipe.servings ?? "-"}
+            <span aria-label={`Préparation ${recipe.prepTime ? `${recipe.prepTime} min` : "non renseignée"}`} title="Préparation">
+              <ChefHat size={15} /> {recipe.prepTime ? `${recipe.prepTime} min` : "-"}
             </span>
-            <span>
+            {recipe.cookTime ? (
+              <span aria-label={`Cuisson ${recipe.cookTime} min`} title="Cuisson">
+                <Flame size={15} /> {recipe.cookTime} min
+              </span>
+            ) : null}
+            <span aria-label={`Total ${recipe.totalTime ? `${recipe.totalTime} min` : "non renseigné"}`} title="Total">
               <Clock size={15} /> {recipe.totalTime ? `${recipe.totalTime} min` : "-"}
             </span>
           </span>

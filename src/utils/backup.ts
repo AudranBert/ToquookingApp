@@ -2,10 +2,11 @@ import { normalizeText } from "../seasonal";
 import type { BackupFile, Recipe } from "../types";
 import { createId } from "./id";
 
-export function downloadRecipesBackup(recipes: Recipe[]) {
+export function downloadRecipesBackup(recipes: Recipe[], tags: string[] = []) {
   const backup: BackupFile = {
     version: 1,
     exportedAt: new Date().toISOString(),
+    tags,
     recipes,
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
@@ -24,10 +25,15 @@ export async function parseBackupFile(file: File, existingRecipes: Recipe[]) {
 
   const existingKeys = new Set(existingRecipes.map((recipe) => normalizeText(`${recipe.name} ${recipe.sourceUrl ?? ""}`)));
 
-  return backup.recipes.map((recipe) => {
+  const recipes = backup.recipes.map((recipe) => {
     const key = normalizeText(`${recipe.name} ${recipe.sourceUrl ?? ""}`);
     return existingKeys.has(key)
       ? { ...recipe, id: createId(), name: `${recipe.name} (import)` }
       : recipe;
   });
+
+  return {
+    recipes,
+    tags: Array.isArray(backup.tags) ? backup.tags.map((tag) => tag.trim()).filter(Boolean) : [],
+  };
 }

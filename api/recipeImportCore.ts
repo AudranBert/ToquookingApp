@@ -1,4 +1,5 @@
 import { parseIngredientLine, type ParsedIngredient } from "../src/utils/ingredientParser";
+import { findKnownRecipeOrigin } from "../src/origins";
 
 type ImportedIngredient = ParsedIngredient;
 
@@ -8,6 +9,8 @@ export type ImportedRecipe = {
   videoUrl?: string;
   ingredients?: ImportedIngredient[];
   instructions?: string[];
+  tags?: string[];
+  origin?: string;
   servings?: number;
   prepTime?: number;
   cookTime?: number;
@@ -23,6 +26,14 @@ function textArray(value: unknown) {
   if (typeof value === "string") return value.split(/\n|;/).map((item) => item.trim()).filter(Boolean);
   if (value && typeof value === "object" && "url" in value && typeof value.url === "string") return [value.url];
   return [];
+}
+
+function metadataValues(recipe: RecipeNode) {
+  return [
+    ...textArray(recipe.keywords),
+    ...textArray(recipe.recipeCategory),
+    ...textArray(recipe.recipeCuisine),
+  ].map((value) => value.trim()).filter(Boolean);
 }
 
 function minutes(value: unknown) {
@@ -78,6 +89,8 @@ function recipeNodeToImport(recipe: RecipeNode, url: string): ImportedRecipe {
   return {
     name: typeof recipe.name === "string" ? recipe.name : undefined,
     sourceUrl: url,
+    origin: findKnownRecipeOrigin(textArray(recipe.recipeCuisine)),
+    tags: metadataValues(recipe),
     ingredients: textArray(recipe.recipeIngredient).map(parseIngredientLine),
     instructions,
     servings: typeof recipe.recipeYield === "string" ? Number.parseInt(recipe.recipeYield, 10) || undefined : undefined,

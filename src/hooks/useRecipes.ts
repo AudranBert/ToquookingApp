@@ -76,10 +76,17 @@ export function useRecipes(status: StatusApi) {
     async (file: File) => {
       try {
         const imported = await parseBackupFile(file, await db.recipes.toArray());
-        await db.recipes.bulkPut(imported);
+        await db.recipes.bulkPut(imported.recipes);
+        await db.tags.bulkPut(
+          imported.tags.map((name) => ({
+            name,
+            createdAt: nowIso(),
+            updatedAt: nowIso(),
+          })),
+        );
         await refresh();
-        status.setStatus(`${imported.length} recette(s) importée(s).`);
-        return imported[0]?.id;
+        status.setStatus(`${imported.recipes.length} recette(s) importée(s).`);
+        return imported.recipes[0]?.id;
       } catch {
         status.setStatus("Le fichier de sauvegarde n'est pas lisible.");
         return undefined;
