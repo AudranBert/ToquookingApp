@@ -1,0 +1,17 @@
+{
+  "name": "Toque - Carnet de recettes",
+  "short_name": "Toque",
+  "description": "Hub local-first pour sauvegarder, filtrer et partager des recettes.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff8ec",
+  "theme_color": "#fff8ec",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
