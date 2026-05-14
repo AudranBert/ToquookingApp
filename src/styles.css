@@ -279,6 +279,115 @@ label {
   gap: var(--space-2);
 }
 
+.search-field {
+  gap: var(--space-2);
+}
+
+.search-field input {
+  min-height: 40px;
+}
+
+.count-label {
+  font-size: 0.9rem;
+}
+
+.empty-inline {
+  margin: 0;
+  padding: var(--space-3);
+  color: var(--color-muted);
+  background: rgba(255, 253, 247, 0.7);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+}
+
+.origin-filter {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.origin-filter__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.origin-filter__clear,
+.origin-filter__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+}
+
+.origin-filter__clear {
+  padding: 0;
+  color: var(--color-accent);
+  background: transparent;
+  border: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.origin-filter__search {
+  gap: 6px;
+}
+
+.origin-filter__selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.origin-filter__chip {
+  color: var(--color-primary);
+}
+
+.origin-filter__groups {
+  display: grid;
+  gap: var(--space-3);
+  max-height: 360px;
+  overflow: auto;
+  padding-right: var(--space-1);
+}
+
+.origin-filter__group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.origin-filter__group h3 {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+}
+
+.origin-filter__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.origin-filter__option {
+  min-height: 32px;
+  padding: 6px 9px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.origin-filter__option:hover,
+.origin-filter__option--active {
+  color: var(--color-primary-text);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
 .check-control input,
 .shopping-item input[type="checkbox"] {
   width: auto;

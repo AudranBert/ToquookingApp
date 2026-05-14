@@ -1,10 +1,12 @@
 import type { RefObject } from "react";
-import { ArrowLeft, Clock, Filter, Link, Plus, Search, Users } from "lucide-react";
-import { RECIPE_ORIGINS } from "../origins";
+import { useMemo, useState } from "react";
+import { ArrowLeft, Clock, Filter, Link, Plus, Search, Users, X } from "lucide-react";
+import { POPULAR_RECIPE_ORIGINS, RECIPE_ORIGIN_GROUPS, RECIPE_ORIGINS } from "../origins";
 import { RecipeDetail } from "../components/RecipeDetail";
 import { SEASONAL_THRESHOLDS, SEASONAL_THRESHOLD_LABELS } from "../constants";
 import type { Recipe, SeasonalThreshold } from "../types";
 import { proxiedImageUrl } from "../utils/images";
+import { normalizeText } from "../utils/text";
 
 export type LibraryFilters = {
   query: string;
@@ -166,17 +168,7 @@ function LibrarySidebar({
             ))}
           </select>
         </label>
-        <label>
-          Pays / région
-          <select value={filters.originFilter} onChange={(event) => handlers.onOriginFilterChange(event.target.value)}>
-            <option value="">Toutes les origines</option>
-            {RECIPE_ORIGINS.map((origin) => (
-              <option key={origin} value={origin}>
-                {origin}
-              </option>
-            ))}
-          </select>
-        </label>
+        <OriginFilterPicker value={filters.originFilter} onChange={handlers.onOriginFilterChange} />
         <label>
           Ingrédients de saison
           <select
@@ -206,6 +198,123 @@ function LibrarySidebar({
         </p>
       )}
     </aside>
+  );
+}
+
+function OriginFilterPicker({ value, onChange }: { value: string; onChange: (origin: string) => void }) {
+  const [originQuery, setOriginQuery] = useState("");
+  const normalizedQuery = normalizeText(originQuery);
+
+  const filteredGroups = useMemo(
+    () =>
+      RECIPE_ORIGIN_GROUPS.map((group) => ({
+        ...group,
+        origins: group.origins.filter((origin) => normalizeText(origin).includes(normalizedQuery)),
+      })).filter((group) => group.origins.length > 0),
+    [normalizedQuery],
+  );
+
+  const ungroupedMatches = useMemo(() => {
+    const groupedOrigins = new Set(RECIPE_ORIGIN_GROUPS.flatMap((group) => group.origins));
+    return RECIPE_ORIGINS.filter(
+      (origin) => !groupedOrigins.has(origin) && normalizeText(origin).includes(normalizedQuery),
+    );
+  }, [normalizedQuery]);
+
+  const hasMatches = filteredGroups.length > 0 || ungroupedMatches.length > 0;
+
+  function selectOrigin(origin: string) {
+    onChange(origin);
+    setOriginQuery("");
+  }
+
+  return (
+    <div className="origin-filter">
+      <div className="origin-filter__header">
+        <span>Pays / région</span>
+        {value && (
+          <button className="origin-filter__clear" type="button" onClick={() => onChange("")}>
+            <X size={14} /> Effacer
+          </button>
+        )}
+      </div>
+
+      <label className="origin-filter__search">
+        <span className="label-with-icon">
+          <Search size={16} /> Rechercher une origine
+        </span>
+        <input
+          value={originQuery}
+          onChange={(event) => setOriginQuery(event.target.value)}
+          placeholder="France, Japon, Méditerranée..."
+        />
+      </label>
+
+      {value && (
+        <div className="origin-filter__selected" aria-label="Origine sélectionnée">
+          <button className="chip origin-filter__chip" type="button" onClick={() => onChange("")}>
+            {value}
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {!originQuery && (
+        <OriginButtonGroup title="Populaires" origins={POPULAR_RECIPE_ORIGINS} value={value} onSelect={selectOrigin} />
+      )}
+
+      <div className="origin-filter__groups">
+        {hasMatches ? (
+          <>
+            {filteredGroups.map((group) => (
+              <OriginButtonGroup
+                key={group.label}
+                title={group.label}
+                origins={group.origins}
+                value={value}
+                onSelect={selectOrigin}
+              />
+            ))}
+            {ungroupedMatches.length > 0 && (
+              <OriginButtonGroup title="Autres" origins={ungroupedMatches} value={value} onSelect={selectOrigin} />
+            )}
+          </>
+        ) : (
+          <p className="empty-inline">Aucune origine trouvée.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function OriginButtonGroup({
+  title,
+  origins,
+  value,
+  onSelect,
+}: {
+  title: string;
+  origins: string[];
+  value: string;
+  onSelect: (origin: string) => void;
+}) {
+  return (
+    <section className="origin-filter__group">
+      <h3>{title}</h3>
+      <div className="origin-filter__options">
+        {origins.map((origin) => (
+          <button
+            className={`origin-filter__option${origin === value ? " origin-filter__option--active" : ""}`}
+            key={origin}
+            type="button"
+            onClick={() => onSelect(origin)}
+            aria-pressed={origin === value}
+          >
+            {origin}
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 

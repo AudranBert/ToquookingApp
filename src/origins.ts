@@ -25,7 +25,9 @@ export const RECIPE_ORIGINS = [
   "Afrique",
   "Allemagne",
   "Algérie",
+  "Amériques",
   "Antilles",
+  "Asie",
   "Belgique",
   "Canada",
   "Chine",
@@ -55,10 +57,76 @@ export const RECIPE_ORIGINS = [
   ...FRENCH_REGIONS,
 ].sort((a, b) => a.localeCompare(b, "fr")) as string[];
 
+export const POPULAR_RECIPE_ORIGINS = [
+  "France",
+  "Italie",
+  "Japon",
+  "Mexique",
+  "Inde",
+  "Espagne",
+  "Thaïlande",
+  "Maroc",
+];
+
+export const RECIPE_ORIGIN_GROUPS = [
+  {
+    label: "Europe",
+    origins: [
+      "Europe",
+      "Allemagne",
+      "Belgique",
+      "Espagne",
+      "France",
+      "Grèce",
+      "Italie",
+      "Norvège",
+      "Portugal",
+      "Royaume-Uni",
+      "Russie",
+      "Suisse",
+    ],
+  },
+  {
+    label: "Régions françaises",
+    origins: FRENCH_REGIONS,
+  },
+  {
+    label: "Afrique & Moyen-Orient",
+    origins: ["Afrique", "Méditerranée", "Moyen-Orient", "Algérie", "Liban", "Maroc", "Tunisie", "Turquie"],
+  },
+  {
+    label: "Asie",
+    origins: ["Asie", "Chine", "Corée", "Inde", "Japon", "Thaïlande", "Vietnam"],
+  },
+  {
+    label: "Amériques",
+    origins: ["Amériques", "Canada", "États-Unis", "Mexique", "Guadeloupe", "Guyane", "Martinique"],
+  },
+  {
+    label: "Outre-mer",
+    origins: ["Antilles", "Guadeloupe", "Guyane", "La Réunion", "Martinique", "Mayotte"],
+  },
+];
+
 const ORIGIN_PARENTS: Record<string, string[]> = {
   Afrique: ["Algérie", "Maroc", "Tunisie"],
+  Amériques: ["Canada", "États-Unis", "Mexique", "Guadeloupe", "Guyane", "Martinique"],
   Antilles: ["Guadeloupe", "Martinique"],
-  Europe: ["Allemagne", "Belgique", "Espagne", "France", "Grèce", "Italie", "Norvège", "Portugal", "Royaume-Uni", "Russie", "Suisse", ...FRENCH_REGIONS],
+  Asie: ["Chine", "Corée", "Inde", "Japon", "Thaïlande", "Vietnam"],
+  Europe: [
+    "Allemagne",
+    "Belgique",
+    "Espagne",
+    "France",
+    "Grèce",
+    "Italie",
+    "Norvège",
+    "Portugal",
+    "Royaume-Uni",
+    "Russie",
+    "Suisse",
+    ...FRENCH_REGIONS,
+  ],
   France: FRENCH_REGIONS,
   Méditerranée: ["Espagne", "France", "Grèce", "Italie", "Liban", "Maroc", "Portugal", "Tunisie", "Turquie"],
   "Moyen-Orient": ["Liban", "Turquie"],
