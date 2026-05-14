@@ -1,4 +1,7 @@
 import { canonicalIngredientKey } from "./utils/ingredients";
+import { normalizeText } from "./utils/text";
+
+export { normalizeText };
 
 export type SeasonalCategory = "fruits-legumes" | "poissons-fruits-de-mer";
 
@@ -234,16 +237,6 @@ export const seasonalCalendar: Record<number, SeasonalMonth> = {
     poissonsFruitsDeMer: ["cabillaud", "coquille saint-jacques", "huitre", "lieu", "merlan", "saumon"],
   },
 };
-
-export function normalizeText(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[’']/g, " ")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
 
 export function currentSeasonalIngredients(date = new Date()) {
   const month = seasonalCalendar[date.getMonth()];

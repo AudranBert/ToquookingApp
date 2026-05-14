@@ -88,7 +88,12 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
     ];
     for (const match of jsonLdScripts) {
       const parsed = extractRecipeFromJsonLd(JSON.parse(match[1]));
-      if (parsed) return { ...parsed, sourceUrl: url };
+      if (parsed) {
+        const warnings = parsed.name?.trim()
+          ? undefined
+          : ["Aucun nom détecté dans la recette importée. Renseigne-le manuellement."];
+        return { ...parsed, sourceUrl: url, warnings };
+      }
     }
   } catch {
     return {

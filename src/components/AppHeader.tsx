@@ -1,6 +1,5 @@
 import { BookOpen, Import, ShoppingBasket } from "lucide-react";
-
-export type Panel = "library" | "form" | "shopping" | "backup";
+import type { Panel } from "../types";
 
 type Props = {
   activePanel: Panel;

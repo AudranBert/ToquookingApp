@@ -98,6 +98,7 @@ export function RecipeDetail({ recipe, printRef, onEdit, onDelete, onDuplicate, 
             <p>{recipe.notes}</p>
           </section>
         )}
+        {recipe.videoUrl && <VideoEmbed url={recipe.videoUrl} />}
         {(recipe.sourceUrl || recipe.videoUrl) && (
           <footer className="link-row">
             {recipe.sourceUrl && <a href={recipe.sourceUrl}>Source</a>}
@@ -107,6 +108,26 @@ export function RecipeDetail({ recipe, printRef, onEdit, onDelete, onDuplicate, 
       </div>
     </article>
   );
+}
+
+function VideoEmbed({ url }: { url: string }) {
+  const embed = youtubeEmbedUrl(url);
+  if (!embed) return null;
+  return (
+    <section className="recipe-video">
+      <iframe
+        src={embed}
+        title="Vidéo de la recette"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    </section>
+  );
+}
+
+function youtubeEmbedUrl(url: string) {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
+  return match ? `https://www.youtube.com/embed/${match[1]}` : null;
 }
 
 function hasValue(value: number | undefined) {

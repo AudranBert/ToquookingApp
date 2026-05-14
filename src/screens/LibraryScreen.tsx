@@ -2,161 +2,210 @@ import type { RefObject } from "react";
 import { ArrowLeft, Clock, Filter, Link, Plus, Search, Users } from "lucide-react";
 import { RECIPE_ORIGINS } from "../origins";
 import { RecipeDetail } from "../components/RecipeDetail";
-import type { Recipe } from "../types";
+import { SEASONAL_THRESHOLDS, SEASONAL_THRESHOLD_LABELS } from "../constants";
+import type { Recipe, SeasonalThreshold } from "../types";
 import { proxiedImageUrl } from "../utils/images";
 
-type SeasonalThreshold = 0 | 1 | 3;
+export type LibraryFilters = {
+  query: string;
+  tagFilter: string;
+  originFilter: string;
+  seasonalThreshold: SeasonalThreshold;
+  allTags: string[];
+};
+
+export type LibraryFilterHandlers = {
+  onQueryChange: (query: string) => void;
+  onTagFilterChange: (tag: string) => void;
+  onOriginFilterChange: (origin: string) => void;
+  onSeasonalThresholdChange: (threshold: SeasonalThreshold) => void;
+};
+
+export type LibraryRecipeActions = {
+  onEdit: (recipe: Recipe) => void;
+  onDelete: (recipe: Recipe) => void;
+  onDuplicate: (recipe: Recipe) => void;
+  onExport: (format: "pdf" | "png") => void;
+  onSelectRecipe: (id: string) => void;
+  onShowList: () => void;
+  onNewRecipe: () => void;
+};
 
 type Props = {
-  allTags: string[];
+  filters: LibraryFilters;
+  filterHandlers: LibraryFilterHandlers;
+  actions: LibraryRecipeActions;
   filteredRecipes: Recipe[];
-  importUrl: string;
-  originFilter: string;
-  query: string;
   selectedRecipe?: Recipe;
   seasonalMatchCounts: Map<string, number>;
   seasonalRecipeIds: Set<string>;
-  seasonalThreshold: SeasonalThreshold;
   seasonMonthName: string;
-  tagFilter: string;
-  printRef: RefObject<HTMLDivElement>;
-  onDelete: (recipe: Recipe) => void;
-  onDuplicate: (recipe: Recipe) => void;
-  onEdit: (recipe: Recipe) => void;
-  onExport: (format: "pdf" | "png") => void;
-  onImport: () => void;
+  importUrl: string;
   onImportUrlChange: (url: string) => void;
-  onNewRecipe: () => void;
-  onOriginFilterChange: (origin: string) => void;
-  onQueryChange: (query: string) => void;
-  onSeasonalThresholdChange: (threshold: SeasonalThreshold) => void;
-  onSelectRecipe: (id: string) => void;
-  onShowList: () => void;
-  onTagFilterChange: (tag: string) => void;
+  onImport: () => void;
+  printRef: RefObject<HTMLDivElement>;
 };
 
 export function LibraryScreen({
-  allTags,
+  filters,
+  filterHandlers,
+  actions,
   filteredRecipes,
-  importUrl,
-  originFilter,
-  query,
   selectedRecipe,
   seasonalMatchCounts,
   seasonalRecipeIds,
-  seasonalThreshold,
   seasonMonthName,
-  tagFilter,
-  printRef,
-  onDelete,
-  onDuplicate,
-  onEdit,
-  onExport,
-  onImport,
+  importUrl,
   onImportUrlChange,
-  onNewRecipe,
-  onOriginFilterChange,
-  onQueryChange,
-  onSeasonalThresholdChange,
-  onSelectRecipe,
-  onShowList,
-  onTagFilterChange,
+  onImport,
+  printRef,
 }: Props) {
   return (
     <section className="library-view">
-      <aside className="panel sidebar">
-        <div className="field-group">
-          <label htmlFor="import-url">Importer depuis un lien</label>
-          <div className="inline-control">
-            <input
-              id="import-url"
-              value={importUrl}
-              onChange={(event) => onImportUrlChange(event.target.value)}
-              placeholder="Marmiton, CuisineAZ, YouTube..."
-            />
-            <button className="button button--icon" onClick={onImport} title="Importer">
-              <Link size={18} />
-            </button>
-          </div>
-        </div>
-
-        <button className="button button--primary button--full" onClick={onNewRecipe}>
-          <Plus size={18} /> Nouvelle recette
-        </button>
-
-        <div className="filters">
-          <label>
-            <span className="label-with-icon">
-              <Search size={16} /> Rechercher
-            </span>
-            <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Nom, ingrédient, tag" />
-          </label>
-          <label>
-            <span className="label-with-icon">
-              <Filter size={16} /> Tag
-            </span>
-            <select value={tagFilter} onChange={(event) => onTagFilterChange(event.target.value)}>
-              <option value="">Tous les tags</option>
-              {allTags.map((tag) => (
-                <option key={tag} value={tag}>
-                  {tag}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Pays / région
-            <select value={originFilter} onChange={(event) => onOriginFilterChange(event.target.value)}>
-              <option value="">Toutes les origines</option>
-              {RECIPE_ORIGINS.map((origin) => (
-                <option key={origin} value={origin}>
-                  {origin}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Ingrédients de saison
-            <select
-              value={seasonalThreshold}
-              onChange={(event) => onSeasonalThresholdChange(Number(event.target.value) as SeasonalThreshold)}
-            >
-              <option value={0}>Toutes les recettes</option>
-              <option value={1}>Au moins 1</option>
-              <option value={3}>Au moins 3</option>
-            </select>
-          </label>
-        </div>
-
-        <p className="muted">
-          {filteredRecipes.length} recette(s)
-          {seasonalThreshold > 0 ? ` avec au moins ${seasonalThreshold} ingrédient(s) de saison en ${seasonMonthName}` : ""}
-        </p>
-        {seasonalThreshold === 0 && (
-          <p className="muted">
-            {seasonalRecipeIds.size} recette(s) contiennent au moins un ingrédient de saison en {seasonMonthName}.
-          </p>
-        )}
-      </aside>
+      <LibrarySidebar
+        filters={filters}
+        handlers={filterHandlers}
+        filteredCount={filteredRecipes.length}
+        seasonalRecipeCount={seasonalRecipeIds.size}
+        seasonMonthName={seasonMonthName}
+        importUrl={importUrl}
+        onImportUrlChange={onImportUrlChange}
+        onImport={onImport}
+        onNewRecipe={actions.onNewRecipe}
+      />
 
       {selectedRecipe ? (
         <div className="detail-pane">
-          <button className="button button--ghost" onClick={onShowList}>
+          <button className="button button--ghost" onClick={actions.onShowList}>
             <ArrowLeft size={18} /> Toutes les recettes
           </button>
           <RecipeDetail
             recipe={selectedRecipe}
             printRef={printRef}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onDuplicate={onDuplicate}
-            onExport={onExport}
+            onEdit={actions.onEdit}
+            onDelete={actions.onDelete}
+            onDuplicate={actions.onDuplicate}
+            onExport={actions.onExport}
           />
         </div>
       ) : (
-        <RecipeGrid recipes={filteredRecipes} seasonalMatchCounts={seasonalMatchCounts} seasonalRecipeIds={seasonalRecipeIds} onSelectRecipe={onSelectRecipe} />
+        <RecipeGrid
+          recipes={filteredRecipes}
+          seasonalMatchCounts={seasonalMatchCounts}
+          seasonalRecipeIds={seasonalRecipeIds}
+          onSelectRecipe={actions.onSelectRecipe}
+        />
       )}
     </section>
+  );
+}
+
+function LibrarySidebar({
+  filters,
+  handlers,
+  filteredCount,
+  seasonalRecipeCount,
+  seasonMonthName,
+  importUrl,
+  onImportUrlChange,
+  onImport,
+  onNewRecipe,
+}: {
+  filters: LibraryFilters;
+  handlers: LibraryFilterHandlers;
+  filteredCount: number;
+  seasonalRecipeCount: number;
+  seasonMonthName: string;
+  importUrl: string;
+  onImportUrlChange: (url: string) => void;
+  onImport: () => void;
+  onNewRecipe: () => void;
+}) {
+  return (
+    <aside className="panel sidebar">
+      <div className="field-group">
+        <label htmlFor="import-url">Importer depuis un lien</label>
+        <div className="inline-control">
+          <input
+            id="import-url"
+            value={importUrl}
+            onChange={(event) => onImportUrlChange(event.target.value)}
+            placeholder="Marmiton, CuisineAZ, YouTube..."
+          />
+          <button className="button button--icon" onClick={onImport} title="Importer">
+            <Link size={18} />
+          </button>
+        </div>
+      </div>
+
+      <button className="button button--primary button--full" onClick={onNewRecipe}>
+        <Plus size={18} /> Nouvelle recette
+      </button>
+
+      <div className="filters">
+        <label>
+          <span className="label-with-icon">
+            <Search size={16} /> Rechercher
+          </span>
+          <input
+            value={filters.query}
+            onChange={(event) => handlers.onQueryChange(event.target.value)}
+            placeholder="Nom, ingrédient, tag"
+          />
+        </label>
+        <label>
+          <span className="label-with-icon">
+            <Filter size={16} /> Tag
+          </span>
+          <select value={filters.tagFilter} onChange={(event) => handlers.onTagFilterChange(event.target.value)}>
+            <option value="">Tous les tags</option>
+            {filters.allTags.map((tag) => (
+              <option key={tag} value={tag}>
+                {tag}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Pays / région
+          <select value={filters.originFilter} onChange={(event) => handlers.onOriginFilterChange(event.target.value)}>
+            <option value="">Toutes les origines</option>
+            {RECIPE_ORIGINS.map((origin) => (
+              <option key={origin} value={origin}>
+                {origin}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Ingrédients de saison
+          <select
+            value={filters.seasonalThreshold}
+            onChange={(event) =>
+              handlers.onSeasonalThresholdChange(Number(event.target.value) as SeasonalThreshold)
+            }
+          >
+            {SEASONAL_THRESHOLDS.map((threshold) => (
+              <option key={threshold} value={threshold}>
+                {SEASONAL_THRESHOLD_LABELS[threshold]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <p className="muted">
+        {filteredCount} recette(s)
+        {filters.seasonalThreshold > 0
+          ? ` avec au moins ${filters.seasonalThreshold} ingrédient(s) de saison en ${seasonMonthName}`
+          : ""}
+      </p>
+      {filters.seasonalThreshold === 0 && (
+        <p className="muted">
+          {seasonalRecipeCount} recette(s) contiennent au moins un ingrédient de saison en {seasonMonthName}.
+        </p>
+      )}
+    </aside>
   );
 }
 

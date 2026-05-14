@@ -44,3 +44,7 @@ export type ShoppingItem = {
   recipeIds: string[];
   pantry?: boolean;
 };
+
+export type Panel = "library" | "form" | "shopping" | "backup";
+export type SeasonalThreshold = 0 | 1 | 3;
+export type ReimportMode = "replace" | "fill-blanks";
