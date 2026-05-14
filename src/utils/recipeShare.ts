@@ -67,12 +67,26 @@ export function recipeToShareText(recipe: Recipe) {
 export async function shareRecipeText(recipe: Recipe) {
   const text = recipeToShareText(recipe);
   if (navigator.share) {
-    await navigator.share({ title: recipe.name, text });
-    return "shared";
+    try {
+      await navigator.share({ title: recipe.name, text });
+      return "shared";
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") throw error;
+    }
   }
 
-  await navigator.clipboard.writeText(text);
-  return "copied";
+  if (isLikelyMobile()) {
+    window.location.href = `sms:?&body=${encodeURIComponent(text)}`;
+    return "sms";
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    return "copied";
+  } catch {
+    window.prompt("Copie le texte de la recette :", text);
+    return "manual";
+  }
 }
 
 function encodeRecipeSharePayload(recipe: Recipe) {
@@ -118,4 +132,8 @@ function formatMeta(recipe: Recipe) {
   ].filter(Boolean);
 
   return meta.length ? meta.join(" | ") : "";
+}
+
+function isLikelyMobile() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }

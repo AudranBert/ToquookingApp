@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { BookOpen, Edit3, FileDown, FileImage, FileJson, MessageSquareText, Plus, Share2, Trash2 } from "lucide-react";
+import { BookOpen, Edit3, FileDown, FileImage, FileJson, MessageSquareText, Plus, Trash2 } from "lucide-react";
 import type { Recipe } from "../types";
 import { currentSeasonalIngredients, recipeContainsSeasonalIngredient } from "../seasonal";
 import { proxiedImageUrl } from "../utils/images";
@@ -12,8 +12,8 @@ type Props = {
   onEdit: (recipe: Recipe) => void;
   onDelete: (recipe: Recipe) => void;
   onDuplicate: (recipe: Recipe) => void;
-  onExport: (format: "pdf" | "png") => void;
-  onShare: () => void;
+  onExportPdf: () => void;
+  onShareImage: () => void;
   onShareText: () => void;
   onExportRecipeFile: () => void;
 };
@@ -24,8 +24,8 @@ export function RecipeDetail({
   onEdit,
   onDelete,
   onDuplicate,
-  onExport,
-  onShare,
+  onExportPdf,
+  onShareImage,
   onShareText,
   onExportRecipeFile,
 }: Props) {
@@ -48,14 +48,11 @@ export function RecipeDetail({
         <button className="button" onClick={() => onDuplicate(recipe)} title="Dupliquer">
           <Plus size={18} /> Dupliquer
         </button>
-        <button className="button" onClick={() => onExport("pdf")} title="Exporter en PDF">
+        <button className="button" onClick={onExportPdf} title="Exporter en PDF">
           <FileDown size={18} /> PDF
         </button>
-        <button className="button" onClick={() => onExport("png")} title="Exporter en PNG">
+        <button className="button" onClick={onShareImage} title="Partager ou telecharger le PNG">
           <FileImage size={18} /> PNG
-        </button>
-        <button className="button" onClick={onShare} title="Partager le PNG">
-          <Share2 size={18} /> Image
         </button>
         <button className="button button--primary" onClick={onShareText} title="Partager par SMS">
           <MessageSquareText size={18} /> SMS

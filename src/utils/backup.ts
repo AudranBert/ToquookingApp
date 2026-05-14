@@ -30,8 +30,7 @@ export async function shareSingleRecipeBackup(recipe: Recipe) {
     files: [file],
   };
 
-  if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
-    await navigator.share(shareData);
+  if (await tryShare(shareData)) {
     return "shared";
   }
 
@@ -86,4 +85,16 @@ function recipeBackupFileName(recipe: Recipe) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
   return `toque-recette-${slug || "recette"}.json`;
+}
+
+async function tryShare(shareData: ShareData) {
+  if (!navigator.share || (navigator.canShare && !navigator.canShare(shareData))) return false;
+
+  try {
+    await navigator.share(shareData);
+    return true;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") throw error;
+    return false;
+  }
 }

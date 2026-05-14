@@ -2,8 +2,12 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import type { Recipe } from "./types";
 
+async function elementToCanvas(element: HTMLElement) {
+  return html2canvas(element, { backgroundColor: "#fffdf7", scale: 2, useCORS: true, allowTaint: false });
+}
+
 async function elementToPngBlob(element: HTMLElement) {
-  const canvas = await html2canvas(element, { backgroundColor: "#fffdf7", scale: 2, useCORS: true, allowTaint: false });
+  const canvas = await elementToCanvas(element);
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (blob) {
@@ -15,49 +19,8 @@ async function elementToPngBlob(element: HTMLElement) {
   });
 }
 
-export async function exportElementAsPng(element: HTMLElement, filename: string) {
-  const canvas = await html2canvas(element, { backgroundColor: "#fffdf7", scale: 2, useCORS: true, allowTaint: false });
-  const link = document.createElement("a");
-  link.download = filename;
-  link.href = canvas.toDataURL("image/png");
-  link.click();
-}
-
-export async function shareElementAsPng(element: HTMLElement, filename: string, recipeName: string, url: string) {
-  const blob = await elementToPngBlob(element);
-  const file = new File([blob], filename, { type: "image/png" });
-  const shareData: ShareData = {
-    title: recipeName,
-    text: `Recette Toque: ${recipeName}\n${url}`,
-    files: [file],
-  };
-
-  if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
-    await navigator.share(shareData);
-    return "shared";
-  }
-
-  const linkOnlyData: ShareData = {
-    title: recipeName,
-    text: `Recette Toque: ${recipeName}`,
-    url,
-  };
-
-  if (navigator.share) {
-    await navigator.share(linkOnlyData);
-    return "shared-link";
-  }
-
-  const link = document.createElement("a");
-  link.download = filename;
-  link.href = URL.createObjectURL(blob);
-  link.click();
-  URL.revokeObjectURL(link.href);
-  return "downloaded";
-}
-
-export async function exportElementAsPdf(element: HTMLElement, filename: string) {
-  const canvas = await html2canvas(element, { backgroundColor: "#fffdf7", scale: 2, useCORS: true, allowTaint: false });
+async function elementToPdfBlob(element: HTMLElement) {
+  const canvas = await elementToCanvas(element);
   const image = canvas.toDataURL("image/png");
   const pdf = new jsPDF("p", "mm", "a4");
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -73,7 +36,50 @@ export async function exportElementAsPdf(element: HTMLElement, filename: string)
     pdf.addImage(image, "PNG", 0, position, pageWidth, imageHeight);
     remaining -= pageHeight;
   }
-  pdf.save(filename);
+
+  return pdf.output("blob");
+}
+
+export async function exportElementAsPng(element: HTMLElement, filename: string) {
+  downloadBlob(await elementToPngBlob(element), filename);
+}
+
+export async function shareElementAsPng(element: HTMLElement, filename: string, recipeName: string, url: string) {
+  const blob = await elementToPngBlob(element);
+  const file = new File([blob], filename, { type: "image/png" });
+  const shareData: ShareData = {
+    title: recipeName,
+    text: `Recette Toque: ${recipeName}\n${url}`,
+    files: [file],
+  };
+
+  if (await tryShare(shareData)) {
+    return "shared";
+  }
+
+  downloadBlob(blob, filename);
+  return "downloaded";
+}
+
+export async function exportElementAsPdf(element: HTMLElement, filename: string) {
+  downloadBlob(await elementToPdfBlob(element), filename);
+}
+
+export async function shareElementAsPdf(element: HTMLElement, filename: string, recipeName: string) {
+  const blob = await elementToPdfBlob(element);
+  const file = new File([blob], filename, { type: "application/pdf" });
+  const shareData: ShareData = {
+    title: recipeName,
+    text: `Recette Toque: ${recipeName}`,
+    files: [file],
+  };
+
+  if (await tryShare(shareData)) {
+    return "shared";
+  }
+
+  downloadBlob(blob, filename);
+  return "downloaded";
 }
 
 export function recipeFileName(recipe: Recipe, extension: "pdf" | "png" | "json") {
@@ -84,4 +90,24 @@ export function recipeFileName(recipe: Recipe, extension: "pdf" | "png" | "json"
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
   return `${slug || "recette"}.${extension}`;
+}
+
+async function tryShare(shareData: ShareData) {
+  if (!navigator.share || (navigator.canShare && !navigator.canShare(shareData))) return false;
+
+  try {
+    await navigator.share(shareData);
+    return true;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") throw error;
+    return false;
+  }
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = URL.createObjectURL(blob);
+  link.click();
+  URL.revokeObjectURL(link.href);
 }

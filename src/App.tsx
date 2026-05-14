@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { X } from "lucide-react";
-import { exportElementAsPdf, exportElementAsPng, recipeFileName, shareElementAsPng } from "./exporters";
+import { recipeFileName, shareElementAsPdf, shareElementAsPng } from "./exporters";
 import { db } from "./db";
 import { MONTH_NAMES } from "./seasonal";
 import { AppHeader } from "./components/AppHeader";
@@ -117,16 +117,20 @@ export function App() {
     if (firstId) setSelectedId(firstId);
   }
 
-  async function exportSelected(format: "pdf" | "png") {
+  async function exportSelectedPdf() {
     if (!selectedRecipe || !printRef.current) return;
-    if (format === "pdf") {
-      await exportElementAsPdf(printRef.current, recipeFileName(selectedRecipe, "pdf"));
-    } else {
-      await exportElementAsPng(printRef.current, recipeFileName(selectedRecipe, "png"));
+    try {
+      const result = await shareElementAsPdf(printRef.current, recipeFileName(selectedRecipe, "pdf"), selectedRecipe.name);
+      if (result === "downloaded") {
+        status.setStatus("PDF telecharge. Le partage natif n'est pas disponible sur cet appareil.");
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      status.setStatus("Le partage PDF n'a pas abouti.");
     }
   }
 
-  async function shareSelected() {
+  async function shareSelectedImage() {
     if (!selectedRecipe || !printRef.current) return;
     const shareUrl = createRecipeShareUrl(selectedRecipe);
 
@@ -140,8 +144,6 @@ export function App() {
 
       if (result === "downloaded") {
         status.setStatus("PNG telecharge. Le partage natif n'est pas disponible sur cet appareil.");
-      } else if (result === "shared-link") {
-        status.setStatus("Lien de recette partage.");
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
@@ -155,6 +157,8 @@ export function App() {
     try {
       const result = await shareRecipeText(selectedRecipe);
       if (result === "copied") status.setStatus("Texte de la recette copie.");
+      if (result === "sms") status.setStatus("Ouverture de l'app SMS.");
+      if (result === "manual") status.setStatus("Texte pret a copier.");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       status.setStatus("Le partage texte n'a pas abouti.");
@@ -215,8 +219,8 @@ export function App() {
             onEdit: startEdit,
             onDelete: handleDelete,
             onDuplicate: handleDuplicate,
-            onExport: exportSelected,
-            onShare: shareSelected,
+            onExportPdf: exportSelectedPdf,
+            onShareImage: shareSelectedImage,
             onShareText: shareSelectedText,
             onExportRecipeFile: exportSelectedRecipeFile,
             onSelectRecipe: setSelectedId,
