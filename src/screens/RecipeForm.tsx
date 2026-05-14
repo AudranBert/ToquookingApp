@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Dispatch, FormEvent, KeyboardEvent, SetStateAction } from "react";
-import { Check, Link, Plus, RefreshCcw, Replace, X } from "lucide-react";
+import { Check, Image as ImageIcon, Link, Plus, RefreshCcw, Replace, Trash2, X } from "lucide-react";
 import { RECIPE_ORIGINS } from "../origins";
 import type { Ingredient, RecipeDraft, ReimportMode } from "../types";
 import { createId } from "../utils/id";
@@ -40,6 +40,23 @@ export function RecipeForm({
 }: Props) {
   function updateField<K extends keyof RecipeDraft>(field: K, value: RecipeDraft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
+  }
+
+  function setImageOverride(imageUrl: string) {
+    setDraft((current) => ({
+      ...current,
+      imageUrl: imageUrl || undefined,
+      sourceImageUrl:
+        current.sourceImageUrl ?? (current.imageUrl && current.sourceUrl ? current.imageUrl : undefined),
+    }));
+  }
+
+  function resetImageOverride() {
+    setDraft((current) => ({
+      ...current,
+      imageUrl: current.sourceImageUrl,
+      sourceImageUrl: current.sourceImageUrl,
+    }));
   }
 
   function updateIngredient(id: string, patch: Partial<Ingredient>) {
@@ -156,12 +173,18 @@ export function RecipeForm({
           ))}
         </datalist>
         <TextField label="Vidéo" value={draft.videoUrl ?? ""} onChange={(videoUrl) => updateField("videoUrl", videoUrl)} />
-        <TextField label="Image" value={draft.imageUrl ?? ""} onChange={(imageUrl) => updateField("imageUrl", imageUrl)} />
         <NumberField label="Personnes" value={draft.servings} onChange={(servings) => updateField("servings", servings)} />
         <NumberField label="Préparation" value={draft.prepTime} onChange={(prepTime) => updateField("prepTime", prepTime)} />
         <NumberField label="Cuisson" value={draft.cookTime} onChange={(cookTime) => updateField("cookTime", cookTime)} />
         <NumberField label="Temps total" value={draft.totalTime} onChange={(totalTime) => updateField("totalTime", totalTime)} />
       </div>
+
+      <ImageField
+        value={draft.imageUrl ?? ""}
+        sourceValue={draft.sourceImageUrl}
+        onChange={setImageOverride}
+        onReset={resetImageOverride}
+      />
 
       <section className="form-section">
         <h3>Ingrédients</h3>
@@ -204,6 +227,115 @@ export function RecipeForm({
       </label>
     </form>
   );
+}
+
+function ImageField({
+  value,
+  sourceValue,
+  onChange,
+  onReset,
+}: {
+  value: string;
+  sourceValue?: string;
+  onChange: (value: string) => void;
+  onReset: () => void;
+}) {
+  const hasImage = Boolean(value);
+  const hasCustomImage = hasImage && value !== sourceValue;
+
+  async function handleUpload(file: File | undefined) {
+    if (!file) return;
+
+    try {
+      onChange(await imageFileToDataUrl(file));
+    } catch {
+      window.alert("Image impossible a lire. Essaie un autre fichier.");
+    }
+  }
+
+  return (
+    <section className="form-section image-field">
+      <div className="image-field__header">
+        <div>
+          <h3>Photo</h3>
+          <p className="muted">Cette image remplace l'apercu importe depuis le site source.</p>
+        </div>
+        {hasCustomImage && (
+          <button className="button button--danger" type="button" onClick={onReset}>
+            <Trash2 size={18} /> {sourceValue ? "Revenir a l'image source" : "Retirer"}
+          </button>
+        )}
+      </div>
+
+      <div className="image-field__body">
+        {hasImage ? (
+          <img className="image-field__preview" src={value} alt="" />
+        ) : (
+          <div className="image-field__empty">
+            <ImageIcon size={30} />
+          </div>
+        )}
+        <div className="image-field__controls">
+          <label>
+            URL de l'image
+            <input value={value.startsWith("data:") ? "" : value} placeholder="https://..." onChange={(event) => onChange(event.target.value)} />
+          </label>
+          <label className="image-field__file-label">
+            Image depuis l'appareil
+            <input
+              className="image-field__file-input"
+              accept="image/*"
+              type="file"
+              onChange={(event) => {
+                void handleUpload(event.target.files?.[0]);
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+async function imageFileToDataUrl(file: File) {
+  const rawDataUrl = await readFileAsDataUrl(file);
+  if (!file.type.startsWith("image/") || file.type === "image/gif" || file.type === "image/svg+xml") return rawDataUrl;
+
+  try {
+    const image = await loadImage(rawDataUrl);
+    const maxSize = 1600;
+    const scale = Math.min(1, maxSize / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+    const context = canvas.getContext("2d");
+    if (!context) return rawDataUrl;
+
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.84);
+  } catch {
+    return rawDataUrl;
+  }
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
 }
 
 function ReimportControls({

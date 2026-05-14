@@ -700,6 +700,71 @@ label {
   gap: var(--space-3);
 }
 
+.image-field {
+  padding: var(--space-4);
+  background: rgba(255, 253, 247, 0.62);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.image-field__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.image-field__header h3,
+.image-field__header p {
+  margin-bottom: 0;
+}
+
+.image-field__body {
+  display: grid;
+  grid-template-columns: minmax(160px, 260px) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.image-field__preview,
+.image-field__empty {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-sm);
+}
+
+.image-field__preview {
+  object-fit: cover;
+  background: #f6ead8;
+}
+
+.image-field__empty {
+  display: grid;
+  place-items: center;
+  color: var(--color-muted);
+  background: #f6ead8;
+  border: 1px dashed var(--color-border-strong);
+}
+
+.image-field__controls {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.image-field__file-label {
+  display: grid;
+  gap: 6px;
+}
+
+.image-field__file-input {
+  min-height: 40px;
+  padding: 0;
+  color: transparent;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
 .reimport-bar {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) auto auto;
@@ -738,8 +803,15 @@ label {
   text-decoration: line-through;
 }
 
-.file-button input {
-  display: none;
+.image-field__file-input::file-selector-button {
+  min-height: 40px;
+  margin: 0 var(--space-3) 0 0;
+  padding: 9px 12px;
+  color: var(--color-primary-text);
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
 }
 
 .seasonal-reference {
@@ -776,8 +848,19 @@ label {
   .layout--split,
   .recipe-columns,
   .form-grid,
+  .image-field__body,
   .reimport-bar {
     grid-template-columns: 1fr;
+  }
+
+  .image-field__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .image-field__file-input::file-selector-button {
+    width: 100%;
+    margin-right: 0;
   }
 
   .ingredient-line {

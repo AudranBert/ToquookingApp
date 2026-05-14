@@ -38,6 +38,7 @@ export function recipeToDraft(recipe: Recipe): RecipeDraft {
     totalTime: recipe.totalTime,
     notes: recipe.notes,
     imageUrl: recipe.imageUrl,
+    sourceImageUrl: recipe.sourceImageUrl,
   };
 }
 
@@ -61,6 +62,7 @@ export function cleanRecipeDraft(draft: RecipeDraft): RecipeDraft {
     videoUrl: draft.videoUrl?.trim(),
     notes: draft.notes?.trim(),
     imageUrl: draft.imageUrl?.trim(),
+    sourceImageUrl: draft.sourceImageUrl?.trim(),
   };
 }
 

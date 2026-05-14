@@ -21,6 +21,7 @@ export type Recipe = {
   totalTime?: number;
   notes?: string;
   imageUrl?: string;
+  sourceImageUrl?: string;
   createdAt: string;
   updatedAt: string;
 };

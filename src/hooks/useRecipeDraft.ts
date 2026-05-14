@@ -78,11 +78,15 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
 }
 
 function parsedToDraft(parsed: ParsedRecipe, fallbackUrl: string, allTags: string[]): RecipeDraft {
+  const imageUrl = parsed.imageUrl;
+
   return {
     ...createEmptyDraft(),
     ...parsed,
     sourceUrl: parsed.sourceUrl ?? fallbackUrl,
     videoUrl: parsed.videoUrl,
+    imageUrl,
+    sourceImageUrl: imageUrl,
     tags: matchKnownTags(parsed.tags ?? [], allTags),
     ingredients: parsed.ingredients?.length ? parsed.ingredients : [{ id: createId(), name: "" }],
     instructions: parsed.instructions?.length ? parsed.instructions : [""],
@@ -101,6 +105,7 @@ function mergeBlanks(current: RecipeDraft, imported: RecipeDraft): RecipeDraft {
     totalTime: current.totalTime ?? imported.totalTime,
     notes: current.notes || imported.notes,
     imageUrl: current.imageUrl || imported.imageUrl,
+    sourceImageUrl: current.sourceImageUrl || imported.sourceImageUrl,
     origin: current.origin || imported.origin,
     tags: current.tags.length ? current.tags : imported.tags,
     ingredients: hasFilledIngredients(current) ? current.ingredients : imported.ingredients,
