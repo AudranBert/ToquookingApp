@@ -4,6 +4,7 @@ import { db } from "./db";
 import { exportElementAsPdf, exportElementAsPng, recipeFileName } from "./exporters";
 import { importRecipeFromUrl } from "./importer";
 import { countSeasonalIngredientMatches, currentSeasonalIngredients, MONTH_NAMES } from "./seasonal";
+import { originMatchesFilter } from "./origins";
 import { AppHeader, type Panel } from "./components/AppHeader";
 import { BackupScreen } from "./screens/BackupScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
@@ -31,6 +32,7 @@ export function App() {
   const [draft, setDraft] = useState<RecipeDraft>(createEmptyDraft);
   const [query, setQuery] = useState("");
   const [tagFilter, setTagFilter] = useState("");
+  const [originFilter, setOriginFilter] = useState("");
   const [seasonalThreshold, setSeasonalThreshold] = useState<SeasonalThreshold>(0);
   const [importUrl, setImportUrl] = useState("");
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
@@ -79,11 +81,12 @@ export function App() {
     () =>
       recipes.filter((recipe) => {
         const tagMatches = !tagFilter || recipe.tags.includes(tagFilter);
+        const originMatches = originMatchesFilter(recipe.origin, originFilter);
         const seasonMatches = seasonalThreshold === 0 || (seasonalMatchCounts.get(recipe.id) ?? 0) >= seasonalThreshold;
 
-        return recipeMatchesQuery(recipe, query) && tagMatches && seasonMatches;
+        return recipeMatchesQuery(recipe, query) && tagMatches && originMatches && seasonMatches;
       }),
-    [recipes, query, tagFilter, seasonalThreshold, seasonalMatchCounts],
+    [recipes, query, tagFilter, originFilter, seasonalThreshold, seasonalMatchCounts],
   );
 
   const selectedShoppingRecipes = recipes.filter((recipe) => shoppingIds.includes(recipe.id));
@@ -235,6 +238,7 @@ export function App() {
           filteredRecipes={filteredRecipes}
           importUrl={importUrl}
           query={query}
+          originFilter={originFilter}
           selectedRecipe={selectedRecipe}
           seasonalMatchCounts={seasonalMatchCounts}
           seasonalRecipeIds={seasonalRecipeIds}
@@ -249,6 +253,7 @@ export function App() {
           onImport={handleAssistedImport}
           onImportUrlChange={setImportUrl}
           onNewRecipe={startNewRecipe}
+          onOriginFilterChange={setOriginFilter}
           onQueryChange={setQuery}
           onSeasonalThresholdChange={setSeasonalThreshold}
           onSelectRecipe={setSelectedId}

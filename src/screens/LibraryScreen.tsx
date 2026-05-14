@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 import { ArrowLeft, Clock, Filter, Link, Plus, Search, Users } from "lucide-react";
+import { RECIPE_ORIGINS } from "../origins";
 import { RecipeDetail } from "../components/RecipeDetail";
 import type { Recipe } from "../types";
 import { proxiedImageUrl } from "../utils/images";
@@ -10,6 +11,7 @@ type Props = {
   allTags: string[];
   filteredRecipes: Recipe[];
   importUrl: string;
+  originFilter: string;
   query: string;
   selectedRecipe?: Recipe;
   seasonalMatchCounts: Map<string, number>;
@@ -25,6 +27,7 @@ type Props = {
   onImport: () => void;
   onImportUrlChange: (url: string) => void;
   onNewRecipe: () => void;
+  onOriginFilterChange: (origin: string) => void;
   onQueryChange: (query: string) => void;
   onSeasonalThresholdChange: (threshold: SeasonalThreshold) => void;
   onSelectRecipe: (id: string) => void;
@@ -36,6 +39,7 @@ export function LibraryScreen({
   allTags,
   filteredRecipes,
   importUrl,
+  originFilter,
   query,
   selectedRecipe,
   seasonalMatchCounts,
@@ -51,6 +55,7 @@ export function LibraryScreen({
   onImport,
   onImportUrlChange,
   onNewRecipe,
+  onOriginFilterChange,
   onQueryChange,
   onSeasonalThresholdChange,
   onSelectRecipe,
@@ -95,6 +100,17 @@ export function LibraryScreen({
               {allTags.map((tag) => (
                 <option key={tag} value={tag}>
                   {tag}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Pays / région
+            <select value={originFilter} onChange={(event) => onOriginFilterChange(event.target.value)}>
+              <option value="">Toutes les origines</option>
+              {RECIPE_ORIGINS.map((origin) => (
+                <option key={origin} value={origin}>
+                  {origin}
                 </option>
               ))}
             </select>
@@ -170,6 +186,7 @@ function RecipeGrid({
         <button className="recipe-card-button" key={recipe.id} onClick={() => onSelectRecipe(recipe.id)}>
           {recipe.imageUrl ? <img src={proxiedImageUrl(recipe.imageUrl)} alt="" /> : <div className="recipe-card-placeholder" />}
           <span className="recipe-card-title">{recipe.name}</span>
+          {recipe.origin && <span className="muted">{recipe.origin}</span>}
           <span className="recipe-card-meta">
             <span>
               <Users size={15} /> {recipe.servings ?? "-"}

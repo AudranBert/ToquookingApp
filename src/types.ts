@@ -10,6 +10,7 @@ export type Recipe = {
   id: string;
   name: string;
   tags: string[];
+  origin?: string;
   ingredients: Ingredient[];
   instructions: string[];
   sourceUrl?: string;

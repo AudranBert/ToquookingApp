@@ -1,5 +1,6 @@
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 import { Check, RefreshCcw, Replace, Plus, X } from "lucide-react";
+import { RECIPE_ORIGINS } from "../origins";
 import type { Ingredient, RecipeDraft } from "../types";
 import { createId } from "../utils/id";
 
@@ -66,6 +67,20 @@ export function RecipeForm({ draft, editing, warnings, onSubmit, onCancel, onRei
           placeholder="plat, chaud, dessert..."
           onChange={(value) => setDraft((current) => ({ ...current, tags: value.split(",").map((tag) => tag.trim()) }))}
         />
+        <label>
+          Pays / région d'origine
+          <input
+            list="recipe-origins"
+            value={draft.origin ?? ""}
+            onChange={(event) => setDraft((current) => ({ ...current, origin: event.target.value }))}
+            placeholder="France, Italie, Maroc..."
+          />
+        </label>
+        <datalist id="recipe-origins">
+          {RECIPE_ORIGINS.map((origin) => (
+            <option key={origin} value={origin} />
+          ))}
+        </datalist>
         <TextField label="Vidéo" value={draft.videoUrl ?? ""} onChange={(videoUrl) => setDraft((current) => ({ ...current, videoUrl }))} />
         <TextField label="Image" value={draft.imageUrl ?? ""} onChange={(imageUrl) => setDraft((current) => ({ ...current, imageUrl }))} />
         <NumberField label="Personnes" value={draft.servings} onChange={(servings) => setDraft((current) => ({ ...current, servings }))} />

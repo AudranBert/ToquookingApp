@@ -53,6 +53,7 @@ export function RecipeDetail({ recipe, printRef, onEdit, onDelete, onDuplicate, 
           <h2>{recipe.name}</h2>
         </div>
         <div className="chip-list">
+          {recipe.origin && <span className="chip chip--origin">{recipe.origin}</span>}
           {recipe.tags.map((tag) => (
             <span className="chip" key={tag}>
               {tag}

@@ -27,6 +27,7 @@ export function recipeToDraft(recipe: Recipe): RecipeDraft {
   return {
     name: recipe.name,
     tags: recipe.tags,
+    origin: recipe.origin,
     ingredients: recipe.ingredients.length ? recipe.ingredients : [{ id: createId(), name: "" }],
     instructions: recipe.instructions.length ? recipe.instructions : [""],
     sourceUrl: recipe.sourceUrl,
@@ -45,6 +46,7 @@ export function cleanRecipeDraft(draft: RecipeDraft): RecipeDraft {
     ...draft,
     name: draft.name.trim(),
     tags: draft.tags.map((tag) => tag.trim()).filter(Boolean),
+    origin: draft.origin?.trim(),
     ingredients: draft.ingredients
       .map((ingredient) => ({
         ...ingredient,
@@ -75,6 +77,7 @@ export function recipeMatchesQuery(recipe: Recipe, query: string) {
   const searchable = normalizeText(
     [
       recipe.name,
+      recipe.origin ?? "",
       recipe.tags.join(" "),
       recipe.ingredients.map((ingredient) => ingredientSearchText(ingredient.name)).join(" "),
       recipe.instructions.join(" "),

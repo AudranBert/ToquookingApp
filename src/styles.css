@@ -416,6 +416,12 @@ label {
   border-color: #d9bf7c;
 }
 
+.chip--origin {
+  color: #293241;
+  background: #e9edf2;
+  border-color: #c7d0dc;
+}
+
 .ingredient-status-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
