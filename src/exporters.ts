@@ -3,7 +3,7 @@ import jsPDF from "jspdf";
 import type { Recipe } from "./types";
 
 export async function exportElementAsPng(element: HTMLElement, filename: string) {
-  const canvas = await html2canvas(element, { backgroundColor: "#fffdf7", scale: 2 });
+  const canvas = await html2canvas(element, { backgroundColor: "#fffdf7", scale: 2, useCORS: true, allowTaint: false });
   const link = document.createElement("a");
   link.download = filename;
   link.href = canvas.toDataURL("image/png");
@@ -11,7 +11,7 @@ export async function exportElementAsPng(element: HTMLElement, filename: string)
 }
 
 export async function exportElementAsPdf(element: HTMLElement, filename: string) {
-  const canvas = await html2canvas(element, { backgroundColor: "#fffdf7", scale: 2 });
+  const canvas = await html2canvas(element, { backgroundColor: "#fffdf7", scale: 2, useCORS: true, allowTaint: false });
   const image = canvas.toDataURL("image/png");
   const pdf = new jsPDF("p", "mm", "a4");
   const pageWidth = pdf.internal.pageSize.getWidth();

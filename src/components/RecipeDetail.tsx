@@ -1,6 +1,7 @@
 import type { RefObject } from "react";
 import { BookOpen, Edit3, FileDown, FileImage, Plus, Trash2 } from "lucide-react";
 import type { Recipe } from "../types";
+import { proxiedImageUrl } from "../utils/images";
 import { ingredientLabel } from "../utils/recipes";
 
 type Props = {
@@ -44,7 +45,7 @@ export function RecipeDetail({ recipe, printRef, onEdit, onDelete, onDuplicate, 
       </div>
 
       <div className="recipe-card" ref={printRef}>
-        {recipe.imageUrl && <img className="recipe-image" src={recipe.imageUrl} alt="" />}
+        {recipe.imageUrl && <img className="recipe-image" src={proxiedImageUrl(recipe.imageUrl)} crossOrigin="anonymous" alt="" />}
         <div className="recipe-title">
           <span className="eyebrow">Recette</span>
           <h2>{recipe.name}</h2>
@@ -57,10 +58,10 @@ export function RecipeDetail({ recipe, printRef, onEdit, onDelete, onDuplicate, 
           ))}
         </div>
         <div className="meta-list">
-          {recipe.servings && <span>{recipe.servings} personne(s)</span>}
-          {recipe.prepTime && <span>Préparation {recipe.prepTime} min</span>}
-          {recipe.cookTime && <span>Cuisson {recipe.cookTime} min</span>}
-          {recipe.totalTime && <span>Total {recipe.totalTime} min</span>}
+          {hasValue(recipe.servings) && <span>{recipe.servings} personne(s)</span>}
+          {hasPositiveValue(recipe.prepTime) && <span>Préparation {recipe.prepTime} min</span>}
+          {hasPositiveValue(recipe.cookTime) && <span>Cuisson {recipe.cookTime} min</span>}
+          {hasPositiveValue(recipe.totalTime) && <span>Total {recipe.totalTime} min</span>}
         </div>
         <div className="recipe-columns">
           <section>
@@ -95,4 +96,12 @@ export function RecipeDetail({ recipe, printRef, onEdit, onDelete, onDuplicate, 
       </div>
     </article>
   );
+}
+
+function hasValue(value: number | undefined) {
+  return value !== undefined && value !== null;
+}
+
+function hasPositiveValue(value: number | undefined) {
+  return value !== undefined && value > 0;
 }
