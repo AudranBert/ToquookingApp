@@ -10,6 +10,14 @@ Main features:
 - You can generate a shopping list by selecting recipes (PDF, PNG or Text).
 
 ### TO DO
-- HTTPS
+- HTTPS/Phone App
 - Change page remove Message headband
 - Better shopping list recipe selection
+- In save menu: can download an example json. So people can generate recipe json with IA. For example they scan a recipe book -> ia formatting (json ) -> import in app.
+- Tooltip for showing which website are supported when importing
+- Can have multiples images
+- Saves: handle images (saving and reloading, use zip maybe)
+- Default App icon. Can personnalize app as it was our cooking book.
+- English UI
+- In recipes needed tools : like oven, fryer, toaster... So we can filter on fryer for example 
+- Maybe some AI tools: better autofilling of the import form, scan book ans import recipe directly, translate recipes
