@@ -1,23 +1,22 @@
 import type { ParsedRecipe } from "./types";
 import { findKnownRecipeOrigin } from "./origins";
 import { parseIngredientLine } from "./utils/ingredients";
-import { createId } from "./utils/id";
 
 const HTML_ENTITIES: Record<string, string> = {
   amp: "&",
   apos: "'",
   copy: "(c)",
-  eacute: "é",
-  egrave: "è",
-  ecirc: "ê",
-  agrave: "à",
-  acirc: "â",
-  icirc: "î",
-  iuml: "ï",
-  ocirc: "ô",
-  ugrave: "ù",
-  ucirc: "û",
-  ccedil: "ç",
+  eacute: "�",
+  egrave: "�",
+  ecirc: "�",
+  agrave: "�",
+  acirc: "�",
+  icirc: "�",
+  iuml: "�",
+  ocirc: "�",
+  ugrave: "�",
+  ucirc: "�",
+  ccedil: "�",
   nbsp: " ",
   quot: '"',
 };
@@ -91,11 +90,9 @@ function arrayify(value: unknown): string[] {
 }
 
 function metadataValues(recipe: Record<string, unknown>) {
-  return [
-    ...arrayify(recipe.keywords),
-    ...arrayify(recipe.recipeCategory),
-    ...arrayify(recipe.recipeCuisine),
-  ].map((value) => value.trim()).filter(Boolean);
+  return [...arrayify(recipe.keywords), ...arrayify(recipe.recipeCategory), ...arrayify(recipe.recipeCuisine)]
+    .map((value) => value.trim())
+    .filter(Boolean);
 }
 
 function extractRecipeFromJsonLd(json: unknown): ParsedRecipe | null {
@@ -143,7 +140,11 @@ function instructionText(item: unknown): string[] {
 
   const node = item as Record<string, unknown>;
   const nested = node.itemListElement ?? node.steps ?? node.recipeInstructions;
-  if (nested) return arrayify(node.text ?? node.name).concat(Array.isArray(nested) ? nested.flatMap(instructionText) : instructionText(nested));
+  if (nested) {
+    return arrayify(node.text ?? node.name).concat(
+      Array.isArray(nested) ? nested.flatMap(instructionText) : instructionText(nested),
+    );
+  }
 
   return arrayify(node.text ?? node.name);
 }
@@ -161,8 +162,25 @@ function recipeVideoUrl(recipe: Record<string, unknown>) {
 
 function marmitonRestTime(html: string) {
   const text = cleanText(html);
-  const match = text.match(/Repos\s*:\s*(.+?)\s+(?:Cuisson\s*:|Étape\s+1|Etape\s+1)/i);
+  const match = text.match(/Repos\s*:\s*(.+?)\s+(?:Cuisson\s*:|�tape\s+1|Etape\s+1)/i);
   return match ? parseDurationText(match[1]) : undefined;
+}
+
+function guessRecipeNameFromUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    const segments = parsed.pathname.split("/").filter(Boolean);
+    const slug = segments[segments.length - 1] ?? "";
+    const cleanedSlug = decodeURIComponent(slug)
+      .replace(/\.[a-z0-9]+$/i, "")
+      .replace(/[-_]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (cleanedSlug.length >= 3) return cleanedSlug;
+    return parsed.hostname.replace(/^www\./i, "");
+  } catch {
+    return "";
+  }
 }
 
 export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
@@ -170,11 +188,11 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
   const timer = window.setTimeout(() => controller.abort(), 12000);
 
   try {
-    const endpoint = `${import.meta.env.BASE_URL}api/import?url=${encodeURIComponent(url)}`;
+    const endpoint = `/api/import?url=${encodeURIComponent(url)}`;
     const response = await fetch(endpoint, { signal: controller.signal });
     if (response.ok) return response.json();
   } catch {
-    // Local static builds do not always have the serverless endpoint.
+    // Local static builds do not always have the server endpoint.
   } finally {
     window.clearTimeout(timer);
   }
@@ -184,7 +202,7 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
       sourceUrl: url,
       videoUrl: url,
       name: "Recette YouTube",
-      warnings: ["Import YouTube partiel : vérifie le titre, les ingrédients et les étapes manuellement."],
+      warnings: ["Import YouTube partiel: verifie le titre, les ingredients et les etapes manuellement."],
     };
   }
 
@@ -202,7 +220,7 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
           if (!parsed) continue;
           const warnings = parsed.name?.trim()
             ? undefined
-            : ["Aucun nom détecté dans la recette importée. Renseigne-le manuellement."];
+            : ["Aucun nom detecte dans la recette importee. Renseigne-le manuellement."];
           return { ...parsed, restTime: parsed.restTime ?? marmitonRestTime(html), sourceUrl: url, warnings };
         } catch {
           continue;
@@ -210,16 +228,22 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
       }
     }
   } catch {
+    const fallbackName = guessRecipeNameFromUrl(url);
     return {
+      name: fallbackName || undefined,
       sourceUrl: url,
-      warnings: ["Import automatique indisponible pour ce site. Le lien est conservé, complète la recette manuellement."],
+      warnings: ["Import automatique indisponible pour ce site. Le lien est conserve, complete la recette manuellement."],
     };
   }
 
+  const fallbackName = guessRecipeNameFromUrl(url);
   return {
+    name: fallbackName || undefined,
     sourceUrl: url,
-    warnings: ["Aucune recette structurée trouvée. Le lien est conservé, complète les champs manquants."],
+    warnings: ["Aucune recette structuree trouvee. Le lien est conserve, complete les champs manquants."],
   };
+}
+
 async function fetchRecipeHtml(url: string): Promise<string> {
   try {
     const response = await fetch(url);
@@ -240,5 +264,4 @@ async function fetchRecipeHtml(url: string): Promise<string> {
   const response = await fetch(jinaUrl);
   if (!response.ok) throw new Error(`Unable to fetch source HTML (${response.status})`);
   return response.text();
-}
 }

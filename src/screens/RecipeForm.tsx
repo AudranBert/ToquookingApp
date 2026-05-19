@@ -38,6 +38,14 @@ export function RecipeForm({
   onReimport,
   setDraft,
 }: Props) {
+  const isOfflineFallbackImport = warnings.some((warning) => {
+    const normalized = warning
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+    return normalized.includes("import automatique indisponible") || normalized.includes("aucune recette structuree");
+  });
+
   function updateField<K extends keyof RecipeDraft>(field: K, value: RecipeDraft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
   }
@@ -142,6 +150,7 @@ export function RecipeForm({
 
       {warnings.length > 0 && (
         <div className="notice notice--warning">
+          {isOfflineFallbackImport && <p className="notice-kicker">Mode secours hors ligne actif</p>}
           {warnings.map((warning) => (
             <p key={warning}>{warning}</p>
           ))}
