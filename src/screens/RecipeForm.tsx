@@ -43,7 +43,11 @@ export function RecipeForm({
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase();
-    return normalized.includes("import automatique indisponible") || normalized.includes("aucune recette structuree");
+    return (
+      normalized.includes("import automatique indisponible") ||
+      normalized.includes("aucune recette structuree") ||
+      normalized.includes("import avance indisponible hors backend")
+    );
   });
 
   function updateField<K extends keyof RecipeDraft>(field: K, value: RecipeDraft[K]) {
