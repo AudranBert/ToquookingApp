@@ -2,6 +2,19 @@
 
 Your own digital recipe book! An all in one app for importing, personalizing, searching, saving, sharing recipes. Everything is done locally.
 
+## GitHub Pages
+
+This app is configured to work on GitHub Pages (repo subpath hosting).
+
+- Build locally: `npm run build`
+- Deploy with the existing script: `npm run deploy`
+- Optional explicit base path override:
+  - PowerShell: `$env:BASE_PATH='/your-repo-name/'; npm run build`
+
+Import behavior on static hosting:
+- Local dev uses the local `/api/import` and `/api/image` proxy endpoints.
+- GitHub Pages fallback uses client-side import parsing and direct image URLs so import and images still work without server functions.
+
 Main features: 
 - Recipes can be imported from various sources automatically. You can add tags, note, change the image, adjuste the instructions...
 - You can search recipes using filters on country of origin, tags, name, ingredients. You can search for seasonal dishes.
