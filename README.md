@@ -10,7 +10,8 @@ Main features:
 - You can generate a shopping list by selecting recipes (PDF, PNG or Text).
 
 ### TO DO
-- HTTPS/Phone App
+- ✔️ HTTPS/Phone App : Hosted on Github Pages
+- Can filter meat, fish, vegan, vegetarian dishes
 - Change page remove Message headband
 - Better shopping list recipe selection
 - In save menu: can download an example json. So people can generate recipe json with IA. For example they scan a recipe book -> ia formatting (json ) -> import in app.
