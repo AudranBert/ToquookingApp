@@ -1,5 +1,7 @@
 ﻿import type { ParsedRecipe } from "./types";
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").trim().replace(/\/+$/, "");
+
 function guessRecipeNameFromUrl(url: string) {
   try {
     const parsed = new URL(url);
@@ -22,7 +24,7 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
   const timer = window.setTimeout(() => controller.abort(), 12000);
 
   try {
-    const endpoint = `/api/import?url=${encodeURIComponent(url)}`;
+    const endpoint = `${API_BASE_URL || ""}/api/import?url=${encodeURIComponent(url)}`;
     const response = await fetch(endpoint, { signal: controller.signal });
     if (response.ok) return response.json();
   } catch {

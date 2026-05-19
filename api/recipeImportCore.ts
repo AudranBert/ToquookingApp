@@ -70,7 +70,7 @@ function cleanText(value: unknown) {
     .trim();
 }
 
-function textArray(value: unknown) {
+function textArray(value: unknown): string[] {
   if (Array.isArray(value)) return value.flatMap(textArray).filter(Boolean);
   if (typeof value === "string" || typeof value === "number") {
     return String(value)
@@ -85,12 +85,14 @@ function textArray(value: unknown) {
   return [];
 }
 
+function firstText(value: unknown) {
+  return textArray(value)[0] ?? "";
+}
+
 function metadataValues(recipe: RecipeNode) {
-  return [
-    ...textArray(recipe.keywords),
-    ...textArray(recipe.recipeCategory),
-    ...textArray(recipe.recipeCuisine),
-  ].map((value) => value.trim()).filter(Boolean);
+  return [...textArray(recipe.keywords), ...textArray(recipe.recipeCategory), ...textArray(recipe.recipeCuisine)]
+    .map((value) => value.trim())
+    .filter(Boolean);
 }
 
 function minutes(value: unknown) {
@@ -117,37 +119,18 @@ function textMinutes(value: string) {
   return simple ? Number(simple[1]) : undefined;
 }
 
-function parseJsonLd(html: string) {
-  const scripts = [
-    ...html.matchAll(
-      /<script[^>]+type=["'](?:application\/ld\+json|application&#x2F;ld&#x2B;json)["'][^>]*>([\s\S]*?)<\/script>/gi,
-    ),
-  ];
-
-  for (const script of scripts) {
-    for (const scriptBody of [script[1], decodeHtmlEntities(script[1])]) {
-      try {
-        const json = JSON.parse(scriptBody);
-      const nodes = Array.isArray(json) ? json : [json];
-      const graph = nodes.flatMap((node) =>
-        node && typeof node === "object" && Array.isArray((node as RecipeNode)["@graph"])
-          ? ((node as RecipeNode)["@graph"] as unknown[])
-          : [node],
-      );
-      const recipe = graph.find((node) => {
-        if (!node || typeof node !== "object") return false;
-        const type = (node as RecipeNode)["@type"];
-        return Array.isArray(type) ? type.includes("Recipe") : type === "Recipe";
-      });
-
-      if (recipe && typeof recipe === "object") return recipe as RecipeNode;
-      } catch {
-        continue;
-      }
-    }
+function canonicalUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, "").toLowerCase();
+  } catch {
+    return "";
   }
+}
 
-  return null;
+function extractPageTitle(html: string) {
+  const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  return cleanText(match?.[1] ?? "");
 }
 
 function instructionText(item: unknown): string[] {
@@ -156,7 +139,11 @@ function instructionText(item: unknown): string[] {
 
   const node = item as RecipeNode;
   const nested = node.itemListElement ?? node.steps ?? node.recipeInstructions;
-  if (nested) return textArray(node.text ?? node.name).concat(Array.isArray(nested) ? nested.flatMap(instructionText) : instructionText(nested));
+  if (nested) {
+    return textArray(node.text ?? node.name).concat(
+      Array.isArray(nested) ? nested.flatMap(instructionText) : instructionText(nested),
+    );
+  }
 
   return textArray(node.text ?? node.name);
 }
@@ -165,6 +152,83 @@ function recipeInstructions(recipe: RecipeNode) {
   return Array.isArray(recipe.recipeInstructions)
     ? recipe.recipeInstructions.flatMap(instructionText).filter(Boolean)
     : textArray(recipe.recipeInstructions);
+}
+
+function recipeCandidateUrls(recipe: RecipeNode) {
+  return [
+    ...textArray(recipe.url),
+    ...textArray(recipe.mainEntityOfPage),
+    ...textArray((recipe.mainEntityOfPage as RecipeNode | undefined)?.["@id"]),
+    ...textArray(recipe["@id"]),
+  ]
+    .map(canonicalUrl)
+    .filter(Boolean);
+}
+
+function recipeCandidateScore(recipe: RecipeNode, requestedUrl: string, pageTitle: string) {
+  let score = 0;
+
+  const requestedCanonical = canonicalUrl(requestedUrl);
+  const candidateUrls = recipeCandidateUrls(recipe);
+
+  if (requestedCanonical && candidateUrls.includes(requestedCanonical)) score += 60;
+  if (
+    requestedCanonical &&
+    candidateUrls.some((value) => requestedCanonical.includes(value) || value.includes(requestedCanonical))
+  ) {
+    score += 20;
+  }
+
+  const ingredientsCount = textArray(recipe.recipeIngredient).length;
+  const instructionsCount = recipeInstructions(recipe).length;
+  score += Math.min(ingredientsCount, 20);
+  score += Math.min(instructionsCount, 20);
+
+  const candidateName = cleanText(firstText(recipe.name)).toLowerCase();
+  const normalizedTitle = pageTitle.toLowerCase();
+  if (candidateName && normalizedTitle.includes(candidateName)) score += 20;
+
+  return score;
+}
+
+function parseJsonLd(html: string, requestedUrl: string) {
+  const scripts = [
+    ...html.matchAll(
+      /<script[^>]+type=["'](?:application\/ld\+json|application&#x2F;ld&#x2B;json)["'][^>]*>([\s\S]*?)<\/script>/gi,
+    ),
+  ];
+
+  const pageTitle = extractPageTitle(html);
+  const candidates: RecipeNode[] = [];
+
+  for (const script of scripts) {
+    for (const scriptBody of [script[1], decodeHtmlEntities(script[1])]) {
+      try {
+        const json = JSON.parse(scriptBody);
+        const nodes = Array.isArray(json) ? json : [json];
+        const graph = nodes.flatMap((node) =>
+          node && typeof node === "object" && Array.isArray((node as RecipeNode)["@graph"])
+            ? ((node as RecipeNode)["@graph"] as unknown[])
+            : [node],
+        );
+
+        for (const node of graph) {
+          if (!node || typeof node !== "object") continue;
+          const type = (node as RecipeNode)["@type"];
+          const isRecipe = Array.isArray(type) ? type.includes("Recipe") : type === "Recipe";
+          if (isRecipe) candidates.push(node as RecipeNode);
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  if (candidates.length === 0) return null;
+
+  return candidates.sort(
+    (a, b) => recipeCandidateScore(b, requestedUrl, pageTitle) - recipeCandidateScore(a, requestedUrl, pageTitle),
+  )[0];
 }
 
 function servings(value: unknown) {
@@ -184,7 +248,23 @@ function marmitonRestTime(html: string) {
   return match ? textMinutes(match[1]) : undefined;
 }
 
+function recipeUrlMismatchWarning(recipe: RecipeNode, requestedUrl: string) {
+  const requestedCanonical = canonicalUrl(requestedUrl);
+  if (!requestedCanonical) return undefined;
+
+  const candidates = recipeCandidateUrls(recipe);
+  if (candidates.length === 0) return undefined;
+  if (candidates.includes(requestedCanonical)) return undefined;
+  if (candidates.some((value) => requestedCanonical.includes(value) || value.includes(requestedCanonical))) {
+    return undefined;
+  }
+
+  return "Le site semble renvoyer une autre recette que le lien demande. Verifie le titre et les ingredients.";
+}
+
 function recipeNodeToImport(recipe: RecipeNode, url: string, html: string): ImportedRecipe {
+  const mismatchWarning = recipeUrlMismatchWarning(recipe, url);
+
   return {
     name: textArray(recipe.name)[0],
     sourceUrl: url,
@@ -199,7 +279,10 @@ function recipeNodeToImport(recipe: RecipeNode, url: string, html: string): Impo
     cookTime: minutes(recipe.cookTime),
     totalTime: minutes(recipe.totalTime),
     imageUrl: textArray(recipe.image)[0],
-    warnings: ["Import assisté : vérifie les quantités et les étapes avant d'enregistrer."],
+    warnings: [
+      "Import assiste : verifie les quantites et les etapes avant d'enregistrer.",
+      ...(mismatchWarning ? [mismatchWarning] : []),
+    ],
   };
 }
 
@@ -230,19 +313,19 @@ export async function importRecipeFromSourceUrl(url: string): Promise<ImportedRe
       name: "Recette YouTube",
       sourceUrl: url,
       videoUrl: url,
-      warnings: ["Import YouTube partiel : complète les ingrédients et les étapes après vérification."],
+      warnings: ["Import YouTube partiel : complete les ingredients et les etapes apres verification."],
     };
   }
 
   try {
     const page = await fetchWithTimeout(url);
     const html = await page.text();
-    const recipe = parseJsonLd(html);
+    const recipe = parseJsonLd(html, url);
 
     if (!recipe) {
       return {
         sourceUrl: url,
-        warnings: ["Aucune donnée de recette structurée trouvée. Complète la fiche manuellement."],
+        warnings: ["Aucune donnee de recette structuree trouvee. Complete la fiche manuellement."],
       };
     }
 
@@ -250,7 +333,7 @@ export async function importRecipeFromSourceUrl(url: string): Promise<ImportedRe
   } catch {
     return {
       sourceUrl: url,
-      warnings: ["Impossible de lire ce lien pour le moment. Le lien est gardé pour une saisie manuelle."],
+      warnings: ["Impossible de lire ce lien pour le moment. Le lien est garde pour une saisie manuelle."],
     };
   }
 }
