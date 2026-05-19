@@ -4,6 +4,7 @@ import { fetchProxiedImage } from "./api/imageProxyCore";
 import { importRecipeFromSourceUrl } from "./api/recipeImportCore";
 
 export default defineConfig({
+  base: "/ToquookingApp/",
   plugins: [
     react(),
     {

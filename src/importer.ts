@@ -170,7 +170,7 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
   const timer = window.setTimeout(() => controller.abort(), 12000);
 
   try {
-    const endpoint = `/api/import?url=${encodeURIComponent(url)}`;
+    const endpoint = `${import.meta.env.BASE_URL}api/import?url=${encodeURIComponent(url)}`;
     const response = await fetch(endpoint, { signal: controller.signal });
     if (response.ok) return response.json();
   } catch {
@@ -189,8 +189,7 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
   }
 
   try {
-    const response = await fetch(url);
-    const html = await response.text();
+    const html = await fetchRecipeHtml(url);
     const jsonLdScripts = [
       ...html.matchAll(
         /<script[^>]+type=["'](?:application\/ld\+json|application&#x2F;ld&#x2B;json)["'][^>]*>([\s\S]*?)<\/script>/gi,
@@ -216,4 +215,25 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
     sourceUrl: url,
     warnings: ["Aucune recette structurée trouvée. Le lien est conservé, complète les champs manquants."],
   };
+async function fetchRecipeHtml(url: string): Promise<string> {
+  try {
+    const response = await fetch(url);
+    if (response.ok) return await response.text();
+  } catch {
+    // Continue with fallback proxies below.
+  }
+
+  const allOriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+  try {
+    const response = await fetch(allOriginsUrl);
+    if (response.ok) return await response.text();
+  } catch {
+    // Continue with last fallback.
+  }
+
+  const jinaUrl = `https://r.jina.ai/http://${url.replace(/^https?:\/\//i, "")}`;
+  const response = await fetch(jinaUrl);
+  if (!response.ok) throw new Error(`Unable to fetch source HTML (${response.status})`);
+  return response.text();
+}
 }
