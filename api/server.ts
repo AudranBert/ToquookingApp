@@ -14,6 +14,15 @@ function sendJson(response: http.ServerResponse, statusCode: number, body: unkno
 
 const server = http.createServer(async (request, response) => {
   try {
+    response.setHeader("Access-Control-Allow-Origin", "*");
+    response.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+    response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    if (request.method === "OPTIONS") {
+      response.statusCode = 204;
+      response.end();
+      return;
+    }
+
     const requestUrl = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
 
     if (requestUrl.pathname === "/health") {
