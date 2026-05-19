@@ -9,7 +9,7 @@ import { BackupScreen } from "./screens/BackupScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
 import { RecipeForm } from "./screens/RecipeForm";
 import { ShoppingScreen } from "./screens/ShoppingScreen";
-import { downloadRecipesBackup, shareSingleRecipeBackup } from "./utils/backup";
+import { shareRecipesBackup, shareSingleRecipeBackup } from "./utils/backup";
 import {
   clearRecipeShareFromLocation,
   createRecipeShareUrl,
@@ -178,6 +178,18 @@ export function App() {
     }
   }
 
+  async function exportRecipesFile() {
+    try {
+      const result = await shareRecipesBackup(recipes, tagApi.allTags);
+      if (result === "downloaded") {
+        status.setStatus("Sauvegarde telechargee. Le partage natif n'est pas disponible sur cet appareil.");
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      status.setStatus("Le partage de la sauvegarde n'a pas abouti.");
+    }
+  }
+
   return (
     <main className="app-shell">
       <AppHeader
@@ -282,7 +294,7 @@ export function App() {
 
       {activePanel === "backup" && (
         <BackupScreen
-          onExport={() => downloadRecipesBackup(recipes, tagApi.allTags)}
+          onExport={exportRecipesFile}
           onImport={handleBackupImport}
         />
       )}

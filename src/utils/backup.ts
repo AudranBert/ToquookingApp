@@ -3,18 +3,34 @@ import type { BackupFile, Recipe } from "../types";
 import { createId } from "./id";
 
 export function downloadRecipesBackup(recipes: Recipe[], tags: string[] = []) {
+  downloadBlob(recipesBackupBlob(recipes, tags), recipesBackupFileName());
+}
+
+export async function shareRecipesBackup(recipes: Recipe[], tags: string[] = []) {
+  const filename = recipesBackupFileName();
+  const blob = recipesBackupBlob(recipes, tags);
+  const jsonFile = new File([blob], filename, { type: "application/json" });
+  if (await tryShare({ files: [jsonFile] })) {
+    return "shared";
+  }
+
+  const plainTextFile = new File([blob], filename, { type: "text/plain" });
+  if (await tryShare({ files: [plainTextFile] })) {
+    return "shared";
+  }
+
+  downloadRecipesBackup(recipes, tags);
+  return "downloaded";
+}
+
+function recipesBackupBlob(recipes: Recipe[], tags: string[] = []) {
   const backup: BackupFile = {
     version: 1,
     exportedAt: new Date().toISOString(),
     tags,
     recipes,
   };
-  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `toque-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
-  link.click();
-  URL.revokeObjectURL(link.href);
+  return new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
 }
 
 export function downloadSingleRecipeBackup(recipe: Recipe) {
@@ -23,14 +39,14 @@ export function downloadSingleRecipeBackup(recipe: Recipe) {
 
 export async function shareSingleRecipeBackup(recipe: Recipe) {
   const filename = recipeBackupFileName(recipe);
-  const file = new File([singleRecipeBackupBlob(recipe)], filename, { type: "application/json" });
-  const shareData: ShareData = {
-    title: recipe.name,
-    text: `Recette Toque: ${recipe.name}`,
-    files: [file],
-  };
+  const blob = singleRecipeBackupBlob(recipe);
+  const jsonFile = new File([blob], filename, { type: "application/json" });
+  if (await tryShare({ files: [jsonFile] })) {
+    return "shared";
+  }
 
-  if (await tryShare(shareData)) {
+  const plainTextFile = new File([blob], filename, { type: "text/plain" });
+  if (await tryShare({ files: [plainTextFile] })) {
     return "shared";
   }
 
@@ -87,8 +103,16 @@ function recipeBackupFileName(recipe: Recipe) {
   return `toque-recette-${slug || "recette"}.json`;
 }
 
+function recipesBackupFileName() {
+  return `toque-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
+}
+
 async function tryShare(shareData: ShareData) {
-  if (!navigator.share || (navigator.canShare && !navigator.canShare(shareData))) return false;
+  if (!navigator.share) return false;
+
+  if (navigator.canShare && !navigator.canShare(shareData)) {
+    return false;
+  }
 
   try {
     await navigator.share(shareData);

@@ -196,12 +196,17 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
       ),
     ];
     for (const match of jsonLdScripts) {
-      const parsed = extractRecipeFromJsonLd(JSON.parse(match[1]));
-      if (parsed) {
-        const warnings = parsed.name?.trim()
-          ? undefined
-          : ["Aucun nom détecté dans la recette importée. Renseigne-le manuellement."];
-        return { ...parsed, restTime: parsed.restTime ?? marmitonRestTime(html), sourceUrl: url, warnings };
+      for (const scriptBody of [match[1], decodeHtmlEntities(match[1])]) {
+        try {
+          const parsed = extractRecipeFromJsonLd(JSON.parse(scriptBody));
+          if (!parsed) continue;
+          const warnings = parsed.name?.trim()
+            ? undefined
+            : ["Aucun nom détecté dans la recette importée. Renseigne-le manuellement."];
+          return { ...parsed, restTime: parsed.restTime ?? marmitonRestTime(html), sourceUrl: url, warnings };
+        } catch {
+          continue;
+        }
       }
     }
   } catch {

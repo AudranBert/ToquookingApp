@@ -47,13 +47,7 @@ export async function exportElementAsPng(element: HTMLElement, filename: string)
 export async function shareElementAsPng(element: HTMLElement, filename: string, title: string, text: string) {
   const blob = await elementToPngBlob(element);
   const file = new File([blob], filename, { type: "image/png" });
-  const shareData: ShareData = {
-    title,
-    text,
-    files: [file],
-  };
-
-  if (await tryShare(shareData)) {
+  if (await tryShare({ files: [file] })) {
     return "shared";
   }
 
@@ -68,13 +62,7 @@ export async function exportElementAsPdf(element: HTMLElement, filename: string)
 export async function shareElementAsPdf(element: HTMLElement, filename: string, title: string, text = `Recette Toque: ${title}`) {
   const blob = await elementToPdfBlob(element);
   const file = new File([blob], filename, { type: "application/pdf" });
-  const shareData: ShareData = {
-    title,
-    text,
-    files: [file],
-  };
-
-  if (await tryShare(shareData)) {
+  if (await tryShare({ files: [file] })) {
     return "shared";
   }
 
@@ -103,7 +91,8 @@ export function basicFileName(label: string, extension: "pdf" | "png") {
 }
 
 async function tryShare(shareData: ShareData) {
-  if (!navigator.share || (navigator.canShare && !navigator.canShare(shareData))) return false;
+  if (!navigator.share) return false;
+  if (navigator.canShare && !navigator.canShare(shareData)) return false;
 
   try {
     await navigator.share(shareData);
