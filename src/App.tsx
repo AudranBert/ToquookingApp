@@ -76,6 +76,17 @@ export function App() {
 
   const selectedRecipe = selectedId ? recipes.find((recipe) => recipe.id === selectedId) : undefined;
   const seasonMonthName = MONTH_NAMES[new Date().getMonth()];
+  const isAbortError = (error: unknown) => error instanceof DOMException && error.name === "AbortError";
+
+  async function withShareStatus(action: () => Promise<"shared" | "downloaded" | "copied" | "sms" | "manual">, fallbackError: string) {
+    try {
+      return await action();
+    } catch (error) {
+      if (isAbortError(error)) return undefined;
+      status.setStatus(fallbackError);
+      return undefined;
+    }
+  }
 
   function startNewRecipe() {
     draftApi.startNew();
@@ -121,75 +132,50 @@ export function App() {
 
   async function exportSelectedPdf() {
     if (!selectedRecipe || !printRef.current) return;
-    try {
-      const result = await shareElementAsPdf(printRef.current, recipeFileName(selectedRecipe, "pdf"), selectedRecipe.name);
-      if (result === "downloaded") {
-        status.setStatus("PDF telecharge. Le partage natif n'est pas disponible sur cet appareil.");
-      }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      status.setStatus("Le partage PDF n'a pas abouti.");
-    }
+    const result = await withShareStatus(
+      () => shareElementAsPdf(printRef.current!, recipeFileName(selectedRecipe, "pdf"), selectedRecipe.name),
+      "Le partage PDF n'a pas abouti.",
+    );
+    if (result === "downloaded") status.setStatus("PDF telecharge. Le partage natif n'est pas disponible sur cet appareil.");
   }
 
   async function shareSelectedImage() {
     if (!selectedRecipe || !printRef.current) return;
+    const target = printRef.current;
     const shareUrl = createRecipeShareUrl(selectedRecipe);
 
-    try {
-      const result = await shareElementAsPng(
-        printRef.current,
-        recipeFileName(selectedRecipe, "png"),
-        selectedRecipe.name,
-        `Recette Toque: ${selectedRecipe.name}\n${shareUrl}`,
-      );
-
-      if (result === "downloaded") {
-        status.setStatus("PNG telecharge. Le partage natif n'est pas disponible sur cet appareil.");
-      }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      status.setStatus("Le partage n'a pas abouti.");
-    }
+    const result = await withShareStatus(
+      () =>
+        shareElementAsPng(target, recipeFileName(selectedRecipe, "png"), selectedRecipe.name, `Recette Toque: ${selectedRecipe.name}\n${shareUrl}`),
+      "Le partage n'a pas abouti.",
+    );
+    if (result === "downloaded") status.setStatus("PNG telecharge. Le partage natif n'est pas disponible sur cet appareil.");
   }
 
   async function shareSelectedText() {
     if (!selectedRecipe) return;
 
-    try {
-      const result = await shareRecipeText(selectedRecipe);
-      if (result === "copied") status.setStatus("Texte de la recette copie.");
-      if (result === "sms") status.setStatus("Ouverture de l'app SMS.");
-      if (result === "manual") status.setStatus("Texte pret a copier.");
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      status.setStatus("Le partage texte n'a pas abouti.");
-    }
+    const result = await withShareStatus(() => shareRecipeText(selectedRecipe), "Le partage texte n'a pas abouti.");
+    if (result === "copied") status.setStatus("Texte de la recette copie.");
+    if (result === "sms") status.setStatus("Ouverture de l'app SMS.");
+    if (result === "manual") status.setStatus("Texte pret a copier.");
   }
 
   async function exportSelectedRecipeFile() {
     if (!selectedRecipe) return;
-    try {
-      const result = await shareSingleRecipeBackup(selectedRecipe);
-      if (result === "downloaded") {
-        status.setStatus("Fichier recette telecharge. Il peut etre importe depuis Sauvegarde.");
-      }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      status.setStatus("Le partage du fichier n'a pas abouti.");
-    }
+    const result = await withShareStatus(
+      () => shareSingleRecipeBackup(selectedRecipe),
+      "Le partage du fichier n'a pas abouti.",
+    );
+    if (result === "downloaded") status.setStatus("Fichier recette telecharge. Il peut etre importe depuis Sauvegarde.");
   }
 
   async function exportRecipesFile() {
-    try {
-      const result = await shareRecipesBackup(recipes, tagApi.allTags);
-      if (result === "downloaded") {
-        status.setStatus("Sauvegarde telechargee. Le partage natif n'est pas disponible sur cet appareil.");
-      }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      status.setStatus("Le partage de la sauvegarde n'a pas abouti.");
-    }
+    const result = await withShareStatus(
+      () => shareRecipesBackup(recipes, tagApi.allTags),
+      "Le partage de la sauvegarde n'a pas abouti.",
+    );
+    if (result === "downloaded") status.setStatus("Sauvegarde telechargee. Le partage natif n'est pas disponible sur cet appareil.");
   }
 
   return (

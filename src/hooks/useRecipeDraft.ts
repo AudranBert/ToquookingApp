@@ -27,19 +27,17 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
   async function importFromUrl() {
     const url = importUrl.trim();
     if (!url) return false;
-    status.setStatus("Import en cours...");
 
-    try {
-      const parsed = await importRecipeFromUrl(url);
-      setDraft(parsedToDraft(parsed, url, allTags));
-      setEditingId(null);
-      setImportWarnings(parsed.warnings ?? []);
-      status.setStatus("Import préparé. Vérifie les champs avant d'enregistrer.");
-      return true;
-    } catch {
-      status.setStatus("Import impossible pour ce lien. Tu peux quand même remplir la recette manuellement.");
-      return false;
-    }
+    return runImport({
+      url,
+      loadingStatus: "Import en cours...",
+      successStatus: "Import préparé. Vérifie les champs avant d'enregistrer.",
+      errorStatus: "Import impossible pour ce lien. Tu peux quand même remplir la recette manuellement.",
+      apply: (imported) => {
+        setDraft(imported);
+        setEditingId(null);
+      },
+    });
   }
 
   async function reimport(mode: ReimportMode) {
@@ -48,18 +46,40 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
       status.setStatus("Ajoute un lien source avant de réimporter.");
       return;
     }
-    status.setStatus("Réimport en cours...");
 
+    await runImport({
+      url,
+      loadingStatus: "Réimport en cours...",
+      successStatus: mode === "replace" ? "Champs remplacés depuis le lien." : "Champs vides complétés depuis le lien.",
+      errorStatus: "Réimport impossible pour ce lien.",
+      apply: (imported) => setDraft((current) => (mode === "replace" ? imported : mergeBlanks(current, imported))),
+    });
+  }
+
+  async function runImport({
+    url,
+    loadingStatus,
+    successStatus,
+    errorStatus,
+    apply,
+  }: {
+    url: string;
+    loadingStatus: string;
+    successStatus: string;
+    errorStatus: string;
+    apply: (imported: RecipeDraft) => void;
+  }) {
+    status.setStatus(loadingStatus);
     try {
       const parsed = await importRecipeFromUrl(url);
       const imported = parsedToDraft(parsed, url, allTags);
-      setDraft((current) => (mode === "replace" ? imported : mergeBlanks(current, imported)));
+      apply(imported);
       setImportWarnings(parsed.warnings ?? []);
-      status.setStatus(
-        mode === "replace" ? "Champs remplacés depuis le lien." : "Champs vides complétés depuis le lien.",
-      );
+      status.setStatus(successStatus);
+      return true;
     } catch {
-      status.setStatus("Réimport impossible pour ce lien.");
+      status.setStatus(errorStatus);
+      return false;
     }
   }
 
