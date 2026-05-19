@@ -11,6 +11,7 @@ Main features:
 
 ### TO DO
 - ✔️ HTTPS/Phone App : Hosted on Github Pages
+- ✔️ Default App icon
 - Can filter meat, fish, vegan, vegetarian dishes
 - Change page remove Message headband
 - Better shopping list recipe selection
@@ -18,7 +19,7 @@ Main features:
 - Tooltip for showing which website are supported when importing
 - Can have multiples images
 - Saves: handle images (saving and reloading, use zip maybe)
-- Default App icon. Can personnalize app as it was our cooking book.
+- Can personnalize app as it was our cooking book
 - English UI
 - In recipes needed tools : like oven, fryer, toaster... So we can filter on fryer for example 
 - Maybe some AI tools: better autofilling of the import form, scan book ans import recipe directly, translate recipes
