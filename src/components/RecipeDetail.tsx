@@ -66,7 +66,7 @@ export function RecipeDetail({
       </div>
 
       <div className="recipe-card" ref={printRef}>
-        {recipe.imageUrl && <img className="recipe-image" src={proxiedImageUrl(recipe.imageUrl)} crossOrigin="anonymous" alt="" />}
+        {recipe.imageUrl && <img className="recipe-image" src={proxiedImageUrl(recipe.imageUrl, recipe.sourceUrl)} crossOrigin="anonymous" alt="" />}
         <div className="recipe-title">
           <span className="eyebrow">Recette</span>
           <h2>{recipe.name}</h2>

@@ -384,7 +384,7 @@ function RecipeGrid({
     <section className="recipe-grid" aria-label="Toutes les recettes">
       {recipes.map((recipe) => (
         <button className="recipe-card-button" key={recipe.id} onClick={() => onSelectRecipe(recipe.id)}>
-          {recipe.imageUrl ? <img src={proxiedImageUrl(recipe.imageUrl)} alt="" /> : <div className="recipe-card-placeholder" />}
+          {recipe.imageUrl ? <img src={proxiedImageUrl(recipe.imageUrl, recipe.sourceUrl)} alt="" /> : <div className="recipe-card-placeholder" />}
           <span className="recipe-card-title">{recipe.name}</span>
           {recipe.origin && <span className="muted">{recipe.origin}</span>}
           <span className="recipe-card-meta">

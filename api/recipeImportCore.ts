@@ -203,7 +203,49 @@ function recipeNodeToImport(recipe: RecipeNode, url: string, html: string): Impo
   };
 }
 
-async function fetchWithTimeout(url: string, timeoutMs = 10000) {
+function markdownRecipeFallback(content: string, sourceUrl: string): ImportedRecipe | null {
+  const normalized = content.replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n");
+  const titleLine = lines.find((line) => /^#\s+/.test(line.trim()));
+  const title = titleLine ? cleanText(titleLine.replace(/^#\s+/, "")) : undefined;
+
+  const ingredientHeader = /^\s{0,3}(#{1,6}\s*)?(ingredients?|ingr\S*dients?)\s*:?\s*$/i;
+  const instructionHeader = /^\s{0,3}(#{1,6}\s*)?(instructions?|steps?|directions?|pr\S*paration|method)\s*:?\s*$/i;
+  const nextSectionHeader = /^\s{0,3}#{1,6}\s+\S+/;
+  const bulletLine = /^\s*(?:[-*+]|(?:\d+[.)]))\s+(.+)$/;
+
+  const collectSection = (headerMatcher: RegExp) => {
+    const start = lines.findIndex((line) => headerMatcher.test(line.trim()));
+    if (start < 0) return [] as string[];
+    const values: string[] = [];
+    for (let i = start + 1; i < lines.length; i += 1) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      if (nextSectionHeader.test(trimmed) && values.length > 0) break;
+      const bullet = line.match(bulletLine);
+      const raw = bullet ? bullet[1] : trimmed;
+      const cleaned = cleanText(raw);
+      if (!cleaned) continue;
+      values.push(cleaned);
+    }
+    return values;
+  };
+
+  const ingredientLines = collectSection(ingredientHeader);
+  const instructionLines = collectSection(instructionHeader);
+
+  if (ingredientLines.length === 0 && instructionLines.length === 0) return null;
+
+  return {
+    sourceUrl,
+    name: title,
+    ingredients: ingredientLines.map(parseIngredientLine),
+    instructions: instructionLines,
+    warnings: ["Import from unstructured markdown/text. Verify ingredients and steps before saving."],
+  };
+}
+
+async function fetchWithTimeout(url: string, timeoutMs = 10000, accept = "text/html,application/xhtml+xml,text/markdown,text/plain;q=0.9,*/*;q=0.8") {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -212,12 +254,29 @@ async function fetchWithTimeout(url: string, timeoutMs = 10000) {
       signal: controller.signal,
       headers: {
         "user-agent": "ToqueRecipeHub/0.1 (+local recipe import)",
-        accept: "text/html,application/xhtml+xml",
+        accept,
       },
     });
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function fetchRecipeSources(url: string) {
+  const sources: string[] = [];
+
+  const direct = await fetchWithTimeout(url, 15000).catch(() => null);
+  if (direct?.ok) sources.push(await direct.text());
+
+  const allOriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+  const allOrigins = await fetchWithTimeout(allOriginsUrl, 15000, "text/html,text/plain,*/*").catch(() => null);
+  if (allOrigins?.ok) sources.push(await allOrigins.text());
+
+  const jinaUrl = `https://r.jina.ai/http://${url.replace(/^https?:\/\//i, "")}`;
+  const jina = await fetchWithTimeout(jinaUrl, 15000, "text/plain,text/markdown,*/*").catch(() => null);
+  if (jina?.ok) sources.push(await jina.text());
+
+  return sources;
 }
 
 export async function importRecipeFromSourceUrl(url: string): Promise<ImportedRecipe> {
@@ -235,18 +294,19 @@ export async function importRecipeFromSourceUrl(url: string): Promise<ImportedRe
   }
 
   try {
-    const page = await fetchWithTimeout(url);
-    const html = await page.text();
-    const recipe = parseJsonLd(html);
+    const htmlSources = await fetchRecipeSources(url);
+    for (const html of htmlSources) {
+      const recipe = parseJsonLd(html);
+      if (recipe) return recipeNodeToImport(recipe, url, html);
 
-    if (!recipe) {
-      return {
-        sourceUrl: url,
-        warnings: ["Aucune donnée de recette structurée trouvée. Complète la fiche manuellement."],
-      };
+      const markdownFallback = markdownRecipeFallback(html, url);
+      if (markdownFallback) return markdownFallback;
     }
 
-    return recipeNodeToImport(recipe, url, html);
+    return {
+      sourceUrl: url,
+      warnings: ["Aucune donnée de recette structurée trouvée. Complète la fiche manuellement."],
+    };
   } catch {
     return {
       sourceUrl: url,
