@@ -286,7 +286,7 @@ function defaultMarkdownFallback(content: string, sourceUrl: string): ParsedReci
     imageUrl,
     ingredients: ingredientLines.map(parseIngredientLine),
     instructions: instructionLines,
-    warnings: ["Import from unstructured markdown/text. Verify ingredients and steps before saving."],
+    warnings: ["Import partiel depuis contenu non structure. Verifie ingredients, etapes et quantites avant de sauvegarder."],
   };
 }
 
@@ -447,7 +447,7 @@ function marmitonFallback(content: string, sourceUrl: string): ParsedRecipe | nu
     sourceUrl,
     ingredients: dedupedIngredients.length ? dedupedIngredients : undefined,
     instructions: cleanedInstructions.length ? cleanedInstructions : undefined,
-    warnings: ["Import from unstructured markdown/text. Verify ingredients and steps before saving."],
+    warnings: ["Import partiel depuis contenu non structure. Verifie ingredients, etapes et quantites avant de sauvegarder."],
   };
 }
 
@@ -563,7 +563,7 @@ function cuisineLibreFallback(content: string, sourceUrl: string): ParsedRecipe 
     imageUrl,
     ingredients: ingredientLines.map(parseIngredientLine),
     instructions,
-    warnings: ["Import from unstructured markdown/text. Verify ingredients and steps before saving."],
+    warnings: ["Import partiel depuis contenu non structure. Verifie ingredients, etapes et quantites avant de sauvegarder."],
   };
 }
 
@@ -626,7 +626,7 @@ function markdownSectionExtractor(
     imageUrl,
     ingredients: ingredients.length ? ingredients : undefined,
     instructions: instructions.length ? instructions : undefined,
-    warnings: ["Import from unstructured markdown/text. Verify ingredients and steps before saving."],
+    warnings: ["Import partiel depuis contenu non structure. Verifie ingredients, etapes et quantites avant de sauvegarder."],
   };
 }
 
@@ -691,7 +691,7 @@ function papillesEtPupillesFallback(content: string, sourceUrl: string): ParsedR
     imageUrl,
     ingredients: ingredients.length ? ingredients : undefined,
     instructions: instructions.length ? instructions : undefined,
-    warnings: ["Import from unstructured markdown/text. Verify ingredients and steps before saving."],
+    warnings: ["Import partiel depuis contenu non structure. Verifie ingredients, etapes et quantites avant de sauvegarder."],
   };
 }
 
@@ -786,7 +786,7 @@ function parseYouTubeImport(text: string, sourceUrl: string): ParsedRecipe {
     name: title || "Recette YouTube",
     ingredients: ingredients.length ? ingredients : undefined,
     instructions: maybeSteps.length ? maybeSteps : undefined,
-    warnings: ["Import YouTube partiel : verifie le titre, les ingredients et les etapes manuellement."],
+    warnings: ["Import YouTube partiel : description detectee partiellement. Verifie titre, ingredients et etapes manuellement."],
   };
 }
 
@@ -942,7 +942,7 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
               sourceUrl: url,
               warnings: parsed.name?.trim()
                 ? undefined
-                : ["Aucun nom detecte dans la recette importee. Renseigne-le manuellement."],
+                : ["Nom non detecte automatiquement. Renseigne le titre manuellement."],
             };
             structuredMerged = mergeRecipes(structuredMerged, enriched);
           } catch {
@@ -968,13 +968,13 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
   } catch {
     return {
       sourceUrl: url,
-      warnings: ["Import automatique indisponible pour ce site. Le lien est conserve, complete la recette manuellement."],
+      warnings: ["Import automatique indisponible pour ce site pour le moment. Le lien est conserve, complete la recette manuellement."],
     };
   }
 
   return {
     sourceUrl: url,
-    warnings: ["Aucune recette structuree trouvee. Le lien est conserve, complete les champs manquants."],
+    warnings: ["Aucune recette exploitable detectee sur cette page. Le lien est conserve, complete les champs manquants."],
   };
 }
 

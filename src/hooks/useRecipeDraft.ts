@@ -30,9 +30,9 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
 
     return runImport({
       url,
-      loadingStatus: "Import en cours...",
-      successStatus: "Import préparé. Vérifie les champs avant d'enregistrer.",
-      errorStatus: "Import impossible pour ce lien. Tu peux quand même remplir la recette manuellement.",
+      loadingStatus: "Analyse du lien en cours (nom, ingredients, etapes, image)...",
+      successStatus: "Import termine. Verifie les champs puis enregistre la recette.",
+      errorStatus: "Import impossible pour ce lien. Le lien est conserve, complete la recette manuellement.",
       apply: (imported) => {
         setDraft(imported);
         setEditingId(null);
@@ -49,9 +49,9 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
 
     await runImport({
       url,
-      loadingStatus: "Réimport en cours...",
-      successStatus: mode === "replace" ? "Champs remplacés depuis le lien." : "Champs vides complétés depuis le lien.",
-      errorStatus: "Réimport impossible pour ce lien.",
+      loadingStatus: "Reimport en cours depuis le lien source...",
+      successStatus: mode === "replace" ? "Reimport termine : champs remplaces depuis le lien." : "Reimport termine : champs vides completes depuis le lien.",
+      errorStatus: "Reimport impossible pour ce lien source.",
       apply: (imported) => setDraft((current) => (mode === "replace" ? imported : mergeBlanks(current, imported))),
     });
   }

@@ -333,8 +333,28 @@ label {
 
 .inline-control {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: var(--space-2);
+}
+
+.import-support {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: rgba(255, 253, 247, 0.72);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.import-support__title {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: 800;
+}
+
+.import-support ul {
+  margin: 0;
+  padding-left: 18px;
 }
 
 .label-with-icon,

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Dispatch, FormEvent, KeyboardEvent, SetStateAction } from "react";
-import { Check, Image as ImageIcon, Link, Plus, RefreshCcw, Replace, Trash2, X } from "lucide-react";
+import { Check, Image as ImageIcon, Info, Link, Plus, RefreshCcw, Replace, Trash2, X } from "lucide-react";
 import { RECIPE_ORIGINS } from "../origins";
 import type { Ingredient, RecipeDraft, ReimportMode } from "../types";
 import { createId } from "../utils/id";
@@ -38,6 +38,8 @@ export function RecipeForm({
   onReimport,
   setDraft,
 }: Props) {
+  const [isImportSupportOpen, setIsImportSupportOpen] = useState(false);
+
   function updateField<K extends keyof RecipeDraft>(field: K, value: RecipeDraft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
   }
@@ -130,7 +132,30 @@ export function RecipeForm({
             <button className="button button--primary" onClick={onImport} type="button">
               <Link size={18} /> Importer
             </button>
+            <button
+              aria-label="Niveaux de support des sites d'import"
+              aria-expanded={isImportSupportOpen}
+              aria-controls="import-support-panel"
+              className="button button--ghost"
+              onClick={() => setIsImportSupportOpen((current) => !current)}
+              type="button"
+            >
+              <Info size={18} />
+            </button>
           </div>
+          {isImportSupportOpen && (
+            <div className="import-support" id="import-support-panel" role="status">
+              <p className="import-support__title">Niveaux de support</p>
+              <ul>
+                <li>marmiton.org: bon</li>
+                <li>cuisineaz.com: bon</li>
+                <li>cuisineactuelle.fr: bon</li>
+                <li>cuisine-libre.org: partiel</li>
+                <li>papillesetpupilles.fr: partiel</li>
+                <li>youtube.com/shorts: partiel (titre/description)</li>
+              </ul>
+            </div>
+          )}
         </section>
       )}
 
