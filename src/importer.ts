@@ -50,6 +50,20 @@ function cleanText(value: unknown) {
     .trim();
 }
 
+function isImageMarkdownLine(value: string) {
+  return /^!?\[.*image/i.test(value);
+}
+
+function isInstructionNoise(value: string) {
+  return (
+    !value ||
+    /^https?:\/\//i.test(value) ||
+    isImageMarkdownLine(value) ||
+    /^\*+\s*\*+$/.test(value.trim()) ||
+    /value=|formulaire_action|jQuery|autosave|_gaq|trackingParams|commandMetadata|navigationEndpoint/i.test(value)
+  );
+}
+
 function parseDurationToMinutes(value: unknown) {
   if (typeof value !== "string") return undefined;
   const iso = value.match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/i);
@@ -322,7 +336,7 @@ function marmitonFallback(content: string, sourceUrl: string): ParsedRecipe | nu
     const stepLine = cleanText(lines[j] ?? "");
     if (!stepLine) continue;
     if (/^(J'ajoute mon grain de sel|Anonyme|Note de l'auteur|La recette en bref|Vous aimerez aussi)/i.test(stepLine)) break;
-    if (/<|>|data-|^\W*$|^!?\[.*image/i.test(stepLine)) continue;
+    if (/<|>|data-|^\W*$/.test(stepLine) || isInstructionNoise(stepLine)) continue;
     instructions.push(stepLine);
   }
 
@@ -350,7 +364,7 @@ function marmitonFallback(content: string, sourceUrl: string): ParsedRecipe | nu
     for (let i = 0; i < rawLines.length; i += 1) {
       if (!/^[eé]tape\s*\d+/i.test(rawLines[i])) continue;
       let j = i + 1;
-      while (j < rawLines.length && /^!?\[.*image/i.test(rawLines[j])) j += 1;
+      while (j < rawLines.length && isImageMarkdownLine(rawLines[j])) j += 1;
       const step = cleanText(rawLines[j] ?? "");
       if (!step) continue;
       if (/^(A Anonyme|Note de l'auteur|La recette en bref|Qu'est-ce qu'on mange|Vous aimerez aussi)/i.test(step)) break;
@@ -402,10 +416,21 @@ function marmitonFallback(content: string, sourceUrl: string): ParsedRecipe | nu
 
   const dedupedIngredients: ReturnType<typeof parseIngredientLine>[] = [];
   const seen = new Set<string>();
+  const seenByName = new Set<string>();
+  const canonicalName = (value: string) =>
+    cleanText(value)
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .replace(/\(.*?\)/g, "")
+      .replace(/x$/i, "")
+      .replace(/s$/i, "");
   for (const ingredient of cleanedIngredients) {
     const key = cleanText(`${ingredient.quantity ?? ""}|${ingredient.unit ?? ""}|${ingredient.name ?? ""}`).toLowerCase();
     if (!key || seen.has(key)) continue;
+    const nameKey = canonicalName(ingredient.name ?? "");
+    if (nameKey && seenByName.has(nameKey)) continue;
     seen.add(key);
+    if (nameKey) seenByName.add(nameKey);
     dedupedIngredients.push(ingredient);
   }
 
@@ -491,8 +516,25 @@ function cuisineLibreFallback(content: string, sourceUrl: string): ParsedRecipe 
         continue;
       }
       if (/^pour\s+/i.test(cleaned)) continue;
+      if (instructions.length === 0 && cleaned.length > 20) {
+        instructions.push(cleaned);
+        continue;
+      }
       if (instructions.length === 0) continue;
       instructions[instructions.length - 1] = `${instructions[instructions.length - 1]} ${cleaned}`.trim();
+    }
+  }
+
+  if (prepStart >= 0 && instructions.length === 0) {
+    for (let i = prepStart + 1; i < rawLines.length; i += 1) {
+      const cleaned = cleanText(rawLines[i]);
+      if (!cleaned) continue;
+      if (endMarkers.test(cleaned)) break;
+      if (/<|>|jQuery|formulaire_action|autosave|_gaq|^\*+$|^\|$/.test(cleaned)) continue;
+      if (/^(temps total|pr\S*paration\s*:|repos\s*:|cuisson\s*:|mijot|sans )/i.test(cleaned)) continue;
+      if (/^ingr\S*dients?/i.test(cleaned)) continue;
+      if (cleaned.length < 12) continue;
+      instructions.push(cleaned.replace(/^\d+[.)]\s*/, ""));
     }
   }
 
@@ -507,6 +549,14 @@ function cuisineLibreFallback(content: string, sourceUrl: string): ParsedRecipe 
 
   if (ingredientLines.length === 0 && instructions.length === 0) return null;
 
+  // Guardrails against noisy crawler/plain-text variants.
+  const noisyInstructionHit = instructions.some((line) =>
+    /(value=|formulaire_action|jQuery|autosave|_gaq|Rated \d+\.\d+ out of 5|Adresse [ée]lectronique|Votre pseudo)/i.test(line),
+  );
+  if (ingredientLines.length > 25 || instructions.length > 20 || noisyInstructionHit) {
+    return null;
+  }
+
   return {
     sourceUrl,
     name: title || undefined,
@@ -519,9 +569,147 @@ function cuisineLibreFallback(content: string, sourceUrl: string): ParsedRecipe 
 
 type DomainParser = (content: string, sourceUrl: string) => ParsedRecipe | null;
 
+function markdownSectionExtractor(
+  content: string,
+  sourceUrl: string,
+  sectionLabels: { ingredients: RegExp; instructions: RegExp; stop?: RegExp },
+): ParsedRecipe | null {
+  const normalized = content.replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n").map((line) => cleanText(line)).filter(Boolean);
+
+  const title = cleanText(
+    normalized.match(/^\s*Title:\s*(.+)$/im)?.[1] ??
+      lines.find((line) => !/^(URL Source|Published Time|Markdown Content|Image)\s*:/i.test(line)) ??
+      "",
+  );
+
+  const ingStart = lines.findIndex((line) => sectionLabels.ingredients.test(line));
+  const prepStart = lines.findIndex((line) => sectionLabels.instructions.test(line));
+  const stop = sectionLabels.stop ?? /(vous aimerez aussi|commentaires?|newsletter|partage|a lire aussi|publicit[eé]|ustensiles)/i;
+
+  const ingredients: ReturnType<typeof parseIngredientLine>[] = [];
+  if (ingStart >= 0) {
+    const end = prepStart > ingStart ? prepStart : lines.length;
+    for (let i = ingStart + 1; i < end; i += 1) {
+      const line = lines[i];
+      if (!line || stop.test(line)) break;
+      if (/^!?\[.*image|^https?:\/\//i.test(line)) continue;
+      if (/^(temps|pr[eé]paration|cuisson|repos)\s*:/i.test(line)) continue;
+      if (/^[*•\-]$|^\d+\/\d+$/.test(line)) continue;
+      if (!/[a-zA-ZÀ-ÿ]/.test(line)) continue;
+      ingredients.push(parseIngredientLine(line.replace(/^[*•\-]\s*/, "")));
+    }
+  }
+
+  const instructions: string[] = [];
+  if (prepStart >= 0) {
+    for (let i = prepStart + 1; i < lines.length; i += 1) {
+      const line = lines[i];
+      if (!line) continue;
+      if (stop.test(line)) break;
+      if (/^!?\[.*image|^https?:\/\//i.test(line)) continue;
+      if (/^(temps total|pr[eé]paration\s*:|repos\s*:|cuisson\s*:)/i.test(line)) continue;
+      if (/^[eé]tape\s*\d+/i.test(line)) continue;
+      if (/^\*+$|^\|$/.test(line)) continue;
+      instructions.push(line.replace(/^\d+[.)]\s*/, ""));
+    }
+  }
+
+  const imageFromMd = normalized.match(/!\[[^\]]*\]\((https?:\/\/[^)\s]+|\/\/[^)\s]+)\)/i)?.[1];
+  const ogImage = normalized.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1];
+  const imageUrl = absolutizeUrl(imageFromMd ?? ogImage, sourceUrl);
+
+  if (ingredients.length === 0 && instructions.length === 0) return null;
+  return {
+    sourceUrl,
+    name: title || undefined,
+    imageUrl,
+    ingredients: ingredients.length ? ingredients : undefined,
+    instructions: instructions.length ? instructions : undefined,
+    warnings: ["Import from unstructured markdown/text. Verify ingredients and steps before saving."],
+  };
+}
+
+function cuisineAzFallback(content: string, sourceUrl: string): ParsedRecipe | null {
+  if (!/cuisineaz\.com/i.test(sourceUrl)) return null;
+  return markdownSectionExtractor(content, sourceUrl, {
+    ingredients: /ingr\S*dients?/i,
+    instructions: /(pr\S*paration|etapes?|instructions?)/i,
+    stop: /(astuces|conseils|questions|commentaires?|a lire aussi|newsletter)/i,
+  });
+}
+
+function papillesEtPupillesFallback(content: string, sourceUrl: string): ParsedRecipe | null {
+  if (!/papillesetpupilles\.fr/i.test(sourceUrl)) return null;
+  const normalized = content.replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n").map((line) => cleanText(line)).filter(Boolean);
+  const title = cleanText(
+    normalized.match(/^\s*Title:\s*(.+)$/im)?.[1] ??
+      lines.find((line) => !/^(URL Source|Published Time|Markdown Content|Image)\s*:/i.test(line)) ??
+      "",
+  );
+  const ingStart = lines.findIndex((line) => /^ingr\S*dients?$/i.test(line));
+  const prepStart = lines.findIndex((line) => /^pr\S*paration$/i.test(line));
+  const stop = /(questions|pourquoi j'aime|r[ée]dig[ée] par|tags\s*:|newsletter|commentaires?)/i;
+
+  const ingredients: ReturnType<typeof parseIngredientLine>[] = [];
+  if (ingStart >= 0) {
+    const end = prepStart > ingStart ? prepStart : lines.length;
+    for (let i = ingStart + 1; i < end; i += 1) {
+      const line = lines[i];
+      if (!line || stop.test(line)) break;
+      if (/^pour\s+\d+/i.test(line)) continue;
+      if (!/^[*•-]\s+/.test(line)) continue;
+      const item = cleanText(line.replace(/^[*•-]\s+/, ""));
+      if (!item || /recettes par ingr|produits de saison|a la decouverte|mieux connaitre/i.test(item)) continue;
+      ingredients.push(parseIngredientLine(item));
+    }
+  }
+
+  const instructions: string[] = [];
+  if (prepStart >= 0) {
+    for (let i = prepStart + 1; i < lines.length; i += 1) {
+      const line = lines[i];
+      if (!line) continue;
+      if (stop.test(line)) break;
+      if (/^image\s*:|^pour\s+\d+/i.test(line)) continue;
+      if (line.length < 12) continue;
+      instructions.push(line);
+    }
+  }
+
+  const imageUrl = absolutizeUrl(
+    normalized.match(/https?:\/\/[^\s"'()]*\/wp-content\/uploads\/[^\s"'()]+/i)?.[0] ??
+      normalized.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1],
+    sourceUrl,
+  );
+
+  if (ingredients.length === 0 && instructions.length === 0) return null;
+  return {
+    sourceUrl,
+    name: title || undefined,
+    imageUrl,
+    ingredients: ingredients.length ? ingredients : undefined,
+    instructions: instructions.length ? instructions : undefined,
+    warnings: ["Import from unstructured markdown/text. Verify ingredients and steps before saving."],
+  };
+}
+
+function cuisineActuelleFallback(content: string, sourceUrl: string): ParsedRecipe | null {
+  if (!/cuisineactuelle\.fr/i.test(sourceUrl)) return null;
+  return markdownSectionExtractor(content, sourceUrl, {
+    ingredients: /ingr\S*dients?/i,
+    instructions: /(pr\S*paration|etapes?|instructions?)/i,
+    stop: /(vous aimerez aussi|commentaires?|newsletter|publicit[eé])/i,
+  });
+}
+
 const DOMAIN_PARSERS: Array<{ hostPattern: RegExp; parser: DomainParser }> = [
   { hostPattern: /(^|\.)marmiton\.org$/i, parser: marmitonFallback },
   { hostPattern: /(^|\.)cuisine-libre\.org$/i, parser: cuisineLibreFallback },
+  { hostPattern: /(^|\.)cuisineaz\.com$/i, parser: cuisineAzFallback },
+  { hostPattern: /(^|\.)papillesetpupilles\.fr$/i, parser: papillesEtPupillesFallback },
+  { hostPattern: /(^|\.)cuisineactuelle\.fr$/i, parser: cuisineActuelleFallback },
 ];
 
 function selectDomainParser(sourceUrl: string): DomainParser | null {
@@ -537,11 +725,114 @@ function parseWithFallbacks(content: string, sourceUrl: string): ParsedRecipe | 
   const domainParser = selectDomainParser(sourceUrl);
   const domainResult = domainParser?.(content, sourceUrl) ?? null;
   const defaultResult = defaultMarkdownFallback(content, sourceUrl);
+  // For known domains, only trust specialized parser to avoid global parser pollution.
+  if (domainParser) {
+    if ((/cuisine-libre\.org|papillesetpupilles\.fr/i.test(sourceUrl)) && !domainResult) return defaultResult;
+    return domainResult;
+  }
   if (!domainResult) return defaultResult;
-  // For known domains, prefer specialized parser output to avoid global parser pollution.
-  if (/marmiton\.org|cuisine-libre\.org/i.test(sourceUrl)) return domainResult;
   if (!defaultResult) return domainResult;
   return mergeRecipes(domainResult, defaultResult);
+}
+
+function hasKnownDomain(sourceUrl: string) {
+  return Boolean(selectDomainParser(sourceUrl));
+}
+
+function extractEscapedJsonTextField(text: string, field: string) {
+  const match = text.match(new RegExp(`"${field}":"([\\s\\S]*?)"`, "i"));
+  if (!match?.[1]) return "";
+  try {
+    return JSON.parse(`"${match[1]}"`);
+  } catch {
+    return match[1];
+  }
+}
+
+function parseYouTubeImport(text: string, sourceUrl: string): ParsedRecipe {
+  const shortDescription = cleanText(extractEscapedJsonTextField(text, "shortDescription"));
+  const titleCandidate =
+    extractEscapedJsonTextField(text, "title") ||
+    text.match(/^\s*Description\s*[\r\n]+([A-ZÀ-ÿ][^\r\n]{2,80})/im)?.[1] ||
+    text.match(/^\s*Title:\s*(.+)$/im)?.[1] ||
+    text.match(/^\s*Description\s*[\r\n]+([^\r\n]+)/im)?.[1] ||
+    text.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1] ||
+    "";
+  const title = cleanText(titleCandidate);
+
+  const ingredientsBlock =
+    (shortDescription || text).match(/ingredients?\s*:\s*([\s\S]*?)(?:\n\s*(?:cuisson|préparation|#|\b\d+\s*vues|\bPartager\b)|$)/i)?.[1] ??
+    text.match(/Description[\s\S]*?Ingredients?\s*:\s*([\s\S]*?)(?:\n\s*Cuisson|\n\s*#|$)/i)?.[1] ??
+    "";
+  const safeIngredientsBlock = ingredientsBlock.length > 2500 ? "" : ingredientsBlock;
+  const ingredients = safeIngredientsBlock
+    .split(/\r?\n/)
+    .map((line) => cleanText(line.replace(/^[-*•]\s*/, "")))
+    .filter((line) => line && /[a-zA-ZÀ-ÿ]/.test(line) && line.length < 140)
+    .filter(
+      (line) =>
+        !/(function\s+\w+\(|=>|window\.|ytInitial|player|renderer|trackingParams|commandMetadata|navigationEndpoint|\{|\}|\[|\])/i.test(
+          line,
+        ),
+    )
+    .map((line) => parseIngredientLine(line));
+
+  const cuissonLine = cleanText((shortDescription || text).match(/cuisson[^\r\n.]*/i)?.[0] ?? "");
+  const maybeSteps = [cuissonLine].filter((line) => line.length > 8);
+
+  return {
+    sourceUrl,
+    videoUrl: sourceUrl,
+    name: title || "Recette YouTube",
+    ingredients: ingredients.length ? ingredients : undefined,
+    instructions: maybeSteps.length ? maybeSteps : undefined,
+    warnings: ["Import YouTube partiel : verifie le titre, les ingredients et les etapes manuellement."],
+  };
+}
+
+function sanitizeMergedResult(recipe: ParsedRecipe, sourceUrl: string): ParsedRecipe {
+  const merged = { ...recipe };
+  if (!merged.name || /^noname$/i.test(merged.name.trim())) {
+    merged.name = fallbackNameFromUrl(sourceUrl) ?? merged.name;
+  }
+  if (merged.instructions?.length) {
+    merged.instructions = merged.instructions.filter((line) => !isInstructionNoise(line));
+  }
+  if (/cuisine-libre\.org/i.test(sourceUrl) && merged.instructions?.length) {
+    merged.instructions = merged.instructions.filter(
+      (line) =>
+        !/^(temps|cuisson\s*:|mijot|sans |rated |\d+\s+vues|partagez|imprimer|facebook|twitter|envoyer cette recette|veuillez laisser ce champ|jQuery|value=)/i.test(
+          line,
+        ),
+    );
+  }
+  if (/cuisineactuelle\.fr/i.test(sourceUrl) && merged.ingredients?.length) {
+    merged.ingredients = merged.ingredients.filter((ing) => !/^ingr\S*dients?$/i.test(cleanText(ing.name ?? "")));
+  }
+  if (hasKnownDomain(sourceUrl) && merged.instructions && merged.instructions.length > 120) {
+    merged.instructions = merged.instructions.slice(0, 40);
+  }
+  if (hasKnownDomain(sourceUrl) && merged.ingredients && merged.ingredients.length > 60) {
+    merged.ingredients = merged.ingredients.slice(0, 30);
+  }
+  return merged;
+}
+
+function finalizeRecipe(sourceUrl: string, structured: ParsedRecipe | null, fallback: ParsedRecipe | null): ParsedRecipe | null {
+  const structuredUseful = hasUsefulRecipeData(structured);
+  if (structuredUseful && structured) {
+    const resolvedName =
+      structured.name && !/^noname$/i.test(structured.name.trim()) ? structured.name : fallbackNameFromUrl(sourceUrl);
+    return {
+      ...structured,
+      name: resolvedName ?? structured.name,
+      imageUrl: structured.imageUrl ?? fallback?.imageUrl,
+      sourceUrl: structured.sourceUrl ?? sourceUrl,
+      warnings: structured.warnings ?? fallback?.warnings,
+    };
+  }
+  if (fallback) return fallback;
+  return structured;
 }
 
 function hasUsefulRecipeData(recipe: ParsedRecipe | null | undefined) {
@@ -584,7 +875,10 @@ function mergeRecipes(base: ParsedRecipe | null, incoming: ParsedRecipe): Parsed
   return {
     ...base,
     ...incoming,
-    name: base.name?.trim() ? base.name : incoming.name,
+    name:
+      base.name?.trim() && !/^noname$/i.test(base.name.trim())
+        ? base.name
+        : incoming.name,
     origin: base.origin ?? incoming.origin,
     sourceUrl: base.sourceUrl ?? incoming.sourceUrl,
     videoUrl: base.videoUrl ?? incoming.videoUrl,
@@ -621,18 +915,15 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
     window.clearTimeout(timer);
   }
 
-  if (/youtube\.com|youtu\.be/.test(url)) {
-    return {
-      sourceUrl: url,
-      videoUrl: url,
-      name: "Recette YouTube",
-      warnings: ["Import YouTube partiel : verifie le titre, les ingredients et les etapes manuellement."],
-    };
-  }
-
   try {
     const htmlSources = await fetchRecipeHtmls(url);
     let merged: ParsedRecipe | null = null;
+    let structuredMerged: ParsedRecipe | null = null;
+    let fallbackMerged: ParsedRecipe | null = null;
+
+    if (/youtube\.com|youtu\.be/.test(url)) {
+      return parseYouTubeImport(htmlSources.join("\n"), url);
+    }
 
     for (const html of htmlSources) {
       const jsonLdScripts = [
@@ -653,7 +944,7 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
                 ? undefined
                 : ["Aucun nom detecte dans la recette importee. Renseigne-le manuellement."],
             };
-            merged = mergeRecipes(merged, enriched);
+            structuredMerged = mergeRecipes(structuredMerged, enriched);
           } catch {
             continue;
           }
@@ -662,15 +953,17 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
 
       const markdownFallback = parseWithFallbacks(html, url);
       if (markdownFallback) {
-        merged = mergeRecipes(merged, markdownFallback);
+        fallbackMerged = mergeRecipes(fallbackMerged, markdownFallback);
       }
     }
 
+    const finalized = finalizeRecipe(url, structuredMerged, fallbackMerged);
+    if (finalized) {
+      merged = mergeRecipes(merged, finalized);
+    }
+
     if (merged) {
-      if (!merged.name || /^noname$/i.test(merged.name.trim())) {
-        merged.name = fallbackNameFromUrl(url) ?? merged.name;
-      }
-      return merged;
+      return sanitizeMergedResult(merged, url);
     }
   } catch {
     return {
