@@ -9,7 +9,7 @@ import { BackupScreen } from "./screens/BackupScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
 import { RecipeForm } from "./screens/RecipeForm";
 import { ShoppingScreen } from "./screens/ShoppingScreen";
-import { shareRecipesBackup, shareSingleRecipeBackup } from "./utils/backup";
+import { downloadRecipeDatabaseJson, downloadRecipeImportExample, shareRecipesBackup, shareSingleRecipeBackup } from "./utils/backup";
 import {
   clearRecipeShareFromLocation,
   createRecipeShareUrl,
@@ -182,6 +182,16 @@ export function App() {
     if (result === "downloaded") status.setStatus("Sauvegarde telechargee. Le partage natif n'est pas disponible sur cet appareil.");
   }
 
+  function downloadImportExampleFile() {
+    downloadRecipeImportExample();
+    status.setStatus("Exemple JSON telecharge.");
+  }
+
+  function downloadDatabaseJsonFile() {
+    downloadRecipeDatabaseJson(recipes, tagApi.allTags);
+    status.setStatus("Base JSON telechargee.");
+  }
+
   return (
     <main className="app-shell">
       <AppHeader
@@ -288,6 +298,8 @@ export function App() {
         <BackupScreen
           onExport={exportRecipesFile}
           onImport={handleBackupImport}
+          onDownloadExample={downloadImportExampleFile}
+          onDownloadDatabase={downloadDatabaseJsonFile}
         />
       )}
     </main>
