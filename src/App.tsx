@@ -7,6 +7,7 @@ import { MONTH_NAMES } from "./seasonal";
 import { AppHeader } from "./components/AppHeader";
 import { BackupScreen } from "./screens/BackupScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
+import { ManagementScreen } from "./screens/ManagementScreen";
 import { RecipeForm } from "./screens/RecipeForm";
 import { ShoppingScreen } from "./screens/ShoppingScreen";
 import { downloadRecipeDatabaseJson, downloadRecipeImportExample, shareRecipesBackup, shareSingleRecipeBackup } from "./utils/backup";
@@ -23,12 +24,14 @@ import { useRecipeFilters } from "./hooks/useRecipeFilters";
 import { useRecipeDraft } from "./hooks/useRecipeDraft";
 import { useShoppingList } from "./hooks/useShoppingList";
 import { useTags } from "./hooks/useTags";
+import { useIngredientsManagement } from "./hooks/useIngredientsManagement";
 import type { Panel, Recipe } from "./types";
 
 export function App() {
   const status = useStatus();
   const { recipes, refresh, save, remove, duplicate, importBackup } = useRecipes(status);
   const tagApi = useTags(recipes, status, refresh);
+  const ingredientApi = useIngredientsManagement(recipes, status, refresh);
   const filters = useRecipeFilters(recipes, tagApi.allTags);
   const draftApi = useRecipeDraft(status, tagApi.allTags);
   const shopping = useShoppingList(recipes, status);
@@ -307,6 +310,23 @@ export function App() {
           onImport={handleBackupImport}
           onDownloadExample={downloadImportExampleFile}
           onDownloadDatabase={downloadDatabaseJsonFile}
+        />
+      )}
+
+      {activePanel === "management" && (
+        <ManagementScreen
+          tags={tagApi.tags}
+          categories={tagApi.categories}
+          protectedTags={tagApi.protectedTags}
+          onCreateTag={tagApi.createTag}
+          onRenameTag={tagApi.renameTag}
+          onMergeTags={tagApi.mergeTags}
+          onDeleteTag={tagApi.deleteTag}
+          onUpdateTagMeta={tagApi.updateTagMeta}
+          ingredients={ingredientApi.allIngredients}
+          onRenameIngredient={ingredientApi.renameIngredient}
+          onMergeIngredients={ingredientApi.mergeIngredients}
+          onDeleteIngredient={ingredientApi.deleteIngredient}
         />
       )}
     </main>

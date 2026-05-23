@@ -958,6 +958,83 @@ label {
   margin-bottom: 0;
 }
 
+.management-screen {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.management-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: var(--space-2);
+}
+
+.management-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.management-categories {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.management-category {
+  padding: var(--space-3);
+}
+
+.management-category__summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  margin-bottom: var(--space-2);
+  cursor: pointer;
+}
+
+.management-category__title {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.management-category__color {
+  display: grid;
+  gap: var(--space-1);
+  font-weight: 700;
+}
+
+.management-category__color input {
+  width: 64px;
+  min-height: 36px;
+  padding: 4px;
+}
+
+.management-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+}
+
+.management-tag-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.management-tags-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.management-tag-card {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2);
+}
+
 @media (max-width: 860px) {
   .app-shell {
     padding: var(--space-4);
@@ -979,7 +1056,12 @@ label {
   .recipe-columns,
   .form-grid,
   .image-field__body,
-  .reimport-bar {
+  .reimport-bar,
+  .management-row {
+    grid-template-columns: 1fr;
+  }
+
+  .management-tags-grid {
     grid-template-columns: 1fr;
   }
 

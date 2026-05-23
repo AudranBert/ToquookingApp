@@ -28,7 +28,10 @@ export type Recipe = {
 };
 
 export type RecipeTag = {
+  id: string;
   name: string;
+  category?: string;
+  color?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -54,7 +57,7 @@ export type ShoppingItem = {
   pantry?: boolean;
 };
 
-export type Panel = "library" | "form" | "shopping" | "backup";
+export type Panel = "library" | "form" | "shopping" | "backup" | "management";
 export type SeasonalThreshold = 0 | 1 | 3;
 export type ReimportMode = "replace" | "fill-blanks";
 export type RegimeFilter = "" | "omnivore" | "végétarien" | "végétalien" | "pescétarien";

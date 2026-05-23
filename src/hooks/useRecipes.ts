@@ -16,7 +16,7 @@ export function useRecipes(status: StatusApi) {
   }, []);
 
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
   const save = useCallback(
@@ -35,10 +35,27 @@ export function useRecipes(status: StatusApi) {
         updatedAt: nowIso(),
       };
 
-      await db.recipes.put(recipe);
-      await refresh();
-      status.setStatus(editingId ? "Recette mise à jour." : "Recette enregistrée.");
-      return recipe;
+      try {
+        await db.recipes.put(recipe);
+        await refresh();
+        status.setStatus(editingId ? "Recette mise a jour." : "Recette enregistree.");
+        return recipe;
+      } catch (firstError) {
+        try {
+          if (db.isOpen()) db.close();
+          await db.open();
+          await db.recipes.put(recipe);
+          await refresh();
+          status.setStatus(editingId ? "Recette mise a jour." : "Recette enregistree.");
+          return recipe;
+        } catch (retryError) {
+          const error = retryError ?? firstError;
+          const details =
+            error instanceof Error ? `${error.name}: ${error.message}` : typeof error === "string" ? error : "erreur inconnue";
+          status.setStatus(`Enregistrement impossible (${details}).`);
+          return null;
+        }
+      }
     },
     [refresh, status],
   );
@@ -48,7 +65,7 @@ export function useRecipes(status: StatusApi) {
       if (!window.confirm(`Supprimer "${recipe.name}" ?`)) return false;
       await db.recipes.delete(recipe.id);
       await refresh();
-      status.setStatus("Recette supprimée.");
+      status.setStatus("Recette supprimee.");
       return true;
     },
     [refresh, status],
@@ -66,7 +83,7 @@ export function useRecipes(status: StatusApi) {
 
       await db.recipes.put(copy);
       await refresh();
-      status.setStatus("Recette dupliquée.");
+      status.setStatus("Recette dupliquee.");
       return copy;
     },
     [refresh, status],
@@ -79,13 +96,14 @@ export function useRecipes(status: StatusApi) {
         await db.recipes.bulkPut(imported.recipes);
         await db.tags.bulkPut(
           imported.tags.map((name) => ({
+            id: createId(),
             name,
             createdAt: nowIso(),
             updatedAt: nowIso(),
           })),
         );
         await refresh();
-        status.setStatus(`${imported.recipes.length} recette(s) importée(s).`);
+        status.setStatus(`${imported.recipes.length} recette(s) importee(s).`);
         return imported.recipes[0]?.id;
       } catch {
         status.setStatus("Le fichier de sauvegarde n'est pas lisible.");

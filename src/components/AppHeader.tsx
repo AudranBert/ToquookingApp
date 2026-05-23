@@ -1,4 +1,4 @@
-import { BookOpen, Import, Plus, ShoppingBasket } from "lucide-react";
+import { BookOpen, Import, Plus, ShoppingBasket, Tags } from "lucide-react";
 import type { Panel } from "../types";
 
 type Props = {
@@ -41,6 +41,12 @@ export function AppHeader({ activePanel, onPanelChange, onShowRecipes, onNewReci
           onClick={() => onPanelChange("backup")}
         >
           <Import size={18} /> Sauvegarde
+        </button>
+        <button
+          className={activePanel === "management" ? "button button--primary" : "button"}
+          onClick={() => onPanelChange("management")}
+        >
+          <Tags size={18} /> Gérer
         </button>
       </nav>
     </header>
