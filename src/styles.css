@@ -288,6 +288,7 @@ label {
 .stack {
   display: grid;
   gap: var(--space-3);
+  align-content: start;
 }
 
 .field-group,
