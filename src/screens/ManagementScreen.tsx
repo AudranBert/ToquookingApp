@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
+import { SectionToggleHeader } from "../components/SectionToggleHeader";
 import type { IngredientUsage } from "../hooks/useIngredientsManagement";
 import type { TagCategory } from "../hooks/useTags";
 import type { RecipeTag } from "../types";
@@ -52,111 +53,88 @@ export function ManagementScreen({
         </div>
       </div>
 
-      {tagsVisible && (
-        <section className="form-section">
-          <div className="management-section-title">
-            <h3>Tags</h3>
-            <button
-              className="button button--icon"
-              type="button"
-              aria-label="Masquer Tags"
-              onClick={() => setTagsVisible(false)}
-            >
-              -
-            </button>
-          </div>
-          <div className="management-row">
-            <input value={newTagName} onChange={(event) => setNewTagName(event.target.value)} placeholder="Nom du tag" />
-            <input
-              list="management-categories"
-              value={newTagCategory}
-              onChange={(event) => setNewTagCategory(event.target.value)}
-              placeholder="Catégorie"
-            />
-            <button
-              className="button button--primary"
-              type="button"
-              onClick={async () => {
-                await onCreateTag(newTagName, newTagCategory);
-                setNewTagName("");
-              }}
-            >
-              Ajouter
-            </button>
-          </div>
-          <datalist id="management-categories">
-            {categoryOptions.map((category) => (
-              <option key={category} value={category} />
-            ))}
-          </datalist>
+      <section className="form-section">
+        <SectionToggleHeader
+          className="management-section-title"
+          open={tagsVisible}
+          onToggle={() => setTagsVisible((current) => !current)}
+          title={<h3>Tags</h3>}
+        />
+        {tagsVisible && (
+          <>
+            <div className="management-row">
+              <input value={newTagName} onChange={(event) => setNewTagName(event.target.value)} placeholder="Nom du tag" />
+              <input
+                list="management-categories"
+                value={newTagCategory}
+                onChange={(event) => setNewTagCategory(event.target.value)}
+                placeholder="Catégorie"
+              />
+              <button
+                className="button button--primary"
+                type="button"
+                onClick={async () => {
+                  await onCreateTag(newTagName, newTagCategory);
+                  setNewTagName("");
+                }}
+              >
+                Ajouter
+              </button>
+            </div>
+            <datalist id="management-categories">
+              {categoryOptions.map((category) => (
+                <option key={category} value={category} />
+              ))}
+            </datalist>
 
-          <div className="management-categories">
-            {categories.map((category) => (
-              <details className="panel management-category" key={category.name} open>
-                <summary className="management-category__summary">
-                  <div className="management-category__title">
-                    <strong>{category.name}</strong>
-                    <span className="muted">{category.tags.length} tag(s)</span>
+            <div className="management-categories">
+              {categories.map((category) => (
+                <details className="panel management-category" key={category.name} open>
+                  <summary className="management-category__summary">
+                    <div className="management-category__title">
+                      <strong>{category.name}</strong>
+                      <span className="muted">{category.tags.length} tag(s)</span>
+                    </div>
+                    <label className="management-category__color" onClick={(event) => event.stopPropagation()}>
+                      Couleur
+                      <input
+                        type="color"
+                        value={category.color ?? "#f6ead8"}
+                        onChange={(event) => void setCategoryColor(category, event.target.value)}
+                      />
+                    </label>
+                  </summary>
+
+                  <div className="management-tags-grid">
+                    {category.tags.map((tag) => (
+                      <TagRow
+                        key={tag.id}
+                        tag={tag}
+                        allTags={tags}
+                        protectedTag={protectedSet.has(tag.name.toLowerCase())}
+                        onRenameTag={onRenameTag}
+                        onMergeTags={onMergeTags}
+                        onDeleteTag={onDeleteTag}
+                        onUpdateTagMeta={onUpdateTagMeta}
+                      />
+                    ))}
                   </div>
-                  <label className="management-category__color" onClick={(event) => event.stopPropagation()}>
-                    Couleur
-                    <input
-                      type="color"
-                      value={category.color ?? "#f6ead8"}
-                      onChange={(event) => void setCategoryColor(category, event.target.value)}
-                    />
-                  </label>
-                </summary>
+                </details>
+              ))}
+              {categories.length === 0 && <p className="muted">Aucun tag.</p>}
+            </div>
+          </>
+        )}
+      </section>
 
-                <div className="management-tags-grid">
-                  {category.tags.map((tag) => (
-                    <TagRow
-                      key={tag.id}
-                      tag={tag}
-                      allTags={tags}
-                      protectedTag={protectedSet.has(tag.name.toLowerCase())}
-                      onRenameTag={onRenameTag}
-                      onMergeTags={onMergeTags}
-                      onDeleteTag={onDeleteTag}
-                      onUpdateTagMeta={onUpdateTagMeta}
-                    />
-                  ))}
-                </div>
-              </details>
-            ))}
-            {categories.length === 0 && <p className="muted">Aucun tag.</p>}
-          </div>
-        </section>
-      )}
-      {!tagsVisible && (
-        <section className="form-section">
-          <div className="management-section-title">
-            <h3>Tags</h3>
-            <button
-              className="button button--icon"
-              type="button"
-              aria-label="Afficher Tags"
-              onClick={() => setTagsVisible(true)}
-            >
-              +
-            </button>
-          </div>
-        </section>
-      )}
-
-      {ingredientsVisible && (
-        <section className="form-section">
-          <div className="management-section-title">
-            <h3>Ingrédients</h3>
-            <button
-              className="button button--icon"
-              type="button"
-              aria-label="Masquer Ingrédients"
-              onClick={() => setIngredientsVisible(false)}
-            >
-              -
-            </button>
-          </div>
+      <section className="form-section">
+        <SectionToggleHeader
+          className="management-section-title"
+          open={ingredientsVisible}
+          onToggle={() => setIngredientsVisible((current) => !current)}
+          title={<h3>Ingrédients</h3>}
+        />
+        {ingredientsVisible && (
           <div className="stack">
             {ingredients.map((ingredient) => (
               <div className="panel management-line" key={ingredient.name}>
@@ -199,23 +177,8 @@ export function ManagementScreen({
             ))}
             {ingredients.length === 0 && <p className="muted">Aucun ingrédient.</p>}
           </div>
-        </section>
-      )}
-      {!ingredientsVisible && (
-        <section className="form-section">
-          <div className="management-section-title">
-            <h3>Ingrédients</h3>
-            <button
-              className="button button--icon"
-              type="button"
-              aria-label="Afficher Ingrédients"
-              onClick={() => setIngredientsVisible(true)}
-            >
-              +
-            </button>
-          </div>
-        </section>
-      )}
+        )}
+      </section>
     </section>
   );
 }

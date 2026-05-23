@@ -409,6 +409,17 @@ label {
   cursor: pointer;
 }
 
+.section-toggle-header__toggle {
+  padding: 0;
+  color: var(--color-accent);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .origin-filter__clear {
   padding: 0;
   color: var(--color-accent);
