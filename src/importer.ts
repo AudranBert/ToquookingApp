@@ -5,6 +5,8 @@ import { parseIngredientLine } from "./utils/ingredients";
 const HTML_ENTITIES: Record<string, string> = {
   amp: "&",
   apos: "'",
+  lt: "<",
+  gt: ">",
   copy: "(c)",
   eacute: "é",
   egrave: "è",
@@ -19,7 +21,81 @@ const HTML_ENTITIES: Record<string, string> = {
   ccedil: "ç",
   nbsp: " ",
   quot: '"',
+  rsquo: "'",
+  lsquo: "'",
+  rdquo: '"',
+  ldquo: '"',
+  ndash: "-",
+  mdash: "-",
+  frac12: "1/2",
 };
+
+function repairMojibake(value: string) {
+  if (!/[ÃÂâï¿\u0019]/.test(value)) return value;
+  const cp1252Map: Record<number, number> = {
+    0x20ac: 0x80,
+    0x201a: 0x82,
+    0x0192: 0x83,
+    0x201e: 0x84,
+    0x2026: 0x85,
+    0x2020: 0x86,
+    0x2021: 0x87,
+    0x02c6: 0x88,
+    0x2030: 0x89,
+    0x0160: 0x8a,
+    0x2039: 0x8b,
+    0x0152: 0x8c,
+    0x017d: 0x8e,
+    0x2018: 0x91,
+    0x2019: 0x92,
+    0x201c: 0x93,
+    0x201d: 0x94,
+    0x2022: 0x95,
+    0x2013: 0x96,
+    0x2014: 0x97,
+    0x02dc: 0x98,
+    0x2122: 0x99,
+    0x0161: 0x9a,
+    0x203a: 0x9b,
+    0x0153: 0x9c,
+    0x017e: 0x9e,
+    0x0178: 0x9f,
+  };
+
+  const toCp1252Byte = (char: string) => {
+    const code = char.codePointAt(0) ?? 0;
+    if (code <= 0xff) return code;
+    return cp1252Map[code] ?? 0x3f;
+  };
+
+  try {
+    const bytes = Uint8Array.from(Array.from(value, toCp1252Byte));
+    const repaired = new TextDecoder("utf-8").decode(bytes);
+    const originalNoise = (value.match(/[ÃÂâï¿\u0019]/g) ?? []).length;
+    const repairedNoise = (repaired.match(/[ÃÂâï¿\u0019]/g) ?? []).length;
+    return repairedNoise < originalNoise ? repaired : value;
+  } catch {
+    return value;
+  }
+}
+
+function isLikelyRecipeImage(url?: string) {
+  if (!url) return false;
+  if (/\/IMG\/groupeon\d+\.png/i.test(url)) return false;
+  if (/\/moton\d+/i.test(url)) return false;
+  return /\.(?:jpg|jpeg|png|webp)(?:\?|$)/i.test(url) || /local\/cache-(?:gd2|vignettes)\//i.test(url);
+}
+
+function pickBestImageCandidate(candidates: Array<string | undefined>, sourceUrl: string) {
+  const absolutes = candidates
+    .filter(Boolean)
+    .map((value) => absolutizeUrl(value, sourceUrl))
+    .filter((value): value is string => Boolean(value));
+  const recipeScoped = absolutes.find((url) => /recette|recipe|food|plat|dish|cooking|\/photos?\//i.test(url));
+  if (recipeScoped) return recipeScoped;
+  const likely = absolutes.find((url) => isLikelyRecipeImage(url));
+  return likely ?? absolutes[0];
+}
 
 function decodeHtmlEntities(value: string) {
   let decoded = value;
@@ -44,7 +120,7 @@ function decodeHtmlEntities(value: string) {
 
 function cleanText(value: unknown) {
   if (value == null) return "";
-  return decodeHtmlEntities(String(value))
+  return repairMojibake(decodeHtmlEntities(String(value)))
     .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -165,6 +241,79 @@ function extractRecipeFromJsonLd(json: unknown, sourceUrl: string): ParsedRecipe
     totalTime: parseDurationToMinutes(recipe.totalTime),
     imageUrl: absolutizeUrl(images[0], sourceUrl),
     videoUrl: absolutizeUrl(recipeVideoUrl(recipe), sourceUrl),
+  };
+}
+
+function extractRecipeFromMicrodataHtml(html: string, sourceUrl: string): ParsedRecipe | null {
+  const normalized = html.replace(/\r\n/g, "\n");
+  const block =
+    normalized.match(/<article[^>]+itemtype=["'][^"']*schema\.org\/Recipe[^"']*["'][^>]*>([\s\S]*?)<\/article>/i)?.[1] ??
+    normalized;
+
+  const name =
+    cleanText(block.match(/itemprop=["']name["'][^>]*>([\s\S]*?)<\/h1>/i)?.[1]) ||
+    cleanText(block.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)?.[1]);
+
+  const ingredientMatches = [
+    ...block.matchAll(/itemprop=["']recipeIngredient["'][^>]*>([\s\S]*?)<\/li>/gi),
+  ];
+  const ingredients = ingredientMatches
+    .map((match) => cleanText(match[1]))
+    .filter(Boolean)
+    .map(parseIngredientLine);
+
+  const instructionContainer =
+    block.match(/itemprop=["']recipeInstructions["'][^>]*>([\s\S]*?)<\/(?:div|section|article)>/i)?.[1] ?? "";
+  const instructionItems = [
+    ...instructionContainer.matchAll(/<(?:li|p)[^>]*>([\s\S]*?)<\/(?:li|p)>/gi),
+  ]
+    .map((match) => cleanText(match[1]))
+    .filter(Boolean);
+  const instructions = instructionItems.length
+    ? instructionItems
+    : cleanText(instructionContainer)
+        .split(/\.(?:\s+|$)|\n+/)
+        .map((line) => cleanText(line))
+        .filter((line) => line.length > 8);
+
+  const servings = Number.parseInt(
+    cleanText(
+      block.match(/itemprop=["']recipeYield["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1] ??
+        block.match(/itemprop=["']recipeYield["'][^>]+content=["']([^"']+)["']/i)?.[1] ??
+        "",
+    ),
+    10,
+  );
+
+  const prepTime = parseDurationToMinutes(
+    block.match(/itemprop=["']prepTime["'][^>]+content=["']([^"']+)["']/i)?.[1],
+  );
+  const cookTime = parseDurationToMinutes(
+    block.match(/itemprop=["']cookTime["'][^>]+content=["']([^"']+)["']/i)?.[1],
+  );
+  const totalTime = parseDurationToMinutes(
+    block.match(/itemprop=["']totalTime["'][^>]+content=["']([^"']+)["']/i)?.[1],
+  );
+
+  const imageCandidates = [
+    block.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1],
+    block.match(/itemprop=["']image["'][^>]+src=["']([^"']+)["']/i)?.[1],
+    block.match(/<link[^>]+rel=["']image_src["'][^>]+href=["']([^"']+)["']/i)?.[1],
+  ].filter(Boolean) as string[];
+  const imageUrl = absolutizeUrl(imageCandidates[0], sourceUrl);
+
+  if (ingredients.length === 0 && instructions.length === 0) return null;
+
+  return {
+    sourceUrl,
+    name: name || undefined,
+    ingredients,
+    instructions,
+    servings: Number.isFinite(servings) && servings > 0 ? servings : undefined,
+    prepTime,
+    cookTime,
+    totalTime,
+    imageUrl,
   };
 }
 
@@ -295,6 +444,44 @@ function marmitonFallback(content: string, sourceUrl: string): ParsedRecipe | nu
 
   const normalized = content.replace(/\r\n/g, "\n");
   const lines = normalized.split("\n").map((line) => cleanText(line)).filter(Boolean);
+  const title =
+    cleanText(normalized.match(/^\s*Title:\s*(.+)$/im)?.[1]) ||
+    cleanText(normalized.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]) ||
+    cleanText(normalized.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)?.[1]);
+
+  const servingsValue =
+    servings(
+      cleanText(
+        normalized.match(/(\d+)\s*personnes?/i)?.[0] ??
+          normalized.match(/itemprop=["']recipeYield["'][^>]+content=["']([^"']+)["']/i)?.[1] ??
+          "",
+      ),
+    ) ?? undefined;
+
+  const prepTime =
+    parseDurationToMinutes(normalized.match(/itemprop=["']prepTime["'][^>]+content=["']([^"']+)["']/i)?.[1]) ??
+    parseDurationText(cleanText(normalized.match(/Pr\S*paration\s*:\s*([^\n<]+)/i)?.[1] ?? ""));
+  const cookTime =
+    parseDurationToMinutes(normalized.match(/itemprop=["']cookTime["'][^>]+content=["']([^"']+)["']/i)?.[1]) ??
+    parseDurationText(cleanText(normalized.match(/Cuisson\s*:\s*([^\n<]+)/i)?.[1] ?? ""));
+  const totalTime =
+    parseDurationToMinutes(normalized.match(/itemprop=["']totalTime["'][^>]+content=["']([^"']+)["']/i)?.[1]) ??
+    parseDurationText(cleanText(normalized.match(/Temps\s+total\s*:\s*([^\n<]+)/i)?.[1] ?? ""));
+  const restTime =
+    parseDurationToMinutes(normalized.match(/itemprop=["']restTime["'][^>]+content=["']([^"']+)["']/i)?.[1]) ??
+    marmitonRestTime(normalized);
+
+  const imageUrl = pickBestImageCandidate(
+    [
+      normalized.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1],
+      normalized.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1],
+      normalized.match(/^\s*Image\s*:\s*(https?:\/\/\S+)\s*$/im)?.[1],
+      normalized.match(/!\[[^\]]*\]\((https?:\/\/[^)\s]+|\/\/[^)\s]+)\)/i)?.[1],
+      normalized.match(/<img[^>]+src=["']([^"']+recette[^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)["']/i)?.[1],
+      normalized.match(/<img[^>]+src=["']([^"']+)["'][^>]*(?:recipe|recette|food|dish)/i)?.[1],
+    ],
+    sourceUrl,
+  );
 
   const ingredients: ReturnType<typeof parseIngredientLine>[] = [];
   let qty = "";
@@ -442,12 +629,22 @@ function marmitonFallback(content: string, sourceUrl: string): ParsedRecipe | nu
   );
 
   if (dedupedIngredients.length === 0 && cleanedInstructions.length === 0) return null;
+  const hasCoreFields = Boolean(title && servingsValue && (prepTime || cookTime || totalTime) && imageUrl);
 
   return {
     sourceUrl,
+    name: title || undefined,
+    imageUrl,
+    servings: servingsValue,
+    prepTime,
+    restTime,
+    cookTime,
+    totalTime,
     ingredients: dedupedIngredients.length ? dedupedIngredients : undefined,
     instructions: cleanedInstructions.length ? cleanedInstructions : undefined,
-    warnings: ["Import partiel depuis contenu non structure. Verifie ingredients, etapes et quantites avant de sauvegarder."],
+    warnings: hasCoreFields
+      ? undefined
+      : ["Import partiel depuis contenu non structure. Verifie ingredients, etapes et quantites avant de sauvegarder."],
   };
 }
 
@@ -470,6 +667,50 @@ function fallbackNameFromUrl(sourceUrl: string) {
 
 function cuisineLibreFallback(content: string, sourceUrl: string): ParsedRecipe | null {
   if (!/cuisine-libre\.org/i.test(sourceUrl)) return null;
+
+  // Dedicated structured path for cuisine-libre pages (preferred over text heuristics).
+  const structured = extractRecipeFromMicrodataHtml(content, sourceUrl);
+  if (structured && (structured.ingredients?.length ?? 0) > 0 && (structured.instructions?.length ?? 0) > 0) {
+    const normalized = content.replace(/\r\n/g, "\n");
+    const prepTime =
+      structured.prepTime ??
+      parseDurationToMinutes(normalized.match(/itemprop=["']prepTime["'][^>]+content=["']([^"']+)["']/i)?.[1]);
+    const cookTime =
+      structured.cookTime ??
+      parseDurationToMinutes(normalized.match(/itemprop=["']cookTime["'][^>]+content=["']([^"']+)["']/i)?.[1]);
+    const totalTime =
+      structured.totalTime ??
+      parseDurationToMinutes(normalized.match(/itemprop=["']totalTime["'][^>]+content=["']([^"']+)["']/i)?.[1]);
+    const servingsValue =
+      structured.servings ??
+      servings(
+        cleanText(
+          normalized.match(/itemprop=["']recipeYield["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1] ??
+            normalized.match(/itemprop=["']recipeYield["'][^>]+content=["']([^"']+)["']/i)?.[1] ??
+            "",
+        ),
+      );
+    const imageUrl = pickBestImageCandidate(
+      [
+        structured.imageUrl,
+        normalized.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1],
+        normalized.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1],
+        normalized.match(/<link[^>]+rel=["']image_src["'][^>]+href=["']([^"']+)["']/i)?.[1],
+      ],
+      sourceUrl,
+    );
+
+    return {
+      ...structured,
+      sourceUrl,
+      imageUrl: imageUrl ?? structured.imageUrl,
+      servings: servingsValue ?? structured.servings,
+      prepTime,
+      cookTime,
+      totalTime,
+      warnings: undefined,
+    };
+  }
 
   const normalized = content.replace(/\r\n/g, "\n");
   const rawLines = normalized.split("\n");
@@ -538,13 +779,30 @@ function cuisineLibreFallback(content: string, sourceUrl: string): ParsedRecipe 
     }
   }
 
+  const servingsText =
+    cleanText(normalized.match(/itemprop=["']recipeYield["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1]) ||
+    cleanText(normalized.match(/Ingr\S*dients?\s+[^<\n]*pour\s+([^<\n]+)/i)?.[1]);
+  const servingsValue = servings(servingsText);
+
+  const prepTime =
+    parseDurationToMinutes(normalized.match(/itemprop=["']prepTime["'][^>]+content=["']([^"']+)["']/i)?.[1]) ??
+    parseDurationText(cleanText(normalized.match(/Pr\S*paration\s*:\s*([^<\n]+)/i)?.[1] ?? ""));
+  const cookTime =
+    parseDurationToMinutes(normalized.match(/itemprop=["']cookTime["'][^>]+content=["']([^"']+)["']/i)?.[1]) ??
+    parseDurationText(cleanText(normalized.match(/Cuisson\s*:\s*([^<\n]+)/i)?.[1] ?? ""));
+  const totalTime =
+    parseDurationToMinutes(normalized.match(/itemprop=["']totalTime["'][^>]+content=["']([^"']+)["']/i)?.[1]) ??
+    parseDurationText(cleanText(normalized.match(/Dur\S*e\s+totale\s*:\s*([^<\n]+)/i)?.[1] ?? ""));
+
   const markdownImages = [...normalized.matchAll(/!\[[^\]]*\]\((https?:\/\/[^)\s]+|\/\/[^)\s]+)\)/gi)].map((m) => m[1]);
   const cacheImage =
     normalized.match(/https?:\/\/[^\s"'()]*\/local\/cache-vignettes\/[^\s"'()]+/i)?.[0] ??
     normalized.match(/https?:\/\/[^\s"'()]*\/local\/cache-gd2\/[^\s"'()]+/i)?.[0];
   const preferredMarkdownImage = markdownImages.find((url) => /\/local\/cache-vignettes\//i.test(url));
   const genericMetaImage = normalized.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1];
-  const imageCandidate = preferredMarkdownImage ?? cacheImage ?? markdownImages[0] ?? genericMetaImage;
+  const twitterImage = normalized.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1];
+  const imageSrc = normalized.match(/<link[^>]+rel=["']image_src["'][^>]+href=["']([^"']+)["']/i)?.[1];
+  const imageCandidate = preferredMarkdownImage ?? cacheImage ?? genericMetaImage ?? twitterImage ?? imageSrc ?? markdownImages[0];
   const imageUrl = absolutizeUrl(imageCandidate, sourceUrl);
 
   if (ingredientLines.length === 0 && instructions.length === 0) return null;
@@ -561,6 +819,10 @@ function cuisineLibreFallback(content: string, sourceUrl: string): ParsedRecipe 
     sourceUrl,
     name: title || undefined,
     imageUrl,
+    servings: servingsValue,
+    prepTime,
+    cookTime,
+    totalTime,
     ingredients: ingredientLines.map(parseIngredientLine),
     instructions,
     warnings: ["Import partiel depuis contenu non structure. Verifie ingredients, etapes et quantites avant de sauvegarder."],
@@ -735,6 +997,82 @@ function parseWithFallbacks(content: string, sourceUrl: string): ParsedRecipe | 
   return mergeRecipes(domainResult, defaultResult);
 }
 
+function parseWithDomainPriority(content: string, sourceUrl: string): ParsedRecipe | null {
+  const domainParser = selectDomainParser(sourceUrl);
+  if (!domainParser) return null;
+  const normalized = content.replace(/\r\n/g, "\n");
+
+  const domainResult = domainParser(content, sourceUrl);
+  const defaultResult = defaultMarkdownFallback(content, sourceUrl);
+  let jsonLdImage: string | undefined;
+  const jsonLdScripts = [
+    ...normalized.matchAll(
+      /<script[^>]+type=["'](?:application\/ld\+json|application&#x2F;ld&#x2B;json)["'][^>]*>([\s\S]*?)<\/script>/gi,
+    ),
+  ];
+  for (const match of jsonLdScripts) {
+    for (const body of [match[1], decodeHtmlEntities(match[1])]) {
+      try {
+        const parsed = extractRecipeFromJsonLd(JSON.parse(body), sourceUrl);
+        if (parsed?.imageUrl) {
+          jsonLdImage = parsed.imageUrl;
+          break;
+        }
+      } catch {
+        // ignore invalid JSON-LD snippets
+      }
+    }
+    if (jsonLdImage) break;
+  }
+
+  const name =
+    cleanText(normalized.match(/^\s*Title:\s*(.+)$/im)?.[1]) ||
+    cleanText(normalized.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)?.[1]) ||
+    cleanText(normalized.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]);
+  const imageUrl = absolutizeUrl(
+    normalized.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1] ??
+      normalized.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1] ??
+      jsonLdImage,
+    sourceUrl,
+  );
+  const prepTime = parseDurationToMinutes(
+    normalized.match(/itemprop=["']prepTime["'][^>]+content=["']([^"']+)["']/i)?.[1],
+  );
+  const cookTime = parseDurationToMinutes(
+    normalized.match(/itemprop=["']cookTime["'][^>]+content=["']([^"']+)["']/i)?.[1],
+  );
+  const totalTime = parseDurationToMinutes(
+    normalized.match(/itemprop=["']totalTime["'][^>]+content=["']([^"']+)["']/i)?.[1],
+  );
+  const restTime =
+    parseDurationToMinutes(normalized.match(/itemprop=["']restTime["'][^>]+content=["']([^"']+)["']/i)?.[1]) ??
+    (/marmiton/i.test(sourceUrl) ? marmitonRestTime(normalized) : undefined);
+  const servingsValue = servings(
+    cleanText(
+      normalized.match(/itemprop=["']recipeYield["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1] ??
+        normalized.match(/itemprop=["']recipeYield["'][^>]+content=["']([^"']+)["']/i)?.[1] ??
+        normalized.match(/(\d+)\s*personnes?/i)?.[0] ??
+        "",
+    ),
+  );
+
+  const enrichedDomain: ParsedRecipe = {
+    ...(domainResult ?? {}),
+    sourceUrl,
+    name: domainResult?.name ?? name ?? undefined,
+    imageUrl: domainResult?.imageUrl ?? imageUrl ?? undefined,
+    servings: domainResult?.servings ?? servingsValue ?? undefined,
+    prepTime: domainResult?.prepTime ?? prepTime ?? undefined,
+    restTime: domainResult?.restTime ?? restTime ?? undefined,
+    cookTime: domainResult?.cookTime ?? cookTime ?? undefined,
+    totalTime: domainResult?.totalTime ?? totalTime ?? undefined,
+  };
+
+  if ((enrichedDomain.ingredients?.length ?? 0) === 0 && defaultResult) return mergeRecipes(enrichedDomain, defaultResult);
+  if ((enrichedDomain.instructions?.length ?? 0) === 0 && defaultResult) return mergeRecipes(enrichedDomain, defaultResult);
+  return enrichedDomain;
+}
+
 function hasKnownDomain(sourceUrl: string) {
   return Boolean(selectDomainParser(sourceUrl));
 }
@@ -828,7 +1166,7 @@ function finalizeRecipe(sourceUrl: string, structured: ParsedRecipe | null, fall
       name: resolvedName ?? structured.name,
       imageUrl: structured.imageUrl ?? fallback?.imageUrl,
       sourceUrl: structured.sourceUrl ?? sourceUrl,
-      warnings: structured.warnings ?? fallback?.warnings,
+      warnings: structured.warnings,
     };
   }
   if (fallback) return fallback;
@@ -871,6 +1209,10 @@ function mergeRecipes(base: ParsedRecipe | null, incoming: ParsedRecipe): Parsed
       : base.ingredients;
   const pickInstructions =
     qualityScore(incomingInstructions) > qualityScore(baseInstructions) ? incoming.instructions : base.instructions;
+  const pickImage =
+    !isLikelyRecipeImage(base.imageUrl) && isLikelyRecipeImage(incoming.imageUrl)
+      ? incoming.imageUrl
+      : (base.imageUrl ?? incoming.imageUrl);
 
   return {
     ...base,
@@ -882,7 +1224,7 @@ function mergeRecipes(base: ParsedRecipe | null, incoming: ParsedRecipe): Parsed
     origin: base.origin ?? incoming.origin,
     sourceUrl: base.sourceUrl ?? incoming.sourceUrl,
     videoUrl: base.videoUrl ?? incoming.videoUrl,
-    imageUrl: base.imageUrl ?? incoming.imageUrl,
+    imageUrl: pickImage,
     servings: base.servings ?? incoming.servings,
     prepTime: base.prepTime ?? incoming.prepTime,
     restTime: base.restTime ?? incoming.restTime,
@@ -917,6 +1259,7 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
 
   try {
     const htmlSources = await fetchRecipeHtmls(url);
+    const hasDedicatedDomainParser = hasKnownDomain(url);
     let merged: ParsedRecipe | null = null;
     let structuredMerged: ParsedRecipe | null = null;
     let fallbackMerged: ParsedRecipe | null = null;
@@ -926,6 +1269,11 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
     }
 
     for (const html of htmlSources) {
+      const domainPriority = parseWithDomainPriority(html, url);
+      if (domainPriority) {
+        structuredMerged = mergeRecipes(structuredMerged, domainPriority);
+      }
+
       const jsonLdScripts = [
         ...html.matchAll(
           /<script[^>]+type=["'](?:application\/ld\+json|application&#x2F;ld&#x2B;json)["'][^>]*>([\s\S]*?)<\/script>/gi,
@@ -951,8 +1299,13 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
         }
       }
 
+      const microdata = extractRecipeFromMicrodataHtml(html, url);
+      if (microdata && !hasDedicatedDomainParser) {
+        structuredMerged = mergeRecipes(structuredMerged, microdata);
+      }
+
       const markdownFallback = parseWithFallbacks(html, url);
-      if (markdownFallback) {
+      if (markdownFallback && !hasDedicatedDomainParser) {
         fallbackMerged = mergeRecipes(fallbackMerged, markdownFallback);
       }
     }
