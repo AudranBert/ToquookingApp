@@ -26,3 +26,10 @@ export function proxiedImageUrl(url?: string, baseUrl?: string) {
   const isLocalHost = /^(localhost|127\.0\.0\.1|::1)$/.test(window.location.hostname);
   return isLocalHost ? endpoint : absolute;
 }
+
+export function shouldUseImageCrossOrigin(url?: string, baseUrl?: string) {
+  if (!url) return false;
+  const absolute = absolutize(url, baseUrl);
+  if (!/^https?:\/\//.test(absolute)) return false;
+  return /^(localhost|127\.0\.0\.1|::1)$/.test(window.location.hostname);
+}

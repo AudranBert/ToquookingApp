@@ -2,7 +2,7 @@ import type { RefObject } from "react";
 import { BookOpen, Edit3, FileDown, FileImage, FileJson, MessageSquareText, Plus, Trash2 } from "lucide-react";
 import type { Recipe } from "../types";
 import { currentSeasonalIngredients, recipeContainsSeasonalIngredient } from "../seasonal";
-import { proxiedImageUrl } from "../utils/images";
+import { proxiedImageUrl, shouldUseImageCrossOrigin } from "../utils/images";
 import { isPantryIngredient } from "../utils/ingredients";
 import { ingredientLabel } from "../utils/recipes";
 
@@ -66,7 +66,14 @@ export function RecipeDetail({
       </div>
 
       <div className="recipe-card" ref={printRef}>
-        {recipe.imageUrl && <img className="recipe-image" src={proxiedImageUrl(recipe.imageUrl, recipe.sourceUrl)} crossOrigin="anonymous" alt="" />}
+        {recipe.imageUrl && (
+          <img
+            className="recipe-image"
+            src={proxiedImageUrl(recipe.imageUrl, recipe.sourceUrl)}
+            crossOrigin={shouldUseImageCrossOrigin(recipe.imageUrl, recipe.sourceUrl) ? "anonymous" : undefined}
+            alt=""
+          />
+        )}
         <div className="recipe-title">
           <span className="eyebrow">Recette</span>
           <h2>{recipe.name}</h2>
