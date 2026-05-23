@@ -5,8 +5,37 @@ import { normalizeText } from "../utils/text";
 import { nowIso } from "../utils/recipes";
 import type { StatusApi } from "./useStatus";
 
+const DEFAULT_PROTECTED_TAGS = [
+  "omnivore",
+  "végétarien",
+  "végétalien",
+  "pescétarien",
+  "entrée",
+  "plat",
+  "dessert",
+  "boisson",
+  "froid",
+  "chaud",
+  "accompagnement",
+  "apéritif",
+] as const;
+
 function sortTags(tags: string[]) {
   return [...tags].sort((a, b) => a.localeCompare(b, "fr"));
+}
+
+function uniqueTags(tags: string[]) {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  tags.forEach((tag) => {
+    const trimmed = tag.trim();
+    if (!trimmed) return;
+    const key = normalizeText(trimmed);
+    if (seen.has(key)) return;
+    seen.add(key);
+    unique.push(trimmed);
+  });
+  return unique;
 }
 
 function uniqueRecipeTags(recipes: Recipe[]) {
@@ -20,10 +49,11 @@ function uniqueRecipeTags(recipes: Recipe[]) {
 
 export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: () => Promise<unknown>) {
   const [tags, setTags] = useState<string[]>([]);
+  const protectedTagKeys = useMemo(() => new Set(DEFAULT_PROTECTED_TAGS.map((tag) => normalizeText(tag))), []);
 
   const refresh = useCallback(async () => {
     const stored = await db.tags.orderBy("name").toArray();
-    setTags(sortTags(stored.map((tag) => tag.name)));
+    setTags(sortTags(uniqueTags([...stored.map((tag) => tag.name), ...DEFAULT_PROTECTED_TAGS])));
   }, []);
 
   useEffect(() => {
@@ -31,19 +61,34 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
   }, [refresh]);
 
   useEffect(() => {
+    db.tags
+      .bulkPut(
+        DEFAULT_PROTECTED_TAGS.map<RecipeTag>((name) => ({
+          name,
+          createdAt: nowIso(),
+          updatedAt: nowIso(),
+        })),
+      )
+      .then(refresh);
+  }, [refresh]);
+
+  useEffect(() => {
     const recipeTags = uniqueRecipeTags(recipes);
     if (recipeTags.length === 0) return;
 
-    db.tags.bulkPut(
-      recipeTags.map<RecipeTag>((name) => ({
-        name,
-        createdAt: nowIso(),
-        updatedAt: nowIso(),
-      })),
-    ).then(refresh);
+    db.tags
+      .bulkPut(
+        recipeTags.map<RecipeTag>((name) => ({
+          name,
+          createdAt: nowIso(),
+          updatedAt: nowIso(),
+        })),
+      )
+      .then(refresh);
   }, [recipes, refresh]);
 
-  const allTags = useMemo(() => sortTags(tags), [tags]);
+  const allTags = useMemo(() => sortTags(uniqueTags([...tags, ...DEFAULT_PROTECTED_TAGS])), [tags]);
+  const isProtectedTag = useCallback((name: string) => protectedTagKeys.has(normalizeText(name)), [protectedTagKeys]);
 
   const createTag = useCallback(
     async (rawName: string) => {
@@ -94,6 +139,11 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
 
   const deleteTag = useCallback(
     async (name: string) => {
+      if (isProtectedTag(name)) {
+        status.setStatus("Ce tag par défaut est protégé et ne peut pas être supprimé.");
+        return;
+      }
+
       await db.transaction("rw", db.tags, db.recipes, async () => {
         await db.tags.delete(name);
         const affected = await db.recipes.filter((recipe) => recipe.tags.includes(name)).toArray();
@@ -109,8 +159,8 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
       await onRecipesChanged();
       status.setStatus("Tag supprime des recettes.");
     },
-    [onRecipesChanged, refresh, status],
+    [isProtectedTag, onRecipesChanged, refresh, status],
   );
 
-  return { allTags, createTag, renameTag, deleteTag };
+  return { allTags, protectedTags: DEFAULT_PROTECTED_TAGS, isProtectedTag, createTag, renameTag, deleteTag };
 }

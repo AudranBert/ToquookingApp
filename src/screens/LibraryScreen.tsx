@@ -4,14 +4,23 @@ import { ArrowLeft, ChefHat, Clock, Filter, Flame, Hourglass, Search, X } from "
 import { POPULAR_RECIPE_ORIGINS, RECIPE_ORIGIN_GROUPS, RECIPE_ORIGINS } from "../origins";
 import { RecipeDetail } from "../components/RecipeDetail";
 import { SEASONAL_THRESHOLDS, SEASONAL_THRESHOLD_LABELS } from "../constants";
-import type { Recipe, SeasonalThreshold } from "../types";
+import type { Recipe, RegimeFilter, SeasonalThreshold } from "../types";
 import { proxiedImageUrl } from "../utils/images";
 import { normalizeText } from "../utils/text";
+
+const REGIME_FILTER_OPTIONS: { value: RegimeFilter; label: string }[] = [
+  { value: "", label: "Tous" },
+  { value: "omnivore", label: "omnivore" },
+  { value: "végétarien", label: "végétarien" },
+  { value: "végétalien", label: "végétalien" },
+  { value: "pescétarien", label: "pescétarien" },
+];
 
 export type LibraryFilters = {
   query: string;
   tagFilters: string[];
   originFilter: string;
+  regimeFilter: RegimeFilter;
   noHeatingOnly: boolean;
   maxTotalTime?: number;
   seasonalThreshold: SeasonalThreshold;
@@ -22,6 +31,7 @@ export type LibraryFilterHandlers = {
   onQueryChange: (query: string) => void;
   onTagFiltersChange: (tags: string[]) => void;
   onOriginFilterChange: (origin: string) => void;
+  onRegimeFilterChange: (regime: RegimeFilter) => void;
   onNoHeatingOnlyChange: (enabled: boolean) => void;
   onMaxTotalTimeChange: (minutes?: number) => void;
   onSeasonalThresholdChange: (threshold: SeasonalThreshold) => void;
@@ -157,80 +167,93 @@ function LibrarySidebar({
             </span>
           </summary>
           <div className="advanced-filters__body">
-        <div className="tag-filter">
-          <div className="origin-filter__header">
-            <span className="label-with-icon">
-              <Filter size={16} /> Tags
-            </span>
-            {filters.tagFilters.length > 0 && (
-              <button className="origin-filter__clear" type="button" onClick={() => handlers.onTagFiltersChange([])}>
-                <X size={14} /> Effacer
-              </button>
-            )}
-          </div>
-          <div className="tag-filter__options">
-            {filters.allTags.length > 0 ? (
-              filters.allTags.map((tag) => {
-                const selected = filters.tagFilters.includes(tag);
-                return (
-                  <button
-                    className={`origin-filter__option${selected ? " origin-filter__option--active" : ""}`}
-                    key={tag}
-                    type="button"
-                    onClick={() =>
-                      handlers.onTagFiltersChange(
-                        selected ? filters.tagFilters.filter((selectedTag) => selectedTag !== tag) : [...filters.tagFilters, tag],
-                      )
-                    }
-                    aria-pressed={selected}
-                  >
-                    {tag}
+            <div className="tag-filter">
+              <div className="origin-filter__header">
+                <span className="label-with-icon">
+                  <Filter size={16} /> Tags
+                </span>
+                {filters.tagFilters.length > 0 && (
+                  <button className="origin-filter__clear" type="button" onClick={() => handlers.onTagFiltersChange([])}>
+                    <X size={14} /> Effacer
                   </button>
-                );
-              })
-            ) : (
-              <p className="empty-inline">Aucun tag.</p>
-            )}
-          </div>
-        </div>
-        <label className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={filters.noHeatingOnly}
-            onChange={(event) => handlers.onNoHeatingOnlyChange(event.target.checked)}
-          />
-          <span>No heating</span>
-        </label>
-        <label>
-          Total ≤ X min
-          <input
-            type="number"
-            min="1"
-            inputMode="numeric"
-            value={filters.maxTotalTime ?? ""}
-            onChange={(event) => {
-              const minutes = Number(event.target.value);
-              handlers.onMaxTotalTimeChange(minutes > 0 ? minutes : undefined);
-            }}
-            placeholder="Minutes"
-          />
-        </label>
-        <OriginFilterPicker value={filters.originFilter} onChange={handlers.onOriginFilterChange} />
-        <label>
-          Ingrédients de saison
-          <select
-            value={filters.seasonalThreshold}
-            onChange={(event) =>
-              handlers.onSeasonalThresholdChange(Number(event.target.value) as SeasonalThreshold)
-            }
-          >
-            {SEASONAL_THRESHOLDS.map((threshold) => (
-              <option key={threshold} value={threshold}>
-                {SEASONAL_THRESHOLD_LABELS[threshold]}
-              </option>
-            ))}
-          </select>
-        </label>
+                )}
+              </div>
+              <div className="tag-filter__options">
+                {filters.allTags.length > 0 ? (
+                  filters.allTags.map((tag) => {
+                    const selected = filters.tagFilters.includes(tag);
+                    return (
+                      <button
+                        className={`origin-filter__option${selected ? " origin-filter__option--active" : ""}`}
+                        key={tag}
+                        type="button"
+                        onClick={() =>
+                          handlers.onTagFiltersChange(
+                            selected ? filters.tagFilters.filter((selectedTag) => selectedTag !== tag) : [...filters.tagFilters, tag],
+                          )
+                        }
+                        aria-pressed={selected}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <p className="empty-inline">Aucun tag.</p>
+                )}
+              </div>
+            </div>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={filters.noHeatingOnly}
+                onChange={(event) => handlers.onNoHeatingOnlyChange(event.target.checked)}
+              />
+              <span>No heating</span>
+            </label>
+            <label>
+              Régime
+              <select
+                value={filters.regimeFilter}
+                onChange={(event) => handlers.onRegimeFilterChange(event.target.value as RegimeFilter)}
+              >
+                {REGIME_FILTER_OPTIONS.map((option) => (
+                  <option key={option.label} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Total ≤ X min
+              <input
+                type="number"
+                min="1"
+                inputMode="numeric"
+                value={filters.maxTotalTime ?? ""}
+                onChange={(event) => {
+                  const minutes = Number(event.target.value);
+                  handlers.onMaxTotalTimeChange(minutes > 0 ? minutes : undefined);
+                }}
+                placeholder="Minutes"
+              />
+            </label>
+            <OriginFilterPicker value={filters.originFilter} onChange={handlers.onOriginFilterChange} />
+            <label>
+              Ingrédients de saison
+              <select
+                value={filters.seasonalThreshold}
+                onChange={(event) =>
+                  handlers.onSeasonalThresholdChange(Number(event.target.value) as SeasonalThreshold)
+                }
+              >
+                {SEASONAL_THRESHOLDS.map((threshold) => (
+                  <option key={threshold} value={threshold}>
+                    {SEASONAL_THRESHOLD_LABELS[threshold]}
+                  </option>
+                ))}
+              </select>
+            </label>
             {filters.seasonalThreshold === 0 && (
               <p className="muted">
                 {seasonalRecipeCount} recette(s) contiennent au moins un ingrédient de saison en {seasonMonthName}.

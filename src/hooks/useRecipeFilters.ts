@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { Recipe, SeasonalThreshold } from "../types";
+import type { Recipe, RegimeFilter, SeasonalThreshold } from "../types";
 import { countSeasonalIngredientMatches, currentSeasonalIngredients } from "../seasonal";
 import { originMatchesFilter } from "../origins";
 import { recipeMatchesQuery } from "../utils/recipes";
@@ -8,6 +8,7 @@ export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
   const [query, setQuery] = useState("");
   const [tagFilters, setTagFilters] = useState<string[]>([]);
   const [originFilter, setOriginFilter] = useState("");
+  const [regimeFilter, setRegimeFilter] = useState<RegimeFilter>("");
   const [noHeatingOnly, setNoHeatingOnly] = useState(false);
   const [maxTotalTime, setMaxTotalTime] = useState<number | undefined>();
   const [seasonalThreshold, setSeasonalThreshold] = useState<SeasonalThreshold>(0);
@@ -38,6 +39,7 @@ export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
       recipes.filter((recipe) => {
         const tagMatches = tagFilters.every((tag) => recipe.tags.includes(tag));
         const originMatches = originMatchesFilter(recipe.origin, originFilter);
+        const regimeMatches = !regimeFilter || recipe.tags.includes(regimeFilter);
         const heatingMatches = !noHeatingOnly || !recipe.cookTime;
         const totalTimeMatches = !maxTotalTime || Boolean(recipe.totalTime && recipe.totalTime <= maxTotalTime);
         const seasonMatches =
@@ -46,12 +48,23 @@ export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
           recipeMatchesQuery(recipe, query) &&
           tagMatches &&
           originMatches &&
+          regimeMatches &&
           heatingMatches &&
           totalTimeMatches &&
           seasonMatches
         );
       }),
-    [recipes, query, tagFilters, originFilter, noHeatingOnly, maxTotalTime, seasonalThreshold, seasonalMatchCounts],
+    [
+      recipes,
+      query,
+      tagFilters,
+      originFilter,
+      regimeFilter,
+      noHeatingOnly,
+      maxTotalTime,
+      seasonalThreshold,
+      seasonalMatchCounts,
+    ],
   );
 
   return {
@@ -61,6 +74,8 @@ export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
     setTagFilters,
     originFilter,
     setOriginFilter,
+    regimeFilter,
+    setRegimeFilter,
     noHeatingOnly,
     setNoHeatingOnly,
     maxTotalTime,

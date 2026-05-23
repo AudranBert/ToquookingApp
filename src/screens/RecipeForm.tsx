@@ -10,6 +10,7 @@ type Props = {
   editing: boolean;
   warnings: string[];
   allTags: string[];
+  protectedTags: readonly string[];
   onCreateTag: (name: string) => void;
   onRenameTag: (oldName: string, newName: string) => void;
   onDeleteTag: (name: string) => void;
@@ -27,6 +28,7 @@ export function RecipeForm({
   editing,
   warnings,
   allTags,
+  protectedTags,
   onCreateTag,
   onRenameTag,
   onDeleteTag,
@@ -178,6 +180,7 @@ export function RecipeForm({
         <TagField
           tags={draft.tags}
           allTags={allTags}
+          protectedTags={protectedTags}
           onCreateTag={onCreateTag}
           onRenameTag={onRenameTag}
           onDeleteTag={onDeleteTag}
@@ -452,6 +455,7 @@ function TextField({
 function TagField({
   tags,
   allTags,
+  protectedTags,
   onCreateTag,
   onRenameTag,
   onDeleteTag,
@@ -459,6 +463,7 @@ function TagField({
 }: {
   tags: string[];
   allTags: string[];
+  protectedTags: readonly string[];
   onCreateTag: (name: string) => void;
   onRenameTag: (oldName: string, newName: string) => void;
   onDeleteTag: (name: string) => void;
@@ -473,6 +478,8 @@ function TagField({
       .filter((tag) => !selected.has(tag) && (!query || tag.toLowerCase().includes(query)))
       .slice(0, 8);
   }, [allTags, tags, input]);
+
+  const protectedTagKeys = useMemo(() => new Set(protectedTags.map((tag) => tag.toLowerCase())), [protectedTags]);
 
   function addTag(raw: string) {
     const tag = raw.trim();
@@ -558,7 +565,13 @@ function TagField({
               >
                 Renommer
               </button>
-              <button className="button button--danger" type="button" onClick={() => onDeleteTag(tag)}>
+              <button
+                className="button button--danger"
+                type="button"
+                onClick={() => onDeleteTag(tag)}
+                disabled={protectedTagKeys.has(tag.toLowerCase())}
+                title={protectedTagKeys.has(tag.toLowerCase()) ? "Tag par défaut protégé" : "Supprimer"}
+              >
                 Supprimer
               </button>
             </span>

@@ -216,6 +216,7 @@ export function App() {
             query: filters.query,
             tagFilters: filters.tagFilters,
             originFilter: filters.originFilter,
+            regimeFilter: filters.regimeFilter,
             noHeatingOnly: filters.noHeatingOnly,
             maxTotalTime: filters.maxTotalTime,
             seasonalThreshold: filters.seasonalThreshold,
@@ -225,6 +226,7 @@ export function App() {
             onQueryChange: filters.setQuery,
             onTagFiltersChange: filters.setTagFilters,
             onOriginFilterChange: filters.setOriginFilter,
+            onRegimeFilterChange: filters.setRegimeFilter,
             onNoHeatingOnlyChange: filters.setNoHeatingOnly,
             onMaxTotalTimeChange: filters.setMaxTotalTime,
             onSeasonalThresholdChange: filters.setSeasonalThreshold,
@@ -255,6 +257,7 @@ export function App() {
           editing={Boolean(draftApi.editingId)}
           warnings={draftApi.importWarnings}
           allTags={tagApi.allTags}
+          protectedTags={tagApi.protectedTags}
           onCreateTag={async (name) => {
             const tag = await tagApi.createTag(name);
             if (tag) draftApi.setDraft((current) => ({ ...current, tags: [...current.tags, tag] }));
@@ -267,6 +270,10 @@ export function App() {
             }));
           }}
           onDeleteTag={async (name) => {
+            if (tagApi.isProtectedTag(name)) {
+              status.setStatus("Ce tag par défaut est protégé et ne peut pas être supprimé.");
+              return;
+            }
             if (!window.confirm(`Supprimer le tag "${name}" de toutes les recettes ?`)) return;
             await tagApi.deleteTag(name);
             draftApi.setDraft((current) => ({ ...current, tags: current.tags.filter((tag) => tag !== name) }));
