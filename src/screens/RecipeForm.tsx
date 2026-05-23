@@ -112,10 +112,10 @@ export function RecipeForm({
           <h2>{draft.name || "Recette sans titre"}</h2>
         </div>
         <div className="action-bar">
-          <button className="button button--ghost" onClick={onCancel} type="button">
-            Annuler
+          <button className="button button--ghost button--icon-mobile" onClick={onCancel} type="button" aria-label="Annuler">
+            <X size={18} />
           </button>
-          <button className="button button--primary" type="submit">
+          <button className="button button--primary button--icon-mobile" type="submit">
             <Check size={18} /> Enregistrer
           </button>
         </div>
@@ -131,7 +131,7 @@ export function RecipeForm({
               onChange={(event) => onImportUrlChange(event.target.value)}
               placeholder="Marmiton, CuisineAZ, YouTube..."
             />
-            <button className="button button--primary" onClick={onImport} type="button">
+            <button className="button button--primary button--icon-mobile" onClick={onImport} type="button">
               <Link size={18} /> Importer
             </button>
             <button
@@ -290,7 +290,7 @@ function ImageField({
           <p className="muted">Cette image remplace l'apercu importe depuis le site source.</p>
         </div>
         {hasCustomImage && (
-          <button className="button button--danger" type="button" onClick={onReset}>
+          <button className="button button--danger button--icon-mobile" type="button" onClick={onReset}>
             <Trash2 size={18} /> {sourceValue ? "Revenir a l'image source" : "Retirer"}
           </button>
         )}
@@ -379,10 +379,10 @@ function ReimportControls({
   return (
     <div className="reimport-bar">
       <TextField label="Lien source" value={sourceUrl} onChange={onSourceUrlChange} />
-      <button className="button" onClick={() => onReimport("fill-blanks")} type="button">
+      <button className="button button--icon-mobile" onClick={() => onReimport("fill-blanks")} type="button">
         <RefreshCcw size={18} /> Compléter les champs vides
       </button>
-      <button className="button button--ghost" onClick={() => onReimport("replace")} type="button">
+      <button className="button button--ghost button--icon-mobile" onClick={() => onReimport("replace")} type="button">
         <Replace size={18} /> Remplacer depuis le lien
       </button>
     </div>

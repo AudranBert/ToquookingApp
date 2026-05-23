@@ -1046,6 +1046,14 @@ label {
   padding: var(--space-2);
 }
 
+.management-action-button {
+  min-width: 40px;
+}
+
+.management-action-button__label {
+  display: inline;
+}
+
 @media (max-width: 860px) {
   .app-shell {
     padding: var(--space-4);
@@ -1057,9 +1065,14 @@ label {
     flex-direction: column;
   }
 
-  .nav-tabs,
-  .nav-tabs .button {
+  .nav-tabs {
     width: 100%;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+  }
+
+  .nav-tabs .button {
+    width: auto;
   }
 
   .library-view,
@@ -1067,13 +1080,59 @@ label {
   .recipe-columns,
   .form-grid,
   .image-field__body,
-  .reimport-bar,
   .management-row {
     grid-template-columns: 1fr;
   }
 
+  .reimport-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .reimport-bar label {
+    grid-column: 1 / -1;
+  }
+
+  .inline-control {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
   .management-tags-grid {
     grid-template-columns: 1fr;
+  }
+
+  .management-action-button {
+    width: 40px;
+    padding: 9px;
+  }
+
+  .management-action-button__label {
+    display: none;
+  }
+
+  .button--icon-mobile {
+    width: 42px;
+    min-width: 42px;
+    padding: 9px;
+    font-size: 0;
+    gap: 0;
+  }
+
+  .button--icon-mobile svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .file-button.button--icon-mobile {
+    width: 42px;
+    min-width: 42px;
+    padding: 9px;
+    font-size: 0;
+    gap: 0;
+  }
+
+  .file-button.button--icon-mobile svg {
+    width: 18px;
+    height: 18px;
   }
 
   .image-field__header {

@@ -42,25 +42,25 @@ export function RecipeDetail({
   return (
     <article className="recipe-detail">
       <div className="action-bar">
-        <button className="button" onClick={() => onEdit(recipe)} title="Modifier">
+        <button className="button button--icon-mobile" onClick={() => onEdit(recipe)} title="Modifier">
           <Edit3 size={18} /> Modifier
         </button>
-        <button className="button" onClick={() => onDuplicate(recipe)} title="Dupliquer">
+        <button className="button button--icon-mobile" onClick={() => onDuplicate(recipe)} title="Dupliquer">
           <Plus size={18} /> Dupliquer
         </button>
-        <button className="button" onClick={onExportPdf} title="Exporter en PDF">
+        <button className="button button--icon-mobile" onClick={onExportPdf} title="Exporter en PDF">
           <FileDown size={18} /> PDF
         </button>
-        <button className="button" onClick={onShareImage} title="Partager ou telecharger le PNG">
+        <button className="button button--icon-mobile" onClick={onShareImage} title="Partager ou telecharger le PNG">
           <FileImage size={18} /> PNG
         </button>
-        <button className="button button--primary" onClick={onShareText} title="Partager par SMS">
+        <button className="button button--primary button--icon-mobile" onClick={onShareText} title="Partager par SMS">
           <MessageSquareText size={18} /> SMS
         </button>
-        <button className="button" onClick={onExportRecipeFile} title="Exporter la recette">
+        <button className="button button--icon-mobile" onClick={onExportRecipeFile} title="Exporter la recette">
           <FileJson size={18} /> Fichier
         </button>
-        <button className="button button--danger" onClick={() => onDelete(recipe)} title="Supprimer">
+        <button className="button button--danger button--icon-mobile" onClick={() => onDelete(recipe)} title="Supprimer">
           <Trash2 size={18} /> Supprimer
         </button>
       </div>

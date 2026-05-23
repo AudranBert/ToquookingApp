@@ -19,17 +19,17 @@ export function BackupScreen({ onExport, onImport, onDownloadExample, onDownload
       </div>
 
       <div className="action-bar">
-        <button className="button button--primary" onClick={onExport}>
+        <button className="button button--primary button--icon-mobile" onClick={onExport}>
           <Download size={18} /> Exporter toutes les recettes
         </button>
-        <label className="button file-button">
+        <label className="button file-button button--icon-mobile">
           <Upload size={18} /> Importer une sauvegarde
           <input accept="application/json" onChange={(event) => event.target.files?.[0] && onImport(event.target.files[0])} type="file" />
         </label>
-        <button className="button" onClick={onDownloadExample}>
+        <button className="button button--icon-mobile" onClick={onDownloadExample}>
           <FileJson size={18} /> Télécharger un exemple JSON
         </button>
-        <button className="button" onClick={onDownloadDatabase}>
+        <button className="button button--icon-mobile" onClick={onDownloadDatabase}>
           <FileJson size={18} /> Télécharger la base JSON
         </button>
       </div>
@@ -45,3 +45,4 @@ export function BackupScreen({ onExport, onImport, onDownloadExample, onDownload
     </section>
   );
 }
+

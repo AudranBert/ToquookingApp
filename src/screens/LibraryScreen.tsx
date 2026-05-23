@@ -85,7 +85,7 @@ export function LibraryScreen({
 
       {selectedRecipe ? (
         <div className="detail-pane">
-          <button className="button button--ghost" onClick={actions.onShowList}>
+          <button className="button button--ghost button--icon-mobile" onClick={actions.onShowList}>
             <ArrowLeft size={18} /> Toutes les recettes
           </button>
           <RecipeDetail

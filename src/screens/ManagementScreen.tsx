@@ -1,4 +1,5 @@
 ﻿import { useMemo, useState } from "react";
+import { GitMerge, Pencil, Trash2 } from "lucide-react";
 import { SectionToggleHeader } from "../components/SectionToggleHeader";
 import type { IngredientUsage } from "../hooks/useIngredientsManagement";
 import type { TagCategory } from "../hooks/useTags";
@@ -143,34 +144,37 @@ export function ManagementScreen({
                 </span>
                 <div className="action-bar">
                   <button
-                    className="button button--ghost"
+                    className="button button--ghost management-action-button"
                     type="button"
                     onClick={async () => {
                       const next = window.prompt("Nouveau nom", ingredient.name);
                       if (next) await onRenameIngredient(ingredient.name, next);
                     }}
                   >
-                    Renommer
+                    <Pencil size={16} />
+                    <span className="management-action-button__label">Renommer</span>
                   </button>
                   <button
-                    className="button button--ghost"
+                    className="button button--ghost management-action-button"
                     type="button"
                     onClick={async () => {
                       const target = window.prompt(`Fusionner "${ingredient.name}" vers`, "");
                       if (target) await onMergeIngredients(ingredient.name, target);
                     }}
                   >
-                    Fusionner
+                    <GitMerge size={16} />
+                    <span className="management-action-button__label">Fusionner</span>
                   </button>
                   <button
-                    className="button button--danger"
+                    className="button button--danger management-action-button"
                     type="button"
                     onClick={async () => {
                       if (!window.confirm(`Supprimer "${ingredient.name}" de toutes les recettes ?`)) return;
                       await onDeleteIngredient(ingredient.name);
                     }}
                   >
-                    Supprimer
+                    <Trash2 size={16} />
+                    <span className="management-action-button__label">Supprimer</span>
                   </button>
                 </div>
               </div>
@@ -222,27 +226,29 @@ function TagRow({
             ))}
         </select>
         <button
-          className="button button--ghost"
+          className="button button--ghost management-action-button"
           type="button"
           onClick={async () => {
             const next = window.prompt("Nouveau nom", tag.name);
             if (next) await onRenameTag(tag.name, next);
           }}
         >
-          Renommer
+          <Pencil size={16} />
+          <span className="management-action-button__label">Renommer</span>
         </button>
         <button
-          className="button button--ghost"
+          className="button button--ghost management-action-button"
           type="button"
           onClick={async () => {
             const target = window.prompt(`Fusionner "${tag.name}" vers`, "");
             if (target) await onMergeTags(tag.name, target);
           }}
         >
-          Fusionner
+          <GitMerge size={16} />
+          <span className="management-action-button__label">Fusionner</span>
         </button>
         <button
-          className="button button--danger"
+          className="button button--danger management-action-button"
           type="button"
           disabled={protectedTag}
           onClick={async () => {
@@ -250,7 +256,8 @@ function TagRow({
             await onDeleteTag(tag.name);
           }}
         >
-          Supprimer
+          <Trash2 size={16} />
+          <span className="management-action-button__label">Supprimer</span>
         </button>
       </div>
     </div>

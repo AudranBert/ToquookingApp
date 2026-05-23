@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from "react";
+﻿import type { Dispatch, SetStateAction } from "react";
 import { useMemo, useRef, useState } from "react";
 import { FileDown, FileImage, MessageSquareText, Plus, Search, ShoppingBasket } from "lucide-react";
 import { basicFileName, shareElementAsPdf, shareElementAsPng } from "../exporters";
@@ -114,20 +114,20 @@ export function ShoppingScreen({
       <div className="section-heading">
         <div>
           <span className="eyebrow">Liste de courses</span>
-          <h2>Sélectionne des recettes</h2>
+          <h2>SÃ©lectionne des recettes</h2>
         </div>
         <div className="action-bar">
-          <button className="button" onClick={handleSharePdf} disabled={!canExport} title="Exporter en PDF">
+          <button className="button button--icon-mobile" onClick={handleSharePdf} disabled={!canExport} title="Exporter en PDF">
             <FileDown size={18} /> PDF
           </button>
-          <button className="button" onClick={handleShareImage} disabled={!canExport} title="Partager ou telecharger le PNG">
+          <button className="button button--icon-mobile" onClick={handleShareImage} disabled={!canExport} title="Partager ou telecharger le PNG">
             <FileImage size={18} /> PNG
           </button>
-          <button className="button button--primary" onClick={handleShareText} disabled={!canExport} title="Partager par SMS">
+          <button className="button button--primary button--icon-mobile" onClick={handleShareText} disabled={!canExport} title="Partager par SMS">
             <MessageSquareText size={18} /> SMS
           </button>
-          <button className="button" onClick={onGenerate}>
-            <ShoppingBasket size={18} /> Générer
+          <button className="button button--icon-mobile" onClick={onGenerate}>
+            <ShoppingBasket size={18} /> GÃ©nÃ©rer
           </button>
         </div>
       </div>
@@ -174,7 +174,7 @@ export function ShoppingScreen({
             </span>
             <input
               aria-label="Rechercher une ligne de course"
-              placeholder="Ingrédient..."
+              placeholder="IngrÃ©dient..."
               type="search"
               value={itemQuery}
               onChange={(event) => setItemQuery(event.target.value)}
@@ -212,7 +212,7 @@ export function ShoppingScreen({
             </label>
           ))}
           {items.length > 0 && visibleItems.length === 0 && <p className="empty-inline">Aucune ligne ne correspond.</p>}
-          <button className="button button--ghost button--full" onClick={onAddItem}>
+          <button className="button button--ghost button--full button--icon-mobile" onClick={onAddItem}>
             <Plus size={18} /> Ajouter une ligne
           </button>
         </div>
@@ -320,3 +320,4 @@ async function copyText(text: string) {
 function isLikelyMobile() {
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
+

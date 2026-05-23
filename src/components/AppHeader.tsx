@@ -19,31 +19,31 @@ export function AppHeader({ activePanel, onPanelChange, onShowRecipes, onNewReci
       </div>
       <nav className="nav-tabs" aria-label="Navigation principale">
         <button
-          className={activePanel === "library" ? "button button--primary" : "button"}
+          className={activePanel === "library" ? "button button--primary button--icon-mobile" : "button button--icon-mobile"}
           onClick={() => onPanelChange("library")}
         >
           <BookOpen size={18} /> Recettes
         </button>
         <button
-          className={activePanel === "form" ? "button button--primary" : "button"}
+          className={activePanel === "form" ? "button button--primary button--icon-mobile" : "button button--icon-mobile"}
           onClick={onNewRecipe}
         >
           <Plus size={18} /> Ajouter
         </button>
         <button
-          className={activePanel === "shopping" ? "button button--primary" : "button"}
+          className={activePanel === "shopping" ? "button button--primary button--icon-mobile" : "button button--icon-mobile"}
           onClick={() => onPanelChange("shopping")}
         >
           <ShoppingBasket size={18} /> Courses
         </button>
         <button
-          className={activePanel === "backup" ? "button button--primary" : "button"}
+          className={activePanel === "backup" ? "button button--primary button--icon-mobile" : "button button--icon-mobile"}
           onClick={() => onPanelChange("backup")}
         >
           <Import size={18} /> Sauvegarde
         </button>
         <button
-          className={activePanel === "management" ? "button button--primary" : "button"}
+          className={activePanel === "management" ? "button button--primary button--icon-mobile" : "button button--icon-mobile"}
           onClick={() => onPanelChange("management")}
         >
           <Tags size={18} /> Gérer
