@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import type { Dispatch, FormEvent, KeyboardEvent, SetStateAction } from "react";
-import { Check, Image as ImageIcon, Info, Link, Plus, RefreshCcw, Replace, Trash2, X } from "lucide-react";
+import { Check, Image as ImageIcon, Info, Link, Pencil, Plus, RefreshCcw, Replace, Trash2, X } from "lucide-react";
 import { RECIPE_ORIGINS } from "../origins";
 import type { Ingredient, RecipeDraft, ReimportMode } from "../types";
 import { createId } from "../utils/id";
@@ -11,7 +11,7 @@ type Props = {
   warnings: string[];
   allTags: string[];
   protectedTags: readonly string[];
-  onCreateTag: (name: string) => void;
+  onCreateTag: (name: string) => Promise<string | undefined> | string | undefined;
   onRenameTag: (oldName: string, newName: string) => void;
   onDeleteTag: (name: string) => void;
   importUrl: string;
@@ -138,7 +138,7 @@ export function RecipeForm({
               aria-label="Niveaux de support des sites d'import"
               aria-expanded={isImportSupportOpen}
               aria-controls="import-support-panel"
-              className="button button--ghost"
+              className="button button--ghost button--icon-mobile"
               onClick={() => setIsImportSupportOpen((current) => !current)}
               type="button"
             >
@@ -403,7 +403,7 @@ function IngredientRow({
       <input placeholder="Quantité" value={ingredient.quantity ?? ""} onChange={(event) => onChange({ quantity: event.target.value })} />
       <input placeholder="Unité" value={ingredient.unit ?? ""} onChange={(event) => onChange({ unit: event.target.value })} />
       <input placeholder="Ingrédient" value={ingredient.name} onChange={(event) => onChange({ name: event.target.value })} />
-      <button className="button button--icon" onClick={onRemove} type="button" title="Retirer">
+      <button className="button button--icon ingredient-line__remove" onClick={onRemove} type="button" title="Retirer">
         <X size={16} />
       </button>
     </div>
@@ -464,7 +464,7 @@ function TagField({
   tags: string[];
   allTags: string[];
   protectedTags: readonly string[];
-  onCreateTag: (name: string) => void;
+  onCreateTag: (name: string) => Promise<string | undefined> | string | undefined;
   onRenameTag: (oldName: string, newName: string) => void;
   onDeleteTag: (name: string) => void;
   onChange: (tags: string[]) => void;
@@ -481,10 +481,14 @@ function TagField({
 
   const protectedTagKeys = useMemo(() => new Set(protectedTags.map((tag) => tag.toLowerCase())), [protectedTags]);
 
+  function hasTag(value: string) {
+    return tags.some((existing) => existing.toLowerCase() === value.toLowerCase());
+  }
+
   function addTag(raw: string) {
     const tag = raw.trim();
     if (!tag) return;
-    if (tags.some((existing) => existing.toLowerCase() === tag.toLowerCase())) {
+    if (hasTag(tag)) {
       setInput("");
       return;
     }
@@ -501,14 +505,29 @@ function TagField({
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Enter" || event.key === ",") {
       event.preventDefault();
-      addTag(input);
+      void addOrCreateTag(input);
     } else if (event.key === "Backspace" && !input && tags.length > 0) {
       removeTag(tags[tags.length - 1]);
     }
   }
 
+  async function addOrCreateTag(raw: string) {
+    const tag = raw.trim();
+    if (!tag) return;
+    const existing = allTags.find((candidate) => candidate.toLowerCase() === tag.toLowerCase());
+    if (existing) {
+      if (!hasTag(existing)) onChange([...tags, existing]);
+      setInput("");
+      return;
+    }
+    const created = await onCreateTag(tag);
+    const resolved = created ?? tag;
+    if (!hasTag(resolved)) onChange([...tags, resolved]);
+    setInput("");
+  }
+
   function createGlobalTag() {
-    onCreateTag(input);
+    void addOrCreateTag(input);
     setInput("");
   }
 
@@ -556,24 +575,25 @@ function TagField({
             <span className="tag-manager__row" key={tag}>
               <span>{tag}</span>
               <button
-                className="button button--ghost"
+                className="button button--ghost button--icon-mobile"
                 type="button"
                 onClick={() => {
                   const next = window.prompt("Nouveau nom du tag", tag);
                   if (next) onRenameTag(tag, next);
                 }}
               >
-                Renommer
+                <Pencil size={16} /> Renommer
               </button>
-              <button
-                className="button button--danger"
-                type="button"
-                onClick={() => onDeleteTag(tag)}
-                disabled={protectedTagKeys.has(tag.toLowerCase())}
-                title={protectedTagKeys.has(tag.toLowerCase()) ? "Tag par défaut protégé" : "Supprimer"}
-              >
-                Supprimer
-              </button>
+              {!protectedTagKeys.has(tag.toLowerCase()) && (
+                <button
+                  className="button button--danger button--icon-mobile"
+                  type="button"
+                  onClick={() => onDeleteTag(tag)}
+                  title="Supprimer"
+                >
+                  <Trash2 size={16} /> Supprimer
+                </button>
+              )}
             </span>
           ))}
           {allTags.length === 0 && <span className="muted">Aucun tag pour l'instant.</span>}
@@ -599,3 +619,4 @@ function NumberField({
     </label>
   );
 }
+

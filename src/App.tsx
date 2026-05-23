@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { X } from "lucide-react";
 import { recipeFileName, shareElementAsPdf, shareElementAsPng } from "./exporters";
@@ -25,6 +25,7 @@ import { useRecipeDraft } from "./hooks/useRecipeDraft";
 import { useShoppingList } from "./hooks/useShoppingList";
 import { useTags } from "./hooks/useTags";
 import { useIngredientsManagement } from "./hooks/useIngredientsManagement";
+import { t } from "./i18n";
 import type { Panel, Recipe } from "./types";
 
 export function App() {
@@ -64,7 +65,7 @@ export function App() {
     setHandledSharedRecipe(true);
     clearRecipeShareFromLocation();
 
-    if (!window.confirm(`Ajouter "${sharedRecipe.name}" a ton carnet Toque ?`)) return;
+    if (!window.confirm(t("app.confirm.importShared", { name: sharedRecipe.name }))) return;
 
     db.recipes
       .toArray()
@@ -76,7 +77,7 @@ export function App() {
         await refresh();
         setSelectedId(importedRecipe.id);
         setActivePanel("library");
-        status.setStatus("Recette importee.");
+        status.setStatus(t("app.status.importedRecipe"));
       })
       .catch(() => status.setStatus("Impossible d'importer cette recette."));
   }, [handledSharedRecipe, refresh, status]);
@@ -207,7 +208,7 @@ export function App() {
       {status.status && (
         <div className="notice" role="status">
           {status.status}
-          <button className="button button--icon" onClick={status.clear} aria-label="Fermer le message">
+          <button className="button button--icon" onClick={status.clear} aria-label={t("app.status.close")}>
             <X size={16} />
           </button>
         </div>
@@ -264,6 +265,7 @@ export function App() {
           onCreateTag={async (name) => {
             const tag = await tagApi.createTag(name);
             if (tag) draftApi.setDraft((current) => ({ ...current, tags: [...current.tags, tag] }));
+            return tag;
           }}
           onRenameTag={async (oldName, newName) => {
             const tag = await tagApi.renameTag(oldName, newName);
@@ -274,10 +276,10 @@ export function App() {
           }}
           onDeleteTag={async (name) => {
             if (tagApi.isProtectedTag(name)) {
-              status.setStatus("Ce tag par défaut est protégé et ne peut pas être supprimé.");
+              status.setStatus(t("app.status.defaultTagProtected"));
               return;
             }
-            if (!window.confirm(`Supprimer le tag "${name}" de toutes les recettes ?`)) return;
+            if (!window.confirm(t("app.confirm.deleteTagGlobal", { name }))) return;
             await tagApi.deleteTag(name);
             draftApi.setDraft((current) => ({ ...current, tags: current.tags.filter((tag) => tag !== name) }));
           }}
@@ -332,3 +334,6 @@ export function App() {
     </main>
   );
 }
+
+
+

@@ -1046,6 +1046,26 @@ label {
   padding: var(--space-2);
 }
 
+.backup-block {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.backup-import-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.backup-import-button input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .management-action-button {
   min-width: 40px;
 }
@@ -1085,11 +1105,7 @@ label {
   }
 
   .reimport-bar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .reimport-bar label {
-    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) auto auto;
   }
 
   .inline-control {
@@ -1146,11 +1162,17 @@ label {
   }
 
   .ingredient-line {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
+  .ingredient-line input:nth-child(1),
+  .ingredient-line input:nth-child(2),
   .ingredient-line input:nth-child(3) {
-    grid-column: 1 / -1;
+    grid-column: 1;
+  }
+
+  .ingredient-line__remove {
+    grid-column: 2;
   }
 
   .sidebar {
