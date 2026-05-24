@@ -9,6 +9,7 @@ import { ingredientLabel } from "../utils/recipes";
 type Props = {
   recipe?: Recipe;
   printRef: RefObject<HTMLDivElement>;
+  tagColorByName: Map<string, string>;
   onEdit: (recipe: Recipe) => void;
   onDelete: (recipe: Recipe) => void;
   onDuplicate: (recipe: Recipe) => void;
@@ -21,6 +22,7 @@ type Props = {
 export function RecipeDetail({
   recipe,
   printRef,
+  tagColorByName,
   onEdit,
   onDelete,
   onDuplicate,
@@ -81,7 +83,7 @@ export function RecipeDetail({
         <div className="chip-list">
           {recipe.origin && <span className="chip chip--origin">{recipe.origin}</span>}
           {recipe.tags.map((tag) => (
-            <span className="chip" key={tag}>
+            <span className="chip" key={tag} style={tagChipStyle(tagColorByName.get(tag.toLowerCase()))}>
               {tag}
             </span>
           ))}
@@ -193,4 +195,8 @@ function hasValue(value: number | undefined) {
 
 function hasPositiveValue(value: number | undefined) {
   return value !== undefined && value > 0;
+}
+
+function tagChipStyle(color?: string) {
+  return color ? { background: color, borderColor: color, color: "#111" } : undefined;
 }

@@ -60,6 +60,7 @@ type Props = {
   seasonalRecipeIds: Set<string>;
   seasonMonthName: string;
   printRef: RefObject<HTMLDivElement>;
+  tagColorByName: Map<string, string>;
 };
 
 export function LibraryScreen({
@@ -72,6 +73,7 @@ export function LibraryScreen({
   seasonalRecipeIds,
   seasonMonthName,
   printRef,
+  tagColorByName,
 }: Props) {
   return (
     <section className="library-view">
@@ -91,6 +93,7 @@ export function LibraryScreen({
           <RecipeDetail
             recipe={selectedRecipe}
             printRef={printRef}
+            tagColorByName={tagColorByName}
             onEdit={actions.onEdit}
             onDelete={actions.onDelete}
             onDuplicate={actions.onDuplicate}
@@ -106,6 +109,7 @@ export function LibraryScreen({
           seasonalMatchCounts={seasonalMatchCounts}
           seasonalRecipeIds={seasonalRecipeIds}
           onSelectRecipe={actions.onSelectRecipe}
+          tagColorByName={tagColorByName}
         />
       )}
     </section>
@@ -389,11 +393,13 @@ function RecipeGrid({
   seasonalMatchCounts,
   seasonalRecipeIds,
   onSelectRecipe,
+  tagColorByName,
 }: {
   recipes: Recipe[];
   seasonalMatchCounts: Map<string, number>;
   seasonalRecipeIds: Set<string>;
   onSelectRecipe: (id: string) => void;
+  tagColorByName: Map<string, string>;
 }) {
   if (recipes.length === 0) {
     return (
@@ -433,7 +439,7 @@ function RecipeGrid({
             <span className="chip-list">
               {seasonalRecipeIds.has(recipe.id) && <span className="chip chip--seasonal">{seasonalMatchCounts.get(recipe.id)} de saison</span>}
               {recipe.tags.slice(0, 4).map((tag) => (
-                <span className="chip" key={tag}>
+                <span className="chip" key={tag} style={tagChipStyle(tagColorByName.get(tag.toLowerCase()))}>
                   {tag}
                 </span>
               ))}
@@ -443,4 +449,8 @@ function RecipeGrid({
       ))}
     </section>
   );
+}
+
+function tagChipStyle(color?: string) {
+  return color ? { background: color, borderColor: color, color: "#111" } : undefined;
 }

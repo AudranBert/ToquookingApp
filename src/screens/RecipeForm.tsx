@@ -13,6 +13,7 @@ type Props = {
   warnings: string[];
   allTags: string[];
   categories: TagCategory[];
+  tagColorByName: Map<string, string>;
   onCreateTag: (name: string) => Promise<string | undefined> | string | undefined;
   importUrl: string;
   onImportUrlChange: (url: string) => void;
@@ -29,6 +30,7 @@ export function RecipeForm({
   warnings,
   allTags,
   categories,
+  tagColorByName,
   onCreateTag,
   importUrl,
   onImportUrlChange,
@@ -179,6 +181,7 @@ export function RecipeForm({
           tags={draft.tags}
           allTags={allTags}
           categories={categories}
+          tagColorByName={tagColorByName}
           onCreateTag={onCreateTag}
           onChange={(tags) => updateField("tags", tags)}
         />
@@ -454,12 +457,14 @@ function TagField({
   tags,
   allTags,
   categories,
+  tagColorByName,
   onCreateTag,
   onChange,
 }: {
   tags: string[];
   allTags: string[];
   categories: TagCategory[];
+  tagColorByName: Map<string, string>;
   onCreateTag: (name: string) => Promise<string | undefined> | string | undefined;
   onChange: (tags: string[]) => void;
 }) {
@@ -528,7 +533,7 @@ function TagField({
       Tags
       <div className="tag-field__box">
         {tags.map((tag) => (
-          <span className="chip tag-field__chip" key={tag}>
+          <span className="chip tag-field__chip" key={tag} style={tagChipStyle(tagColorByName.get(tag.toLowerCase()))}>
             {tag}
             <button
               className="tag-field__remove"
@@ -573,6 +578,7 @@ function TagField({
                     <button
                       className={selected ? "chip tag-reference__chip tag-reference__chip--active" : "chip tag-reference__chip"}
                       key={tag.id}
+                      style={selected ? undefined : tagChipStyle(tag.color)}
                       onClick={() => {
                         if (selected) {
                           onChange(tags.filter((existing) => existing.toLowerCase() !== tag.name.toLowerCase()));
@@ -616,5 +622,9 @@ function NumberField({
       <input min="0" type="number" value={value ?? ""} onChange={(event) => onChange(Number(event.target.value) || undefined)} />
     </label>
   );
+}
+
+function tagChipStyle(color?: string) {
+  return color ? { background: color, borderColor: color, color: "#111" } : undefined;
 }
 

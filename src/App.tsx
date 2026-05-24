@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { X } from "lucide-react";
 import { recipeFileName, shareElementAsPdf, shareElementAsPng } from "./exporters";
@@ -41,6 +41,13 @@ export function App() {
   const [activePanel, setActivePanel] = useState<Panel>("library");
   const [handledSharedRecipe, setHandledSharedRecipe] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+  const tagColorByName = useMemo(() => {
+    const map = new Map<string, string>();
+    tagApi.tags.forEach((tag) => {
+      if (tag.color) map.set(tag.name.toLowerCase(), tag.color);
+    });
+    return map;
+  }, [tagApi.tags]);
 
   useEffect(() => {
     status.clear();
@@ -252,6 +259,7 @@ export function App() {
           seasonalRecipeIds={filters.seasonalRecipeIds}
           seasonMonthName={seasonMonthName}
           printRef={printRef}
+          tagColorByName={tagColorByName}
         />
       )}
 
@@ -262,6 +270,7 @@ export function App() {
           warnings={draftApi.importWarnings}
           allTags={tagApi.allTags}
           categories={tagApi.categories}
+          tagColorByName={tagColorByName}
           onCreateTag={async (name) => {
             const tag = await tagApi.createTag(name);
             if (tag) draftApi.setDraft((current) => ({ ...current, tags: [...current.tags, tag] }));
@@ -318,6 +327,7 @@ export function App() {
     </main>
   );
 }
+
 
 
 
