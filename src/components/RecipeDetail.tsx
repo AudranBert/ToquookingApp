@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { BedSingle, BookOpen, ChefHat, Clock3, Copy, Edit3, FileDown, FileImage, FileJson, Flame, MessageSquareText, Trash2, Users } from "lucide-react";
+import { BookOpen, ChefHat, Clock3, Copy, Edit3, FileDown, FileImage, FileJson, Flame, Hourglass, MessageSquareText, Trash2, Users } from "lucide-react";
 import type { Recipe } from "../types";
 import { currentSeasonalIngredients, recipeContainsSeasonalIngredient } from "../seasonal";
 import { proxiedImageUrl, shouldUseImageCrossOrigin } from "../utils/images";
@@ -106,7 +106,7 @@ export function RecipeDetail({
           )}
           {hasPositiveValue(recipe.restTime) && (
             <span className="meta-pill" role="listitem" title="Repos" aria-label={`Repos ${recipe.restTime} min`}>
-              <BedSingle size={15} />
+              <Hourglass size={15} />
               <strong>{recipe.restTime} min</strong>
               <span className="meta-pill__label">repos</span>
             </span>

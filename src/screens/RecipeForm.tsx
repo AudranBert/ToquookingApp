@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Dispatch, FormEvent, KeyboardEvent, SetStateAction } from "react";
-import { BedSingle, Check, ChefHat, Clock3, Flame, Image as ImageIcon, Info, Link, Plus, RefreshCcw, Replace, Trash2, Users, X } from "lucide-react";
+import { Check, ChefHat, Clock3, Flame, Hourglass, Image as ImageIcon, Info, Link, Plus, RefreshCcw, Replace, Trash2, Users, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { TagCategory } from "../hooks/useTags";
 import { RECIPE_ORIGINS } from "../origins";
@@ -206,7 +206,7 @@ export function RecipeForm({
         <div className="timing-grid form-grid__full" aria-label="Temps et portions">
           <NumberField label="Parts" icon={Users} value={draft.servings} onChange={(servings) => updateField("servings", servings)} />
           <NumberField label="Prep" icon={ChefHat} value={draft.prepTime} onChange={(prepTime) => updateField("prepTime", prepTime)} />
-          <NumberField label="Repos" icon={BedSingle} value={draft.restTime} onChange={(restTime) => updateField("restTime", restTime)} />
+          <NumberField label="Repos" icon={Hourglass} value={draft.restTime} onChange={(restTime) => updateField("restTime", restTime)} />
           <NumberField label="Cuisson" icon={Flame} value={draft.cookTime} onChange={(cookTime) => updateField("cookTime", cookTime)} />
           <NumberField label="Total" icon={Clock3} value={draft.totalTime} onChange={(totalTime) => updateField("totalTime", totalTime)} />
         </div>

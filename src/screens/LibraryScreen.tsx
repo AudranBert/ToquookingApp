@@ -1,6 +1,6 @@
 ﻿import type { RefObject } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ChefHat, Clock, Filter, Flag, Flame, Hourglass, Search, Snowflake, Sprout, Tag, Timer, Vegan, X } from "lucide-react";
+import { ArrowLeft, ChefHat, Clock, Filter, Flag, Flame, Hourglass, Search, Snowflake, Soup, Sprout, Tag, Timer, Vegan, X } from "lucide-react";
 import { POPULAR_RECIPE_ORIGINS, RECIPE_ORIGIN_GROUPS, RECIPE_ORIGINS } from "../origins";
 import { RecipeDetail } from "../components/RecipeDetail";
 import { SectionToggleHeader } from "../components/SectionToggleHeader";
@@ -136,6 +136,8 @@ function LibrarySidebar({
   const [advancedOpen, setAdvancedOpen] = useState(() =>
     typeof window === "undefined" ? true : window.matchMedia("(min-width: 861px)").matches,
   );
+  const [cookingOpen, setCookingOpen] = useState(false);
+  const [ingredientsOpen, setIngredientsOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
   const [originsOpen, setOriginsOpen] = useState(false);
 
@@ -170,50 +172,82 @@ function LibrarySidebar({
             </span>
           </summary>
           <div className="advanced-filters__body">
-            <label className="checkbox-row">
-              <input type="checkbox" checked={filters.noHeatingOnly} onChange={(event) => handlers.onNoHeatingOnlyChange(event.target.checked)} />
-              <span className="label-with-icon"><Snowflake size={16} /> No heating</span>
-            </label>
-            <label>
-              <span className="label-with-icon"><Vegan size={16} /> Régime</span>
-              <select value={filters.regimeFilter} onChange={(event) => handlers.onRegimeFilterChange(event.target.value as RegimeFilter)}>
-                {REGIME_FILTER_OPTIONS.map((option) => (
-                  <option key={option.label} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="label-with-icon"><Timer size={16} /> Total ≤ X min</span>
-              <input
-                type="number"
-                min="1"
-                inputMode="numeric"
-                value={filters.maxTotalTime ?? ""}
-                onChange={(event) => {
-                  const minutes = Number(event.target.value);
-                  handlers.onMaxTotalTimeChange(minutes > 0 ? minutes : undefined);
-                }}
-                placeholder="Minutes"
+            <div className="tag-filter">
+              <SectionToggleHeader
+                className="origin-filter__header"
+                open={cookingOpen}
+                onToggle={() => setCookingOpen((current) => !current)}
+                title={
+                  <span className="label-with-icon">
+                    <ChefHat size={16} /> Preparation
+                  </span>
+                }
               />
-            </label>
-            <label>
-              <span className="label-with-icon"><Sprout size={16} /> Ingrédients de saison</span>
-              <select
-                value={filters.seasonalThreshold}
-                onChange={(event) => handlers.onSeasonalThresholdChange(Number(event.target.value) as SeasonalThreshold)}
-              >
-                {SEASONAL_THRESHOLDS.map((threshold) => (
-                  <option key={threshold} value={threshold}>
-                    {SEASONAL_THRESHOLD_LABELS[threshold]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {filters.seasonalThreshold === 0 && (
-              <p className="muted">{seasonalRecipeCount} recette(s) contiennent au moins un ingrédient de saison en {seasonMonthName}.</p>
-            )}
+              {cookingOpen && (
+                <div className="stack filter-group-content">
+                  <label className="checkbox-row">
+                    <input type="checkbox" checked={filters.noHeatingOnly} onChange={(event) => handlers.onNoHeatingOnlyChange(event.target.checked)} />
+                    <span className="label-with-icon"><Snowflake size={16} /> No heating</span>
+                  </label>
+                  <label>
+                    <span className="label-with-icon"><Timer size={16} /> Total ≤ X min</span>
+                    <input
+                      type="number"
+                      min="1"
+                      inputMode="numeric"
+                      value={filters.maxTotalTime ?? ""}
+                      onChange={(event) => {
+                        const minutes = Number(event.target.value);
+                        handlers.onMaxTotalTimeChange(minutes > 0 ? minutes : undefined);
+                      }}
+                      placeholder="Minutes"
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+            <div className="tag-filter">
+              <SectionToggleHeader
+                className="origin-filter__header"
+                open={ingredientsOpen}
+                onToggle={() => setIngredientsOpen((current) => !current)}
+                title={
+                  <span className="label-with-icon">
+                    <Soup size={16} /> Ingrédients
+                  </span>
+                }
+              />
+              {ingredientsOpen && (
+                <div className="stack filter-group-content">
+                  <label>
+                    <span className="label-with-icon"><Vegan size={16} /> Régime</span>
+                    <select value={filters.regimeFilter} onChange={(event) => handlers.onRegimeFilterChange(event.target.value as RegimeFilter)}>
+                      {REGIME_FILTER_OPTIONS.map((option) => (
+                        <option key={option.label} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span className="label-with-icon"><Sprout size={16} /> Ingrédients de saison</span>
+                    <select
+                      value={filters.seasonalThreshold}
+                      onChange={(event) => handlers.onSeasonalThresholdChange(Number(event.target.value) as SeasonalThreshold)}
+                    >
+                      {SEASONAL_THRESHOLDS.map((threshold) => (
+                        <option key={threshold} value={threshold}>
+                          {SEASONAL_THRESHOLD_LABELS[threshold]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {filters.seasonalThreshold === 0 && (
+                    <p className="muted">{seasonalRecipeCount} recette(s) contiennent au moins un ingrédient de saison en {seasonMonthName}.</p>
+                  )}
+                </div>
+              )}
+            </div>
             <OriginFilterPicker
               value={filters.originFilter}
               onChange={handlers.onOriginFilterChange}
@@ -239,7 +273,7 @@ function LibrarySidebar({
                 }
               />
               {tagsOpen && (
-                <div className="tag-filter__groups">
+                <div className="tag-filter__groups filter-group-content">
                   {filters.tagCategories.filter((category) => normalizeText(category.name) !== normalizeText("Régime alimentaire")).length > 0 ? (
                     filters.tagCategories
                       .filter((category) => normalizeText(category.name) !== normalizeText("Régime alimentaire"))
@@ -340,7 +374,7 @@ function OriginFilterPicker({
       />
 
       {open && (
-        <>
+        <div className="filter-group-content">
           <label className="origin-filter__search">
             <span className="label-with-icon">
               <Search size={16} /> Rechercher une origine
@@ -371,7 +405,7 @@ function OriginFilterPicker({
               <p className="empty-inline">Aucune origine trouvée.</p>
             )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
