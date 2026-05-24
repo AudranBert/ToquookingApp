@@ -74,11 +74,15 @@ function stripWrappingQuotes(value: string | undefined) {
     ['"', '"'],
     ["'", "'"],
     ["“", "”"],
+    ["‘", "’"],
     ["«", "»"],
+    ["â€œ", "â€"],
+    ["â€˜", "â€™"],
+    ["Â«", "Â»"],
   ];
   for (const [start, end] of pairs) {
-    if (trimmed.startsWith(start) && trimmed.endsWith(end) && trimmed.length >= 2) {
-      return trimmed.slice(1, -1).trim();
+    if (trimmed.startsWith(start) && trimmed.endsWith(end) && trimmed.length >= start.length + end.length) {
+      return trimmed.slice(start.length, trimmed.length - end.length).trim();
     }
   }
   return trimmed;

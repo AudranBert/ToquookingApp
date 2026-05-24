@@ -110,11 +110,11 @@ export function RecipeForm({
   return (
     <form className="panel workspace recipe-form" onSubmit={onSubmit}>
       <div className="section-heading">
-        <div>
+        <div className="recipe-form__title-wrap">
           <span className="eyebrow">{editing ? "Modification" : "Nouvelle recette"}</span>
-          <h2>{draft.name || "Recette sans titre"}</h2>
+          <h2 className="recipe-form__title">{draft.name || "Recette sans titre"}</h2>
         </div>
-        <div className="action-bar">
+        <div className="action-bar recipe-form__actions">
           <button className="button button--ghost button--icon-mobile" onClick={onCancel} type="button" aria-label="Annuler">
             <X size={18} />
           </button>

@@ -83,7 +83,26 @@ function isLikelyRecipeImage(url?: string) {
   if (!url) return false;
   if (/\/IMG\/groupeon\d+\.png/i.test(url)) return false;
   if (/\/moton\d+/i.test(url)) return false;
+  if (/logo|sprite|icon|avatar|placeholder|default-image|social|banner|favicon/i.test(url)) return false;
+  if (/_w(?:[1-9]?\d|[1-3]\d\d)\.(?:jpg|jpeg|png|webp)(?:\?|$)/i.test(url)) return false;
+  if (/_h(?:[1-9]?\d|[1-3]\d\d)\.(?:jpg|jpeg|png|webp)(?:\?|$)/i.test(url)) return false;
+  if (/assets\.afcdn\.com\/recipe\/\d+\/\d+_w100\.(?:jpg|jpeg|png|webp)(?:\?|$)/i.test(url)) return false;
   return /\.(?:jpg|jpeg|png|webp)(?:\?|$)/i.test(url) || /local\/cache-(?:gd2|vignettes)\//i.test(url);
+}
+
+function imageCandidateScore(url: string) {
+  let score = 0;
+  if (/recette|recipe|food|plat|dish|cooking|\/photos?\//i.test(url)) score += 5;
+  if (/\/uploads\/|\/wp-content\/|\/media\/|\/images?\//i.test(url)) score += 2;
+  if (/logo|sprite|icon|avatar|placeholder|default-image|social|banner|favicon/i.test(url)) score -= 8;
+  if (/\/IMG\/groupeon\d+\.png|\/moton\d+/i.test(url)) score -= 8;
+  if (/_w(?:[1-9]?\d|[1-3]\d\d)\.(?:jpg|jpeg|png|webp)(?:\?|$)/i.test(url)) score -= 10;
+  if (/_h(?:[1-9]?\d|[1-3]\d\d)\.(?:jpg|jpeg|png|webp)(?:\?|$)/i.test(url)) score -= 10;
+  if (/assets\.afcdn\.com\/recipe\/\d+\/\d+_w100\.(?:jpg|jpeg|png|webp)(?:\?|$)/i.test(url)) score -= 12;
+  if (/assets\.afcdn\.com\/recipe\/\d+\/\d+_w200\.(?:jpg|jpeg|png|webp)(?:\?|$)/i.test(url)) score -= 14;
+  if (/_w(?:[6-9]\d\d|[1-9]\d{3,})\./i.test(url)) score += 3;
+  if (/\.(?:jpg|jpeg|png|webp)(?:\?|$)/i.test(url)) score += 1;
+  return score;
 }
 
 function pickBestImageCandidate(candidates: Array<string | undefined>, sourceUrl: string) {
@@ -91,10 +110,11 @@ function pickBestImageCandidate(candidates: Array<string | undefined>, sourceUrl
     .filter(Boolean)
     .map((value) => absolutizeUrl(value, sourceUrl))
     .filter((value): value is string => Boolean(value));
-  const recipeScoped = absolutes.find((url) => /recette|recipe|food|plat|dish|cooking|\/photos?\//i.test(url));
-  if (recipeScoped) return recipeScoped;
+  if (absolutes.length === 0) return undefined;
+  const best = [...absolutes].sort((a, b) => imageCandidateScore(b) - imageCandidateScore(a))[0];
+  if (isLikelyRecipeImage(best)) return best;
   const likely = absolutes.find((url) => isLikelyRecipeImage(url));
-  return likely ?? absolutes[0];
+  return likely ?? best;
 }
 
 function decodeHtmlEntities(value: string) {
@@ -120,10 +140,33 @@ function decodeHtmlEntities(value: string) {
 
 function cleanText(value: unknown) {
   if (value == null) return "";
-  return repairMojibake(decodeHtmlEntities(String(value)))
+  return stripWrappingQuotes(
+    repairMojibake(decodeHtmlEntities(String(value)))
     .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ")
-    .trim();
+    .trim(),
+  );
+}
+
+function stripWrappingQuotes(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  const pairs: Array<[string, string]> = [
+    ['"', '"'],
+    ["'", "'"],
+    ["“", "”"],
+    ["‘", "’"],
+    ["«", "»"],
+    ["â€œ", "â€\u009d"],
+    ["â€˜", "â€™"],
+    ["Â«", "Â»"],
+  ];
+  for (const [start, end] of pairs) {
+    if (trimmed.startsWith(start) && trimmed.endsWith(end) && trimmed.length >= start.length + end.length) {
+      return trimmed.slice(start.length, trimmed.length - end.length).trim();
+    }
+  }
+  return trimmed;
 }
 
 function isImageMarkdownLine(value: string) {
@@ -244,6 +287,46 @@ function extractRecipeFromJsonLd(json: unknown, sourceUrl: string): ParsedRecipe
   };
 }
 
+function extractRecipeFromMrtnRecipesData(html: string, sourceUrl: string): ParsedRecipe | null {
+  const match = html.match(/Mrtn\.recipesData\s*=\s*(\{[\s\S]*?\});/i);
+  if (!match?.[1]) return null;
+
+  try {
+    const parsed = JSON.parse(match[1]) as { recipes?: Array<Record<string, unknown>> };
+    const recipe = parsed.recipes?.[0];
+    if (!recipe) return null;
+
+    const ingredientsRaw = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+    const ingredients = ingredientsRaw
+      .map((item) => {
+        if (!item || typeof item !== "object") return "";
+        const row = item as Record<string, unknown>;
+        const qty = row.qty == null ? "" : String(row.qty);
+        const unit = row.unit == null ? "" : String(row.unit);
+        const name = row.name == null ? "" : String(row.name);
+        return cleanText(`${qty} ${unit} ${name}`);
+      })
+      .filter(Boolean)
+      .map(parseIngredientLine);
+
+    const servingsValue = recipe.nb_pers == null ? undefined : Number.parseInt(String(recipe.nb_pers), 10) || undefined;
+    const imageUrl = absolutizeUrl(cleanText(String(recipe.picture_url ?? "")), sourceUrl);
+    const name = cleanText(String(recipe.name ?? ""));
+
+    if (!name && ingredients.length === 0) return null;
+
+    return {
+      sourceUrl,
+      name: name || undefined,
+      imageUrl: imageUrl || undefined,
+      ingredients: ingredients.length ? ingredients : undefined,
+      servings: servingsValue,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function extractRecipeFromMicrodataHtml(html: string, sourceUrl: string): ParsedRecipe | null {
   const normalized = html.replace(/\r\n/g, "\n");
   const block =
@@ -347,6 +430,47 @@ function marmitonRestTime(html: string) {
   const text = cleanText(html);
   const match = text.match(/Repos\s*:\s*(.+?)\s+(?:Cuisson\s*:|Étape\s+1|Etape\s+1)/i);
   return match ? parseDurationText(match[1]) : undefined;
+}
+
+function extractMarmitonCarouselImageCandidates(html: string) {
+  const urls: string[] = [];
+  const push = (value?: string) => {
+    if (!value) return;
+    const cleaned = cleanText(value);
+    if (!cleaned) return;
+    if (!/^https?:\/\/|^\/\//i.test(cleaned)) return;
+    if (!/assets\.afcdn\.com\/recipe\//i.test(cleaned)) return;
+    urls.push(cleaned);
+  };
+
+  const imgBlocks = [...html.matchAll(/<img\b[^>]*>/gi)].map((match) => match[0]);
+  for (const block of imgBlocks) {
+    push(block.match(/\bsrc=["']([^"']+)["']/i)?.[1]);
+    push(block.match(/\bdata-src=["']([^"']+)["']/i)?.[1]);
+    push(block.match(/\bdata-original=["']([^"']+)["']/i)?.[1]);
+    push(block.match(/\bdata-lazy(?:-src)?=["']([^"']+)["']/i)?.[1]);
+
+    const srcset = block.match(/\bsrcset=["']([^"']+)["']/i)?.[1] ?? block.match(/\bdata-srcset=["']([^"']+)["']/i)?.[1];
+    if (srcset) {
+      for (const part of srcset.split(",")) {
+        const src = cleanText(part).split(/\s+/)[0];
+        push(src);
+      }
+    }
+  }
+
+  // Marmiton embeds the diapo images in a JS payload:
+  // af_diapo_list.push({ photos:[[id,"..._w600.jpg",...], ...] })
+  // Prioritize these, they are the recipe carousel images.
+  const diapoPhotosMatch = html.match(/af_diapo_list\.push\(\{[\s\S]*?photos\s*:\s*\[([\s\S]*?)\]\s*,\s*sButtons/i);
+  if (diapoPhotosMatch?.[1]) {
+    for (const match of diapoPhotosMatch[1].matchAll(/https?:\/\/assets\.afcdn\.com\/recipe\/[^"'\\\s,)\]]+_w(?:600|648|1024)[^"'\\\s,)\]]*/gi)) {
+      push(match[0]);
+    }
+  }
+
+  const deduped = Array.from(new Set(urls));
+  return deduped.filter((url) => !/_w(?:[1-9]?\d|[1-3]\d\d)\.(?:jpg|jpeg|png|webp)(?:\?|$)/i.test(url));
 }
 
 function defaultMarkdownFallback(content: string, sourceUrl: string): ParsedRecipe | null {
@@ -470,9 +594,11 @@ function marmitonFallback(content: string, sourceUrl: string): ParsedRecipe | nu
   const restTime =
     parseDurationToMinutes(normalized.match(/itemprop=["']restTime["'][^>]+content=["']([^"']+)["']/i)?.[1]) ??
     marmitonRestTime(normalized);
+  const carouselImages = extractMarmitonCarouselImageCandidates(normalized);
 
   const imageUrl = pickBestImageCandidate(
     [
+      ...carouselImages,
       normalized.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1],
       normalized.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1],
       normalized.match(/^\s*Image\s*:\s*(https?:\/\/\S+)\s*$/im)?.[1],
@@ -630,6 +756,7 @@ function marmitonFallback(content: string, sourceUrl: string): ParsedRecipe | nu
 
   if (dedupedIngredients.length === 0 && cleanedInstructions.length === 0) return null;
   const hasCoreFields = Boolean(title && servingsValue && (prepTime || cookTime || totalTime) && imageUrl);
+  const hasStructuredEnough = Boolean(title && imageUrl && (dedupedIngredients.length > 0 || cleanedInstructions.length > 0));
 
   return {
     sourceUrl,
@@ -642,7 +769,7 @@ function marmitonFallback(content: string, sourceUrl: string): ParsedRecipe | nu
     totalTime,
     ingredients: dedupedIngredients.length ? dedupedIngredients : undefined,
     instructions: cleanedInstructions.length ? cleanedInstructions : undefined,
-    warnings: hasCoreFields
+    warnings: hasCoreFields || hasStructuredEnough
       ? undefined
       : ["Import partiel depuis contenu non structure. Verifie ingredients, etapes et quantites avant de sauvegarder."],
   };
@@ -1077,6 +1204,121 @@ function hasKnownDomain(sourceUrl: string) {
   return Boolean(selectDomainParser(sourceUrl));
 }
 
+function parseMarmitonStructuredOnly(html: string, sourceUrl: string): ParsedRecipe | null {
+  const normalized = html.replace(/\r\n/g, "\n");
+  const candidates: ParsedRecipe[] = [];
+
+  const jsonLdScripts = [
+    ...normalized.matchAll(
+      /<script[^>]+type=["'](?:application\/ld\+json|application&#x2F;ld&#x2B;json)["'][^>]*>([\s\S]*?)<\/script>/gi,
+    ),
+  ];
+  for (const match of jsonLdScripts) {
+    for (const body of [match[1], decodeHtmlEntities(match[1])]) {
+      try {
+        const parsed = extractRecipeFromJsonLd(JSON.parse(body), sourceUrl);
+        if (parsed) candidates.push(parsed);
+      } catch {
+        // ignore invalid JSON-LD snippets
+      }
+    }
+  }
+
+  const mrtn = extractRecipeFromMrtnRecipesData(normalized, sourceUrl);
+  if (mrtn) candidates.push(mrtn);
+  const stepsFromHtml = extractMarmitonStepsFromHtml(normalized, sourceUrl);
+  if (stepsFromHtml) candidates.push(stepsFromHtml);
+
+  if (candidates.length === 0) return null;
+  let best: ParsedRecipe | null = null;
+  for (const candidate of candidates) best = mergeRecipes(best, candidate);
+  if (!best) return null;
+
+  const carouselImages = extractMarmitonCarouselImageCandidates(normalized);
+  const bestImage = pickBestImageCandidate(
+    [
+      ...carouselImages,
+      best.imageUrl,
+      normalized.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1],
+      normalized.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1],
+    ],
+    sourceUrl,
+  );
+
+  return {
+    ...best,
+    sourceUrl,
+    imageUrl: bestImage ?? best.imageUrl,
+    ingredients: pickCleanestIngredients(best.ingredients),
+    instructions: pickCleanestLines(best.instructions),
+    warnings: undefined,
+  };
+}
+
+function extractMarmitonStepsFromHtml(html: string, sourceUrl: string): ParsedRecipe | null {
+  const instructions = [...html.matchAll(/<div class="recipe-step-list__container"[\s\S]*?<p>([\s\S]*?)<\/p>/gi)]
+    .map((match) => cleanText(match[1]))
+    .filter(Boolean)
+    .filter((line) => !/�/.test(line));
+
+  const ingredientRows = [...html.matchAll(/data-ingredientQuantity="([^"]*)"[\s\S]*?data-unit(?:Singular|Plural)="([^"]*)"[\s\S]*?data-ingredientName(?:Singular|Plural)="([^"]*)"[\s\S]*?data-ingredientComplement(?:Singular|Plural)="([^"]*)"/gi)];
+  const ingredients = ingredientRows
+    .map((m) => cleanText(`${m[1]} ${m[2]} ${m[3]} ${m[4]}`))
+    .filter(Boolean)
+    .filter((line) => !/�/.test(line))
+    .map(parseIngredientLine);
+
+  const imageUrl = pickBestImageCandidate(
+    [
+      html.match(/id="af-diapo-desktop-0_img"[^>]*data-src="([^"]+)"/i)?.[1],
+      ...extractMarmitonCarouselImageCandidates(html),
+    ],
+    sourceUrl,
+  );
+
+  if (instructions.length === 0 && ingredients.length === 0) return null;
+  return {
+    sourceUrl,
+    imageUrl,
+    ingredients: ingredients.length ? ingredients : undefined,
+    instructions: instructions.length ? instructions : undefined,
+  };
+}
+
+function pickCleanestLines(lines: string[] | undefined) {
+  if (!lines?.length) return lines;
+  const clean = lines.filter((line) => !/�/.test(line));
+  return clean.length ? clean : lines;
+}
+
+function pickCleanestIngredients(ingredients: ReturnType<typeof parseIngredientLine>[] | undefined) {
+  if (!ingredients?.length) return ingredients;
+  const clean = ingredients.filter((ing) => !/�/.test(cleanText(`${ing.quantity ?? ""} ${ing.unit ?? ""} ${ing.name ?? ""}`)));
+  return clean.length ? clean : ingredients;
+}
+
+function sourceTextQualityScore(value: string) {
+  const replacement = (value.match(/\uFFFD/g) ?? []).length;
+  const mojibake = (value.match(/[ÃÂâï¿]/g) ?? []).length;
+  const recipeSignals = (value.match(/recipeIngredient|recipeInstructions|itemprop=["']recipe/i) ?? []).length;
+  return recipeSignals * 20 - replacement * 8 - mojibake * 3;
+}
+
+function isAcceptableMarmitonSource(value: string) {
+  const replacement = (value.match(/\uFFFD/g) ?? []).length;
+  const signal = (value.match(/recipe-step-list__container|Mrtn\.recipesData|application\/ld\+json|recipeIngredient|recipeInstructions/gi) ?? []).length;
+  if (signal === 0) return false;
+  const maxReplacement = Math.max(8, Math.floor(value.length / 3000));
+  return replacement <= maxReplacement;
+}
+
+function decodeResponseBody(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  const utf8 = new TextDecoder("utf-8").decode(bytes);
+  const cp1252 = new TextDecoder("windows-1252").decode(bytes);
+  return sourceTextQualityScore(cp1252) > sourceTextQualityScore(utf8) ? cp1252 : utf8;
+}
+
 function extractEscapedJsonTextField(text: string, field: string) {
   const match = text.match(new RegExp(`"${field}":"([\\s\\S]*?)"`, "i"));
   if (!match?.[1]) return "";
@@ -1183,6 +1425,10 @@ function qualityScore(lines: string[] | undefined) {
   let score = 0;
   for (const line of lines) {
     if (!line) continue;
+    if (line.includes("�")) {
+      score -= 40;
+      continue;
+    }
     if (/data-|<|>|https?:\/\/|jQuery|formulaire_action|autosave|_gaq/i.test(line)) {
       score -= 3;
       continue;
@@ -1196,6 +1442,11 @@ function qualityScore(lines: string[] | undefined) {
   return score;
 }
 
+function replacementCharCount(lines: string[] | undefined) {
+  if (!lines?.length) return 0;
+  return lines.reduce((count, line) => count + ((line.match(/�/g) ?? []).length), 0);
+}
+
 function mergeRecipes(base: ParsedRecipe | null, incoming: ParsedRecipe): ParsedRecipe {
   if (!base) return incoming;
   const baseIngredients = base.ingredients ?? [];
@@ -1203,12 +1454,29 @@ function mergeRecipes(base: ParsedRecipe | null, incoming: ParsedRecipe): Parsed
   const baseInstructions = base.instructions ?? [];
   const incomingInstructions = incoming.instructions ?? [];
 
+  const baseIngredientLines = baseIngredients.map((x) => x.name ?? "");
+  const incomingIngredientLines = incomingIngredients.map((x) => x.name ?? "");
+  const baseIngredientReplacementCount = replacementCharCount(baseIngredientLines);
+  const incomingIngredientReplacementCount = replacementCharCount(incomingIngredientLines);
   const pickIngredients =
-    qualityScore(incomingIngredients.map((x) => x.name ?? "")) > qualityScore(baseIngredients.map((x) => x.name ?? ""))
+    incomingIngredientReplacementCount < baseIngredientReplacementCount
       ? incoming.ingredients
-      : base.ingredients;
+      : incomingIngredientReplacementCount > baseIngredientReplacementCount
+        ? base.ingredients
+        : qualityScore(incomingIngredientLines) > qualityScore(baseIngredientLines)
+          ? incoming.ingredients
+          : base.ingredients;
+
+  const baseInstructionReplacementCount = replacementCharCount(baseInstructions);
+  const incomingInstructionReplacementCount = replacementCharCount(incomingInstructions);
   const pickInstructions =
-    qualityScore(incomingInstructions) > qualityScore(baseInstructions) ? incoming.instructions : base.instructions;
+    incomingInstructionReplacementCount < baseInstructionReplacementCount
+      ? incoming.instructions
+      : incomingInstructionReplacementCount > baseInstructionReplacementCount
+        ? base.instructions
+        : qualityScore(incomingInstructions) > qualityScore(baseInstructions)
+          ? incoming.instructions
+          : base.instructions;
   const pickImage =
     !isLikelyRecipeImage(base.imageUrl) && isLikelyRecipeImage(incoming.imageUrl)
       ? incoming.imageUrl
@@ -1241,12 +1509,18 @@ function isLocalDevHost() {
   return /^(localhost|127\.0\.0\.1|::1)$/.test(window.location.hostname);
 }
 
+function shouldUseLocalImportApi() {
+  return import.meta.env.VITE_USE_LOCAL_IMPORT_API === "true";
+}
+
 export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), 12000);
 
   try {
-    if (isLocalDevHost()) {
+    // Opt-in only: local API may run a different parser than the frontend build.
+    // Keep frontend importer as the default to match GitHub Pages behavior.
+    if (isLocalDevHost() && shouldUseLocalImportApi()) {
       const endpoint = `${import.meta.env.BASE_URL}api/import?url=${encodeURIComponent(url)}`;
       const response = await fetch(endpoint, { signal: controller.signal });
       if (response.ok) return response.json();
@@ -1258,7 +1532,12 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
   }
 
   try {
-    const htmlSources = await fetchRecipeHtmls(url);
+    const htmlSourcesRaw = await fetchRecipeHtmls(url);
+    const isMarmiton = /(^https?:\/\/)?([^/]+\.)?marmiton\.org\//i.test(url);
+    const htmlSources = (isMarmiton ? htmlSourcesRaw.filter(isAcceptableMarmitonSource) : htmlSourcesRaw).sort(
+      (a, b) => sourceTextQualityScore(b) - sourceTextQualityScore(a),
+    );
+    const effectiveSources = htmlSources.length > 0 ? htmlSources : htmlSourcesRaw;
     const hasDedicatedDomainParser = hasKnownDomain(url);
     let merged: ParsedRecipe | null = null;
     let structuredMerged: ParsedRecipe | null = null;
@@ -1268,10 +1547,24 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
       return parseYouTubeImport(htmlSources.join("\n"), url);
     }
 
-    for (const html of htmlSources) {
-      const domainPriority = parseWithDomainPriority(html, url);
-      if (domainPriority) {
-        structuredMerged = mergeRecipes(structuredMerged, domainPriority);
+    if (isMarmiton) {
+      let strictMarmiton: ParsedRecipe | null = null;
+      for (const html of effectiveSources) {
+        const structured = parseMarmitonStructuredOnly(html, url);
+        if (structured) strictMarmiton = mergeRecipes(strictMarmiton, structured);
+      }
+      if (strictMarmiton && hasUsefulRecipeData(strictMarmiton)) {
+        return sanitizeMergedResult(strictMarmiton, url);
+      }
+    }
+
+    for (const html of effectiveSources) {
+      if (hasDedicatedDomainParser) {
+        const domainPriority = parseWithDomainPriority(html, url);
+        if (domainPriority) {
+          structuredMerged = mergeRecipes(structuredMerged, domainPriority);
+        }
+        continue;
       }
 
       const jsonLdScripts = [
@@ -1300,12 +1593,12 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
       }
 
       const microdata = extractRecipeFromMicrodataHtml(html, url);
-      if (microdata && !hasDedicatedDomainParser) {
+      if (microdata) {
         structuredMerged = mergeRecipes(structuredMerged, microdata);
       }
 
       const markdownFallback = parseWithFallbacks(html, url);
-      if (markdownFallback && !hasDedicatedDomainParser) {
+      if (markdownFallback) {
         fallbackMerged = mergeRecipes(fallbackMerged, markdownFallback);
       }
     }
@@ -1340,7 +1633,7 @@ async function fetchRecipeHtmls(url: string): Promise<string[]> {
         Accept: "text/html,application/xhtml+xml,text/markdown,text/plain;q=0.9,*/*;q=0.8",
       },
     });
-    if (response.ok) sources.push(await response.text());
+    if (response.ok) sources.push(decodeResponseBody(await response.arrayBuffer()));
   } catch {
     // Continue with fallback proxies below.
   }
@@ -1348,7 +1641,7 @@ async function fetchRecipeHtmls(url: string): Promise<string[]> {
   const allOriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
   try {
     const response = await fetch(allOriginsUrl);
-    if (response.ok) sources.push(await response.text());
+    if (response.ok) sources.push(decodeResponseBody(await response.arrayBuffer()));
   } catch {
     // Continue with last fallback.
   }
@@ -1356,7 +1649,7 @@ async function fetchRecipeHtmls(url: string): Promise<string[]> {
   const jinaUrl = `https://r.jina.ai/http://${url.replace(/^https?:\/\//i, "")}`;
   try {
     const response = await fetch(jinaUrl);
-    if (response.ok) sources.push(await response.text());
+    if (response.ok) sources.push(decodeResponseBody(await response.arrayBuffer()));
   } catch {
     // Keep existing behavior: caller handles no-source case.
   }

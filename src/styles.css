@@ -790,6 +790,24 @@ label {
   gap: 22px;
 }
 
+.recipe-form__title-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: calc(100% - 220px);
+}
+
+.recipe-form__title {
+  margin-bottom: 0;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.recipe-form__actions {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  flex-wrap: nowrap;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1168,6 +1186,14 @@ label {
   .recipe-form .section-heading {
     align-items: flex-start;
     flex-direction: row;
+  }
+
+  .recipe-form__title-wrap {
+    max-width: none;
+  }
+
+  .recipe-form__actions {
+    flex-wrap: wrap;
   }
 
   .nav-tabs {
