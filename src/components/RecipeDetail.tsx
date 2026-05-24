@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { BookOpen, Edit3, FileDown, FileImage, FileJson, MessageSquareText, Plus, Trash2 } from "lucide-react";
+import { BedSingle, BookOpen, ChefHat, Clock3, Copy, Edit3, FileDown, FileImage, FileJson, Flame, MessageSquareText, Trash2, Users } from "lucide-react";
 import type { Recipe } from "../types";
 import { currentSeasonalIngredients, recipeContainsSeasonalIngredient } from "../seasonal";
 import { proxiedImageUrl, shouldUseImageCrossOrigin } from "../utils/images";
@@ -46,7 +46,7 @@ export function RecipeDetail({
           <Edit3 size={18} /> Modifier
         </button>
         <button className="button button--icon-mobile" onClick={() => onDuplicate(recipe)} title="Dupliquer">
-          <Plus size={18} /> Dupliquer
+          <Copy size={18} /> Dupliquer
         </button>
         <button className="button button--icon-mobile" onClick={onExportPdf} title="Exporter en PDF">
           <FileDown size={18} /> PDF
@@ -86,12 +86,42 @@ export function RecipeDetail({
             </span>
           ))}
         </div>
-        <div className="meta-list">
-          {hasValue(recipe.servings) && <span>{recipe.servings} personne(s)</span>}
-          {hasPositiveValue(recipe.prepTime) && <span>Préparation {recipe.prepTime} min</span>}
-          {hasPositiveValue(recipe.restTime) && <span>Repos {recipe.restTime} min</span>}
-          {hasPositiveValue(recipe.cookTime) && <span>Cuisson {recipe.cookTime} min</span>}
-          {hasPositiveValue(recipe.totalTime) && <span>Total {recipe.totalTime} min</span>}
+        <div className="meta-list" role="list" aria-label="Informations recette">
+          {hasValue(recipe.servings) && (
+            <span className="meta-pill" role="listitem" title="Personnes" aria-label={`${recipe.servings} personne(s)`}>
+              <Users size={15} />
+              <strong>{recipe.servings}</strong>
+              <span className="meta-pill__label">Parts</span>
+            </span>
+          )}
+          {hasPositiveValue(recipe.prepTime) && (
+            <span className="meta-pill" role="listitem" title="Préparation" aria-label={`Préparation ${recipe.prepTime} min`}>
+              <ChefHat size={15} />
+              <strong>{recipe.prepTime} min</strong>
+              <span className="meta-pill__label">Prep</span>
+            </span>
+          )}
+          {hasPositiveValue(recipe.restTime) && (
+            <span className="meta-pill" role="listitem" title="Repos" aria-label={`Repos ${recipe.restTime} min`}>
+              <BedSingle size={15} />
+              <strong>{recipe.restTime} min</strong>
+              <span className="meta-pill__label">repos</span>
+            </span>
+          )}
+          {hasPositiveValue(recipe.cookTime) && (
+            <span className="meta-pill" role="listitem" title="Cuisson" aria-label={`Cuisson ${recipe.cookTime} min`}>
+              <Flame size={15} />
+              <strong>{recipe.cookTime} min</strong>
+              <span className="meta-pill__label">Cuisson</span>
+            </span>
+          )}
+          {hasPositiveValue(recipe.totalTime) && (
+            <span className="meta-pill" role="listitem" title="Total" aria-label={`Total ${recipe.totalTime} min`}>
+              <Clock3 size={15} />
+              <strong>{recipe.totalTime} min</strong>
+              <span className="meta-pill__label">Total</span>
+            </span>
+          )}
         </div>
         <div className="recipe-columns">
           <section>

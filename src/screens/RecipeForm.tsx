@@ -1,6 +1,7 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Dispatch, FormEvent, KeyboardEvent, SetStateAction } from "react";
-import { Check, Image as ImageIcon, Info, Link, Pencil, Plus, RefreshCcw, Replace, Trash2, X } from "lucide-react";
+import { BedSingle, Check, ChefHat, Clock3, Flame, Image as ImageIcon, Info, Link, Pencil, Plus, RefreshCcw, Replace, Trash2, Users, X } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { RECIPE_ORIGINS } from "../origins";
 import type { Ingredient, RecipeDraft, ReimportMode } from "../types";
 import { createId } from "../utils/id";
@@ -201,11 +202,13 @@ export function RecipeForm({
           ))}
         </datalist>
         <TextField label="Vidéo" value={draft.videoUrl ?? ""} onChange={(videoUrl) => updateField("videoUrl", videoUrl)} />
-        <NumberField label="Personnes" value={draft.servings} onChange={(servings) => updateField("servings", servings)} />
-        <NumberField label="Préparation" value={draft.prepTime} onChange={(prepTime) => updateField("prepTime", prepTime)} />
-        <NumberField label="Repos" value={draft.restTime} onChange={(restTime) => updateField("restTime", restTime)} />
-        <NumberField label="Cuisson" value={draft.cookTime} onChange={(cookTime) => updateField("cookTime", cookTime)} />
-        <NumberField label="Temps total" value={draft.totalTime} onChange={(totalTime) => updateField("totalTime", totalTime)} />
+        <div className="timing-grid form-grid__full" aria-label="Temps et portions">
+          <NumberField label="Parts" icon={Users} value={draft.servings} onChange={(servings) => updateField("servings", servings)} />
+          <NumberField label="Prep" icon={ChefHat} value={draft.prepTime} onChange={(prepTime) => updateField("prepTime", prepTime)} />
+          <NumberField label="Repos" icon={BedSingle} value={draft.restTime} onChange={(restTime) => updateField("restTime", restTime)} />
+          <NumberField label="Cuisson" icon={Flame} value={draft.cookTime} onChange={(cookTime) => updateField("cookTime", cookTime)} />
+          <NumberField label="Total" icon={Clock3} value={draft.totalTime} onChange={(totalTime) => updateField("totalTime", totalTime)} />
+        </div>
       </div>
 
       <ImageField
@@ -605,16 +608,21 @@ function TagField({
 
 function NumberField({
   label,
+  icon: Icon,
   value,
   onChange,
 }: {
   label: string;
+  icon: LucideIcon;
   value?: number;
   onChange: (value: number | undefined) => void;
 }) {
   return (
-    <label>
-      {label}
+    <label className="number-field" aria-label={label}>
+      <span className="number-field__label">
+        <Icon size={16} />
+        <span className="number-field__label-text">{label}</span>
+      </span>
       <input min="0" type="number" value={value ?? ""} onChange={(event) => onChange(Number(event.target.value) || undefined)} />
     </label>
   );
