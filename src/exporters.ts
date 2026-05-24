@@ -1,8 +1,7 @@
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 import type { Recipe } from "./types";
 
 async function elementToCanvas(element: HTMLElement) {
+  const { default: html2canvas } = await import("html2canvas");
   return html2canvas(element, { backgroundColor: "#fffdf7", scale: 2, useCORS: true, allowTaint: false });
 }
 
@@ -20,6 +19,7 @@ async function elementToPngBlob(element: HTMLElement) {
 }
 
 async function elementToPdfBlob(element: HTMLElement) {
+  const { default: jsPDF } = await import("jspdf");
   const canvas = await elementToCanvas(element);
   const image = canvas.toDataURL("image/png");
   const pdf = new jsPDF("p", "mm", "a4");

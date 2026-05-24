@@ -1,5 +1,5 @@
 import { normalizeText } from "../seasonal";
-import type { BackupFile, Recipe } from "../types";
+import type { BackupFile, Recipe, RecipeTag } from "../types";
 import { createId } from "./id";
 
 type RecipeDatabaseJson = {
@@ -10,7 +10,7 @@ type RecipeDatabaseJson = {
   recipeNames: string[];
 };
 
-export function downloadRecipesBackup(recipes: Recipe[], tags: string[] = []) {
+export function downloadRecipesBackup(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
   downloadBlob(recipesBackupBlob(recipes, tags), recipesBackupFileName());
 }
 
@@ -18,11 +18,11 @@ export function downloadRecipeImportExample() {
   downloadBlob(recipeImportExampleBlob(), "toque-exemple-import.json");
 }
 
-export function downloadRecipeDatabaseJson(recipes: Recipe[], tags: string[] = []) {
+export function downloadRecipeDatabaseJson(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
   downloadBlob(recipeDatabaseBlob(recipes, tags), "toque-base-recettes.json");
 }
 
-export async function shareRecipesBackup(recipes: Recipe[], tags: string[] = []) {
+export async function shareRecipesBackup(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
   const filename = recipesBackupFileName();
   const blob = recipesBackupBlob(recipes, tags);
   const jsonFile = new File([blob], filename, { type: "application/json" });
@@ -39,8 +39,11 @@ export async function shareRecipesBackup(recipes: Recipe[], tags: string[] = [])
   return "downloaded";
 }
 
-function recipesBackupBlob(recipes: Recipe[], tags: string[] = []) {
-  const globalTags = normalizeTagList([...tags, ...recipes.flatMap((recipe) => recipe.tags)]);
+function recipesBackupBlob(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
+  const globalTags = normalizeTagRecords([
+    ...tags,
+    ...recipes.flatMap((recipe) => recipe.tags.map((name) => ({ name }))),
+  ]);
   const backup: BackupFile = {
     version: 1,
     exportedAt: new Date().toISOString(),
@@ -75,7 +78,7 @@ function singleRecipeBackupBlob(recipe: Recipe) {
   const backup: BackupFile = {
     version: 1,
     exportedAt: new Date().toISOString(),
-    tags: normalizeTagList(recipe.tags),
+    tags: normalizeTagRecords(recipe.tags.map((name) => ({ name }))),
     recipes: [recipe],
   };
   return new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
@@ -108,7 +111,7 @@ export async function parseBackupFile(file: File, existingRecipes: Recipe[]) {
 
   return {
     recipes,
-    tags: Array.isArray(backup.tags) ? backup.tags.map((tag) => tag.trim()).filter(Boolean) : [],
+    tags: parseImportedTags(backup.tags),
   };
 }
 
@@ -126,12 +129,41 @@ function recipesBackupFileName() {
   return `toque-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
 }
 
-function normalizeTagList(tags: string[]) {
-  return [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))];
+function normalizeTagRecords(tags: Array<Pick<RecipeTag, "name" | "category" | "color">>) {
+  const byName = new Map<string, Pick<RecipeTag, "name" | "category" | "color">>();
+  tags.forEach((tag) => {
+    const name = tag.name?.trim();
+    if (!name) return;
+    const key = normalizeText(name);
+    const current = byName.get(key);
+    byName.set(key, {
+      name,
+      category: tag.category?.trim() || current?.category,
+      color: tag.color?.trim() || current?.color,
+    });
+  });
+  return [...byName.values()];
 }
 
-function recipeDatabaseBlob(recipes: Recipe[], tags: string[] = []) {
-  const knownTags = new Set(tags.map((tag) => tag.trim()).filter(Boolean));
+function parseImportedTags(tags: unknown) {
+  if (!Array.isArray(tags)) return [] as Array<Pick<RecipeTag, "name" | "category" | "color">>;
+  const normalized: Array<Pick<RecipeTag, "name" | "category" | "color">> = [];
+  tags.forEach((tag) => {
+    if (!tag || typeof tag !== "object") return;
+    const candidate = tag as Partial<RecipeTag>;
+    if (typeof candidate.name !== "string") return;
+    normalized.push({ name: candidate.name, category: candidate.category, color: candidate.color });
+  });
+  return normalizeTagRecords(normalized);
+}
+
+function recipeDatabaseBlob(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
+  const knownTags = new Set(
+    tags
+      .map((tag) => tag.name)
+      .map((tag) => tag.trim())
+      .filter(Boolean),
+  );
   const ingredientNames = new Set<string>();
   const recipeNames = new Set<string>();
 
@@ -165,7 +197,7 @@ function recipeImportExampleBlob() {
   const example: BackupFile = {
     version: 1,
     exportedAt: "2026-05-23T12:00:00.000Z",
-    tags: ["TagExample1", "TagExample2"],
+    tags: [{ name: "TagExample1" }, { name: "TagExample2" }],
     recipes: [
       {
         id: "recipe-example-1",

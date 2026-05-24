@@ -6,6 +6,7 @@ import type { TagCategory } from "../hooks/useTags";
 import { RECIPE_ORIGINS } from "../origins";
 import type { Ingredient, RecipeDraft, ReimportMode } from "../types";
 import { createId } from "../utils/id";
+import { getTagStyle } from "../utils/tagStyle";
 
 type Props = {
   draft: RecipeDraft;
@@ -22,6 +23,7 @@ type Props = {
   onSubmit: (event: FormEvent) => void;
   onCancel: () => void;
   setDraft: Dispatch<SetStateAction<RecipeDraft>>;
+  onStatus: (message: string) => void;
 };
 
 export function RecipeForm({
@@ -39,6 +41,7 @@ export function RecipeForm({
   onCancel,
   onReimport,
   setDraft,
+  onStatus,
 }: Props) {
   const [isImportSupportOpen, setIsImportSupportOpen] = useState(false);
 
@@ -214,6 +217,7 @@ export function RecipeForm({
         sourceValue={draft.sourceImageUrl}
         onChange={setImageOverride}
         onReset={resetImageOverride}
+        onStatus={onStatus}
       />
 
       <section className="form-section">
@@ -264,11 +268,13 @@ function ImageField({
   sourceValue,
   onChange,
   onReset,
+  onStatus,
 }: {
   value: string;
   sourceValue?: string;
   onChange: (value: string) => void;
   onReset: () => void;
+  onStatus: (message: string) => void;
 }) {
   const hasImage = Boolean(value);
   const hasCustomImage = hasImage && value !== sourceValue;
@@ -279,7 +285,7 @@ function ImageField({
     try {
       onChange(await imageFileToDataUrl(file));
     } catch {
-      window.alert("Image impossible a lire. Essaie un autre fichier.");
+      onStatus("Image impossible a lire. Essaie un autre fichier.");
     }
   }
 
@@ -533,7 +539,7 @@ function TagField({
       Tags
       <div className="tag-field__box">
         {tags.map((tag) => (
-          <span className="chip tag-field__chip" key={tag} style={tagChipStyle(tagColorByName.get(tag.toLowerCase()))}>
+          <span className="chip tag-field__chip" key={tag} style={getTagStyle(tag, tagColorByName)}>
             {tag}
             <button
               className="tag-field__remove"
@@ -578,7 +584,7 @@ function TagField({
                     <button
                       className={selected ? "chip tag-reference__chip tag-reference__chip--active" : "chip tag-reference__chip"}
                       key={tag.id}
-                      style={selected ? undefined : tagChipStyle(tag.color)}
+                      style={selected ? undefined : getTagStyle(tag.name, undefined, tag.color)}
                       onClick={() => {
                         if (selected) {
                           onChange(tags.filter((existing) => existing.toLowerCase() !== tag.name.toLowerCase()));
@@ -624,7 +630,4 @@ function NumberField({
   );
 }
 
-function tagChipStyle(color?: string) {
-  return color ? { background: color, borderColor: color, color: "#111" } : undefined;
-}
 

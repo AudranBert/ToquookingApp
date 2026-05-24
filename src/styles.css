@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --color-bg: #fff8ec;
   --color-surface: #fffdf7;
   --color-surface-soft: rgba(255, 253, 247, 0.76);
@@ -28,6 +28,9 @@
   --space-8: 32px;
 
   --shadow-soft: 0 18px 48px rgba(41, 50, 65, 0.08);
+  --chip-text-on-color: #111;
+  --button-icon-size: 42px;
+  --section-gap: var(--space-5);
 
   color: var(--color-text);
   background: var(--color-bg);
@@ -129,7 +132,7 @@ label {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-5);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--section-gap);
 }
 
 .eyebrow {
@@ -210,7 +213,7 @@ label {
 }
 
 .button--icon {
-  width: 42px;
+  width: var(--button-icon-size);
   padding: 9px;
 }
 
@@ -479,6 +482,11 @@ label {
   gap: var(--space-1);
 }
 
+.tag-filter__groups {
+  display: grid;
+  gap: var(--space-2);
+}
+
 .origin-filter__option {
   min-height: 32px;
   padding: 6px 9px;
@@ -610,7 +618,7 @@ label {
 .recipe-image {
   width: 100%;
   aspect-ratio: 16 / 9;
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--section-gap);
   object-fit: cover;
   border-radius: var(--radius-md);
 }
@@ -1099,7 +1107,7 @@ label {
 .backup-block {
   display: grid;
   gap: var(--space-3);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--section-gap);
 }
 
 .backup-import-button {
@@ -1122,6 +1130,30 @@ label {
 
 .management-action-button__label {
   display: inline;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgba(41, 50, 65, 0.35);
+}
+
+.dialog-card {
+  width: min(520px, 100%);
+  padding: var(--space-4);
+  background: var(--color-surface);
+}
+
+.dialog-card h3 {
+  margin-bottom: var(--space-2);
+}
+
+.dialog-card p {
+  margin-bottom: var(--space-3);
 }
 
 @media (max-width: 860px) {
@@ -1186,8 +1218,8 @@ label {
 
   .button--icon-mobile,
   .file-button.button--icon-mobile {
-    width: 42px;
-    min-width: 42px;
+    width: var(--button-icon-size);
+    min-width: var(--button-icon-size);
     padding: 9px;
     font-size: 0;
     gap: 0;
@@ -1286,3 +1318,5 @@ label {
     font-size: 0.78rem;
   }
 }
+
+

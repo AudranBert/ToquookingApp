@@ -5,6 +5,7 @@ import { currentSeasonalIngredients, recipeContainsSeasonalIngredient } from "..
 import { proxiedImageUrl, shouldUseImageCrossOrigin } from "../utils/images";
 import { isPantryIngredient } from "../utils/ingredients";
 import { ingredientLabel } from "../utils/recipes";
+import { getTagStyle } from "../utils/tagStyle";
 
 type Props = {
   recipe?: Recipe;
@@ -83,7 +84,7 @@ export function RecipeDetail({
         <div className="chip-list">
           {recipe.origin && <span className="chip chip--origin">{recipe.origin}</span>}
           {recipe.tags.map((tag) => (
-            <span className="chip" key={tag} style={tagChipStyle(tagColorByName.get(tag.toLowerCase()))}>
+            <span className="chip" key={tag} style={getTagStyle(tag, tagColorByName)}>
               {tag}
             </span>
           ))}
@@ -195,8 +196,4 @@ function hasValue(value: number | undefined) {
 
 function hasPositiveValue(value: number | undefined) {
   return value !== undefined && value > 0;
-}
-
-function tagChipStyle(color?: string) {
-  return color ? { background: color, borderColor: color, color: "#111" } : undefined;
 }

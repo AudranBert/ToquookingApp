@@ -84,7 +84,6 @@ export async function shareRecipeText(recipe: Recipe) {
     await navigator.clipboard.writeText(text);
     return "copied";
   } catch {
-    window.prompt("Copie le texte de la recette :", text);
     return "manual";
   }
 }

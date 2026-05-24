@@ -45,7 +45,7 @@ export type ParsedRecipe = Partial<RecipeDraft> & {
 export type BackupFile = {
   version: 1;
   exportedAt: string;
-  tags?: string[];
+  tags?: Array<Pick<RecipeTag, "name" | "category" | "color">>;
   recipes: Recipe[];
 };
 

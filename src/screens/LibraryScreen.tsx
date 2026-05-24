@@ -1,6 +1,6 @@
 ﻿import type { RefObject } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ChefHat, Clock, Filter, Flame, Hourglass, Search, X } from "lucide-react";
+import { ArrowLeft, ChefHat, Clock, Filter, Flag, Flame, Hourglass, Search, Snowflake, Sprout, Tag, Timer, Vegan, X } from "lucide-react";
 import { POPULAR_RECIPE_ORIGINS, RECIPE_ORIGIN_GROUPS, RECIPE_ORIGINS } from "../origins";
 import { RecipeDetail } from "../components/RecipeDetail";
 import { SectionToggleHeader } from "../components/SectionToggleHeader";
@@ -8,6 +8,8 @@ import { SEASONAL_THRESHOLDS, SEASONAL_THRESHOLD_LABELS } from "../constants";
 import type { Recipe, RegimeFilter, SeasonalThreshold } from "../types";
 import { proxiedImageUrl } from "../utils/images";
 import { normalizeText } from "../utils/text";
+import { getTagStyle } from "../utils/tagStyle";
+import type { TagCategory } from "../hooks/useTags";
 
 const REGIME_FILTER_OPTIONS: { value: RegimeFilter; label: string }[] = [
   { value: "", label: "Tous" },
@@ -26,6 +28,8 @@ export type LibraryFilters = {
   maxTotalTime?: number;
   seasonalThreshold: SeasonalThreshold;
   allTags: string[];
+  tagColorByName: Map<string, string>;
+  tagCategories: TagCategory[];
 };
 
 export type LibraryFilterHandlers = {
@@ -132,8 +136,8 @@ function LibrarySidebar({
   const [advancedOpen, setAdvancedOpen] = useState(() =>
     typeof window === "undefined" ? true : window.matchMedia("(min-width: 861px)").matches,
   );
-  const [tagsOpen, setTagsOpen] = useState(true);
-  const [originsOpen, setOriginsOpen] = useState(true);
+  const [tagsOpen, setTagsOpen] = useState(false);
+  const [originsOpen, setOriginsOpen] = useState(false);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(min-width: 861px)");
@@ -166,57 +170,12 @@ function LibrarySidebar({
             </span>
           </summary>
           <div className="advanced-filters__body">
-            <div className="tag-filter">
-              <SectionToggleHeader
-                className="origin-filter__header"
-                open={tagsOpen}
-                onToggle={() => setTagsOpen((current) => !current)}
-                title={
-                  <span className="label-with-icon">
-                    <Filter size={16} /> Tags
-                  </span>
-                }
-                rightSlot={
-                  filters.tagFilters.length > 0 ? (
-                    <button className="origin-filter__clear" type="button" onClick={() => handlers.onTagFiltersChange([])}>
-                      <X size={14} /> Effacer
-                    </button>
-                  ) : undefined
-                }
-              />
-              {tagsOpen && (
-                <div className="tag-filter__options">
-                  {filters.allTags.length > 0 ? (
-                    filters.allTags.map((tag) => {
-                      const selected = filters.tagFilters.includes(tag);
-                      return (
-                        <button
-                          className={`origin-filter__option${selected ? " origin-filter__option--active" : ""}`}
-                          key={tag}
-                          type="button"
-                          onClick={() =>
-                            handlers.onTagFiltersChange(
-                              selected ? filters.tagFilters.filter((selectedTag) => selectedTag !== tag) : [...filters.tagFilters, tag],
-                            )
-                          }
-                          aria-pressed={selected}
-                        >
-                          {tag}
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <p className="empty-inline">Aucun tag.</p>
-                  )}
-                </div>
-              )}
-            </div>
             <label className="checkbox-row">
               <input type="checkbox" checked={filters.noHeatingOnly} onChange={(event) => handlers.onNoHeatingOnlyChange(event.target.checked)} />
-              <span>No heating</span>
+              <span className="label-with-icon"><Snowflake size={16} /> No heating</span>
             </label>
             <label>
-              Régime
+              <span className="label-with-icon"><Vegan size={16} /> Régime</span>
               <select value={filters.regimeFilter} onChange={(event) => handlers.onRegimeFilterChange(event.target.value as RegimeFilter)}>
                 {REGIME_FILTER_OPTIONS.map((option) => (
                   <option key={option.label} value={option.value}>
@@ -226,7 +185,7 @@ function LibrarySidebar({
               </select>
             </label>
             <label>
-              Total ≤ X min
+              <span className="label-with-icon"><Timer size={16} /> Total ≤ X min</span>
               <input
                 type="number"
                 min="1"
@@ -239,14 +198,8 @@ function LibrarySidebar({
                 placeholder="Minutes"
               />
             </label>
-            <OriginFilterPicker
-              value={filters.originFilter}
-              onChange={handlers.onOriginFilterChange}
-              open={originsOpen}
-              onToggle={() => setOriginsOpen((current) => !current)}
-            />
             <label>
-              Ingrédients de saison
+              <span className="label-with-icon"><Sprout size={16} /> Ingrédients de saison</span>
               <select
                 value={filters.seasonalThreshold}
                 onChange={(event) => handlers.onSeasonalThresholdChange(Number(event.target.value) as SeasonalThreshold)}
@@ -261,6 +214,69 @@ function LibrarySidebar({
             {filters.seasonalThreshold === 0 && (
               <p className="muted">{seasonalRecipeCount} recette(s) contiennent au moins un ingrédient de saison en {seasonMonthName}.</p>
             )}
+            <OriginFilterPicker
+              value={filters.originFilter}
+              onChange={handlers.onOriginFilterChange}
+              open={originsOpen}
+              onToggle={() => setOriginsOpen((current) => !current)}
+            />
+            <div className="tag-filter">
+              <SectionToggleHeader
+                className="origin-filter__header"
+                open={tagsOpen}
+                onToggle={() => setTagsOpen((current) => !current)}
+                title={
+                  <span className="label-with-icon">
+                    <Tag size={16} /> Tags
+                  </span>
+                }
+                rightSlot={
+                  filters.tagFilters.length > 0 ? (
+                    <button className="origin-filter__clear" type="button" onClick={() => handlers.onTagFiltersChange([])}>
+                      <X size={14} /> Effacer
+                    </button>
+                  ) : undefined
+                }
+              />
+              {tagsOpen && (
+                <div className="tag-filter__groups">
+                  {filters.tagCategories.filter((category) => normalizeText(category.name) !== normalizeText("Régime alimentaire")).length > 0 ? (
+                    filters.tagCategories
+                      .filter((category) => normalizeText(category.name) !== normalizeText("Régime alimentaire"))
+                      .map((category) => (
+                      <section className="origin-filter__group" key={category.name}>
+                        <h3>{category.name}</h3>
+                        <div className="tag-filter__options">
+                          {category.tags.map((tag) => {
+                            const selected = filters.tagFilters.includes(tag.name);
+                            return (
+                              <button
+                                className={`origin-filter__option${selected ? " origin-filter__option--active" : ""}`}
+                                key={tag.id}
+                                type="button"
+                                style={selected ? undefined : getTagStyle(tag.name, filters.tagColorByName, tag.color)}
+                                onClick={() =>
+                                  handlers.onTagFiltersChange(
+                                    selected
+                                      ? filters.tagFilters.filter((selectedTag) => selectedTag !== tag.name)
+                                      : [...filters.tagFilters, tag.name],
+                                  )
+                                }
+                                aria-pressed={selected}
+                              >
+                                {tag.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    ))
+                  ) : (
+                    <p className="empty-inline">Aucun tag.</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </details>
       </div>
@@ -309,7 +325,11 @@ function OriginFilterPicker({
         className="origin-filter__header"
         open={open}
         onToggle={onToggle}
-        title="Pays / région"
+        title={
+          <span className="label-with-icon">
+            <Flag size={16} /> Pays / région
+          </span>
+        }
         rightSlot={
           value ? (
             <button className="origin-filter__clear" type="button" onClick={() => onChange("")}>
@@ -439,7 +459,7 @@ function RecipeGrid({
             <span className="chip-list">
               {seasonalRecipeIds.has(recipe.id) && <span className="chip chip--seasonal">{seasonalMatchCounts.get(recipe.id)} de saison</span>}
               {recipe.tags.slice(0, 4).map((tag) => (
-                <span className="chip" key={tag} style={tagChipStyle(tagColorByName.get(tag.toLowerCase()))}>
+                <span className="chip" key={tag} style={getTagStyle(tag, tagColorByName)}>
                   {tag}
                 </span>
               ))}
@@ -449,8 +469,4 @@ function RecipeGrid({
       ))}
     </section>
   );
-}
-
-function tagChipStyle(color?: string) {
-  return color ? { background: color, borderColor: color, color: "#111" } : undefined;
 }

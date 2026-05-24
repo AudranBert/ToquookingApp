@@ -167,7 +167,7 @@ async function shareShoppingListText(text: string) {
     try { await navigator.share({ title: "Liste de courses", text }); return "shared"; } catch (error) { if (error instanceof DOMException && error.name === "AbortError") throw error; }
   }
   if (isLikelyMobile()) { window.location.href = `sms:?&body=${encodeURIComponent(text)}`; return "sms"; }
-  try { await copyText(text); return "copied"; } catch { window.prompt("Copie le texte de la liste de courses :", text); return "manual"; }
+  try { await copyText(text); return "copied"; } catch { return "manual"; }
 }
 
 async function copyText(text: string) {

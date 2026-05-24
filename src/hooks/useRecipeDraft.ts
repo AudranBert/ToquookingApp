@@ -77,8 +77,9 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
       setImportWarnings(parsed.warnings ?? []);
       status.setStatus(successStatus);
       return true;
-    } catch {
-      status.setStatus(errorStatus);
+    } catch (error) {
+      const details = classifyImportError(error);
+      status.setStatus(`${errorStatus} (${details})`);
       return false;
     }
   }
@@ -150,4 +151,12 @@ function hasFilledIngredients(draft: RecipeDraft) {
   return draft.ingredients.some((ingredient) =>
     [ingredient.quantity, ingredient.unit, ingredient.name, ingredient.note].some((value) => value?.trim()),
   );
+}
+
+function classifyImportError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error ?? "").toLowerCase();
+  if (/failed to fetch|network|cors|timeout|dns|internet/.test(message)) return "probleme reseau";
+  if (/unsupported|not supported|no recipe|introuvable|aucune recette/.test(message)) return "source non supportee";
+  if (/json|parse|syntax/.test(message)) return "erreur de parsing";
+  return "erreur inconnue";
 }

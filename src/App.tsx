@@ -1,13 +1,11 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { X } from "lucide-react";
 import { recipeFileName, shareElementAsPdf, shareElementAsPng } from "./exporters";
 import { db } from "./db";
 import { MONTH_NAMES } from "./seasonal";
 import { AppHeader } from "./components/AppHeader";
-import { BackupScreen } from "./screens/BackupScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
-import { ManagementScreen } from "./screens/ManagementScreen";
 import { RecipeForm } from "./screens/RecipeForm";
 import { ShoppingScreen } from "./screens/ShoppingScreen";
 import { downloadRecipeDatabaseJson, downloadRecipeImportExample, shareRecipesBackup, shareSingleRecipeBackup } from "./utils/backup";
@@ -27,6 +25,12 @@ import { useTags } from "./hooks/useTags";
 import { useIngredientsManagement } from "./hooks/useIngredientsManagement";
 import { t } from "./i18n";
 import type { Panel, Recipe } from "./types";
+import { buildTagColorMap } from "./utils/tagStyle";
+import { useAppDialog } from "./hooks/useAppDialog";
+import { AppDialog } from "./components/AppDialog";
+
+const BackupScreen = lazy(async () => import("./screens/BackupScreen").then((module) => ({ default: module.BackupScreen })));
+const ManagementScreen = lazy(async () => import("./screens/ManagementScreen").then((module) => ({ default: module.ManagementScreen })));
 
 export function App() {
   const status = useStatus();
@@ -36,18 +40,13 @@ export function App() {
   const filters = useRecipeFilters(recipes, tagApi.allTags);
   const draftApi = useRecipeDraft(status, tagApi.allTags);
   const shopping = useShoppingList(recipes, status);
+  const dialog = useAppDialog();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<Panel>("library");
   const [handledSharedRecipe, setHandledSharedRecipe] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
-  const tagColorByName = useMemo(() => {
-    const map = new Map<string, string>();
-    tagApi.tags.forEach((tag) => {
-      if (tag.color) map.set(tag.name.toLowerCase(), tag.color);
-    });
-    return map;
-  }, [tagApi.tags]);
+  const tagColorByName = useMemo(() => buildTagColorMap(tagApi.tags), [tagApi.tags]);
 
   useEffect(() => {
     status.clear();
@@ -72,22 +71,25 @@ export function App() {
     setHandledSharedRecipe(true);
     clearRecipeShareFromLocation();
 
-    if (!window.confirm(t("app.confirm.importShared", { name: sharedRecipe.name }))) return;
+    void (async () => {
+      const accepted = await dialog.confirm(t("app.confirm.importShared", { name: sharedRecipe.name }));
+      if (!accepted) return;
 
-    db.recipes
-      .toArray()
-      .then((existingRecipes) => {
-        const importedRecipe = sharedRecipeToImport(sharedRecipe, existingRecipes);
-        return db.recipes.put(importedRecipe).then(() => importedRecipe);
-      })
-      .then(async (importedRecipe) => {
-        await refresh();
-        setSelectedId(importedRecipe.id);
-        setActivePanel("library");
-        status.setStatus(t("app.status.importedRecipe"));
-      })
-      .catch(() => status.setStatus("Impossible d'importer cette recette."));
-  }, [handledSharedRecipe, refresh, status]);
+      db.recipes
+        .toArray()
+        .then((existingRecipes) => {
+          const importedRecipe = sharedRecipeToImport(sharedRecipe, existingRecipes);
+          return db.recipes.put(importedRecipe).then(() => importedRecipe);
+        })
+        .then(async (importedRecipe) => {
+          await refresh();
+          setSelectedId(importedRecipe.id);
+          setActivePanel("library");
+          status.setStatus(t("app.status.importedRecipe"));
+        })
+        .catch(() => status.setStatus("Impossible d'importer cette recette."));
+    })();
+  }, [dialog, handledSharedRecipe, refresh, status]);
 
   const selectedRecipe = selectedId ? recipes.find((recipe) => recipe.id === selectedId) : undefined;
   const seasonMonthName = MONTH_NAMES[new Date().getMonth()];
@@ -127,6 +129,8 @@ export function App() {
   }
 
   async function handleDelete(recipe: Recipe) {
+    const accepted = await dialog.confirm(`Supprimer "${recipe.name}" ?`, undefined, true);
+    if (!accepted) return;
     if (await remove(recipe)) setSelectedId(null);
   }
 
@@ -187,7 +191,7 @@ export function App() {
 
   async function exportRecipesFile() {
     const result = await withShareStatus(
-      () => shareRecipesBackup(recipes, tagApi.allTags),
+      () => shareRecipesBackup(recipes, tagApi.tags),
       "Le partage de la sauvegarde n'a pas abouti.",
     );
     if (result === "downloaded") status.setStatus("Sauvegarde telechargee. Le partage natif n'est pas disponible sur cet appareil.");
@@ -199,7 +203,7 @@ export function App() {
   }
 
   function downloadDatabaseJsonFile() {
-    downloadRecipeDatabaseJson(recipes, tagApi.allTags);
+    downloadRecipeDatabaseJson(recipes, tagApi.tags);
     status.setStatus("Base JSON telechargee.");
   }
 
@@ -232,6 +236,8 @@ export function App() {
             maxTotalTime: filters.maxTotalTime,
             seasonalThreshold: filters.seasonalThreshold,
             allTags: filters.allTags,
+            tagColorByName,
+            tagCategories: tagApi.categories,
           }}
           filterHandlers={{
             onQueryChange: filters.setQuery,
@@ -283,6 +289,7 @@ export function App() {
           onReimport={draftApi.reimport}
           onSubmit={handleSubmit}
           setDraft={draftApi.setDraft}
+          onStatus={status.setStatus}
         />
       )}
 
@@ -300,34 +307,49 @@ export function App() {
       )}
 
       {activePanel === "backup" && (
-        <BackupScreen
-          onExport={exportRecipesFile}
-          onImport={handleBackupImport}
-          onDownloadExample={downloadImportExampleFile}
-          onDownloadDatabase={downloadDatabaseJsonFile}
-        />
+        <Suspense fallback={<section className="panel workspace"><p>Chargement...</p></section>}>
+          <BackupScreen
+            onExport={exportRecipesFile}
+            onImport={handleBackupImport}
+            onDownloadExample={downloadImportExampleFile}
+            onDownloadDatabase={downloadDatabaseJsonFile}
+          />
+        </Suspense>
       )}
 
       {activePanel === "management" && (
-        <ManagementScreen
-          tags={tagApi.tags}
-          categories={tagApi.categories}
-          protectedTags={tagApi.protectedTags}
-          onCreateTag={tagApi.createTag}
-          onRenameTag={tagApi.renameTag}
-          onMergeTags={tagApi.mergeTags}
-          onDeleteTag={tagApi.deleteTag}
-          onUpdateTagMeta={tagApi.updateTagMeta}
-          ingredients={ingredientApi.allIngredients}
-          onRenameIngredient={ingredientApi.renameIngredient}
-          onMergeIngredients={ingredientApi.mergeIngredients}
-          onDeleteIngredient={ingredientApi.deleteIngredient}
-        />
+        <Suspense fallback={<section className="panel workspace"><p>Chargement...</p></section>}>
+          <ManagementScreen
+            tags={tagApi.tags}
+            categories={tagApi.categories}
+            protectedTags={tagApi.protectedTags}
+            onCreateTag={tagApi.createTag}
+            onRenameTag={tagApi.renameTag}
+            onMergeTags={tagApi.mergeTags}
+            onDeleteTag={tagApi.deleteTag}
+            onUpdateTagMeta={tagApi.updateTagMeta}
+            ingredients={ingredientApi.allIngredients}
+            onRenameIngredient={ingredientApi.renameIngredient}
+            onMergeIngredients={ingredientApi.mergeIngredients}
+            onDeleteIngredient={ingredientApi.deleteIngredient}
+            onConfirm={dialog.confirm}
+            onPrompt={dialog.prompt}
+          />
+        </Suspense>
       )}
+
+      <AppDialog
+        open={dialog.dialogState.open}
+        title={dialog.dialogState.title}
+        message={dialog.dialogState.message}
+        promptValue={dialog.dialogState.promptValue}
+        danger={dialog.dialogState.danger}
+        confirmLabel={dialog.dialogState.confirmLabel}
+        cancelLabel={dialog.dialogState.cancelLabel}
+        onPromptValueChange={dialog.setPromptValue}
+        onCancel={() => dialog.closeWith(null)}
+        onConfirm={() => dialog.closeWith(typeof dialog.dialogState.promptValue === "string" ? dialog.dialogState.promptValue : true)}
+      />
     </main>
   );
 }
-
-
-
-

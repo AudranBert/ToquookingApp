@@ -26,7 +26,6 @@ export function useRecipes(status: StatusApi) {
         status.setStatus("Ajoute au minimum un nom.");
         return null;
       }
-
       const existing = editingId ? await db.recipes.get(editingId) : undefined;
       const recipe: Recipe = {
         ...cleaned,
@@ -62,7 +61,6 @@ export function useRecipes(status: StatusApi) {
 
   const remove = useCallback(
     async (recipe: Recipe) => {
-      if (!window.confirm(`Supprimer "${recipe.name}" ?`)) return false;
       await db.recipes.delete(recipe.id);
       await refresh();
       status.setStatus("Recette supprimee.");
@@ -94,13 +92,20 @@ export function useRecipes(status: StatusApi) {
       try {
         const imported = await parseBackupFile(file, await db.recipes.toArray());
         await db.recipes.bulkPut(imported.recipes);
+        const existingTags = await db.tags.toArray();
+        const existingByName = new Map(existingTags.map((tag) => [tag.name.toLowerCase(), tag]));
         await db.tags.bulkPut(
-          imported.tags.map((name) => ({
-            id: createId(),
-            name,
-            createdAt: nowIso(),
-            updatedAt: nowIso(),
-          })),
+          imported.tags.map((tag) => {
+            const existing = existingByName.get(tag.name.toLowerCase());
+            return {
+              id: existing?.id ?? createId(),
+              name: existing?.name ?? tag.name,
+              category: tag.category ?? existing?.category,
+              color: tag.color ?? existing?.color,
+              createdAt: existing?.createdAt ?? nowIso(),
+              updatedAt: nowIso(),
+            };
+          }),
         );
         await refresh();
         status.setStatus(`${imported.recipes.length} recette(s) importee(s).`);
