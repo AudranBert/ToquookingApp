@@ -359,8 +359,7 @@ label {
 }
 
 .label-with-icon,
-.check-control,
-.shopping-item {
+.check-control {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -721,24 +720,6 @@ label {
   cursor: pointer;
 }
 
-.tag-manager__list {
-  display: grid;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-
-.tag-manager__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: var(--space-2);
-  align-items: center;
-  padding: var(--space-2);
-  color: var(--color-text);
-  background: rgba(255, 253, 247, 0.72);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
 .tag-reference {
   display: grid;
   gap: var(--space-2);
@@ -920,6 +901,9 @@ label {
 }
 
 .shopping-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: 10px 12px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -1175,10 +1159,6 @@ label {
     grid-template-columns: 1fr;
   }
 
-  .timing-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .number-field input {
     text-align: center;
   }
@@ -1204,19 +1184,7 @@ label {
     display: none;
   }
 
-  .button--icon-mobile {
-    width: 42px;
-    min-width: 42px;
-    padding: 9px;
-    font-size: 0;
-    gap: 0;
-  }
-
-  .button--icon-mobile svg {
-    width: 18px;
-    height: 18px;
-  }
-
+  .button--icon-mobile,
   .file-button.button--icon-mobile {
     width: 42px;
     min-width: 42px;
@@ -1225,6 +1193,7 @@ label {
     gap: 0;
   }
 
+  .button--icon-mobile svg,
   .file-button.button--icon-mobile svg {
     width: 18px;
     height: 18px;
