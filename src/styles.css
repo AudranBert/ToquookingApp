@@ -739,6 +739,30 @@ label {
   border-radius: var(--radius-md);
 }
 
+.tag-reference {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.tag-reference__group {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.tag-reference__group > .chip-list {
+  margin-bottom: 0;
+}
+
+.tag-reference__chip {
+  cursor: pointer;
+}
+
+.tag-reference__chip--active {
+  color: var(--color-primary-text);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
 .ingredient-status-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -902,10 +926,15 @@ label {
 }
 
 .shopping-item input[aria-label="Ligne de course"] {
+  flex: 1;
   min-height: 32px;
   padding: var(--space-1);
   background: transparent;
   border: 0;
+}
+
+.shopping-item__delete {
+  margin-left: auto;
 }
 
 .shopping-item--done input[aria-label="Ligne de course"] {
@@ -1119,6 +1148,11 @@ label {
   .section-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .recipe-form .section-heading {
+    align-items: flex-start;
+    flex-direction: row;
   }
 
   .nav-tabs {

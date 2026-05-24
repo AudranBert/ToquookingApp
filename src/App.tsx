@@ -261,27 +261,11 @@ export function App() {
           editing={Boolean(draftApi.editingId)}
           warnings={draftApi.importWarnings}
           allTags={tagApi.allTags}
-          protectedTags={tagApi.protectedTags}
+          categories={tagApi.categories}
           onCreateTag={async (name) => {
             const tag = await tagApi.createTag(name);
             if (tag) draftApi.setDraft((current) => ({ ...current, tags: [...current.tags, tag] }));
             return tag;
-          }}
-          onRenameTag={async (oldName, newName) => {
-            const tag = await tagApi.renameTag(oldName, newName);
-            draftApi.setDraft((current) => ({
-              ...current,
-              tags: current.tags.map((currentTag) => (currentTag === oldName ? tag : currentTag)),
-            }));
-          }}
-          onDeleteTag={async (name) => {
-            if (tagApi.isProtectedTag(name)) {
-              status.setStatus(t("app.status.defaultTagProtected"));
-              return;
-            }
-            if (!window.confirm(t("app.confirm.deleteTagGlobal", { name }))) return;
-            await tagApi.deleteTag(name);
-            draftApi.setDraft((current) => ({ ...current, tags: current.tags.filter((tag) => tag !== name) }));
           }}
           importUrl={draftApi.importUrl}
           onImportUrlChange={draftApi.setImportUrl}

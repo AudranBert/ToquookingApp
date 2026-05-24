@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import type { Dispatch, FormEvent, KeyboardEvent, SetStateAction } from "react";
-import { BedSingle, Check, ChefHat, Clock3, Flame, Image as ImageIcon, Info, Link, Pencil, Plus, RefreshCcw, Replace, Trash2, Users, X } from "lucide-react";
+import { BedSingle, Check, ChefHat, Clock3, Flame, Image as ImageIcon, Info, Link, Plus, RefreshCcw, Replace, Trash2, Users, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { TagCategory } from "../hooks/useTags";
 import { RECIPE_ORIGINS } from "../origins";
 import type { Ingredient, RecipeDraft, ReimportMode } from "../types";
 import { createId } from "../utils/id";
@@ -11,10 +12,8 @@ type Props = {
   editing: boolean;
   warnings: string[];
   allTags: string[];
-  protectedTags: readonly string[];
+  categories: TagCategory[];
   onCreateTag: (name: string) => Promise<string | undefined> | string | undefined;
-  onRenameTag: (oldName: string, newName: string) => void;
-  onDeleteTag: (name: string) => void;
   importUrl: string;
   onImportUrlChange: (url: string) => void;
   onImport: () => void;
@@ -29,10 +28,8 @@ export function RecipeForm({
   editing,
   warnings,
   allTags,
-  protectedTags,
+  categories,
   onCreateTag,
-  onRenameTag,
-  onDeleteTag,
   importUrl,
   onImportUrlChange,
   onImport,
@@ -181,10 +178,8 @@ export function RecipeForm({
         <TagField
           tags={draft.tags}
           allTags={allTags}
-          protectedTags={protectedTags}
+          categories={categories}
           onCreateTag={onCreateTag}
-          onRenameTag={onRenameTag}
-          onDeleteTag={onDeleteTag}
           onChange={(tags) => updateField("tags", tags)}
         />
         <label>
@@ -407,7 +402,7 @@ function IngredientRow({
       <input placeholder="Unité" value={ingredient.unit ?? ""} onChange={(event) => onChange({ unit: event.target.value })} />
       <input placeholder="Ingrédient" value={ingredient.name} onChange={(event) => onChange({ name: event.target.value })} />
       <button className="button button--icon ingredient-line__remove" onClick={onRemove} type="button" title="Retirer">
-        <X size={16} />
+        <Trash2 size={16} />
       </button>
     </div>
   );
@@ -428,7 +423,7 @@ function InstructionRow({
     <div className="step-line">
       <textarea value={step} onChange={(event) => onChange(event.target.value)} placeholder={`Étape ${index + 1}`} />
       <button className="button button--icon" onClick={onRemove} type="button" title="Retirer">
-        <X size={16} />
+        <Trash2 size={16} />
       </button>
     </div>
   );
@@ -458,18 +453,14 @@ function TextField({
 function TagField({
   tags,
   allTags,
-  protectedTags,
+  categories,
   onCreateTag,
-  onRenameTag,
-  onDeleteTag,
   onChange,
 }: {
   tags: string[];
   allTags: string[];
-  protectedTags: readonly string[];
+  categories: TagCategory[];
   onCreateTag: (name: string) => Promise<string | undefined> | string | undefined;
-  onRenameTag: (oldName: string, newName: string) => void;
-  onDeleteTag: (name: string) => void;
   onChange: (tags: string[]) => void;
 }) {
   const [input, setInput] = useState("");
@@ -481,8 +472,6 @@ function TagField({
       .filter((tag) => !selected.has(tag) && (!query || tag.toLowerCase().includes(query)))
       .slice(0, 8);
   }, [allTags, tags, input]);
-
-  const protectedTagKeys = useMemo(() => new Set(protectedTags.map((tag) => tag.toLowerCase())), [protectedTags]);
 
   function hasTag(value: string) {
     return tags.some((existing) => existing.toLowerCase() === value.toLowerCase());
@@ -572,34 +561,35 @@ function TagField({
         ))}
       </datalist>
       <details className="tag-manager">
-        <summary>Gerer la liste globale</summary>
-        <div className="tag-manager__list">
-          {allTags.map((tag) => (
-            <span className="tag-manager__row" key={tag}>
-              <span>{tag}</span>
-              <button
-                className="button button--ghost button--icon-mobile"
-                type="button"
-                onClick={() => {
-                  const next = window.prompt("Nouveau nom du tag", tag);
-                  if (next) onRenameTag(tag, next);
-                }}
-              >
-                <Pencil size={16} /> Renommer
-              </button>
-              {!protectedTagKeys.has(tag.toLowerCase()) && (
-                <button
-                  className="button button--danger button--icon-mobile"
-                  type="button"
-                  onClick={() => onDeleteTag(tag)}
-                  title="Supprimer"
-                >
-                  <Trash2 size={16} /> Supprimer
-                </button>
-              )}
-            </span>
+        <summary>Liste globale des tags</summary>
+        <div className="tag-reference">
+          {categories.map((category) => (
+            <div className="tag-reference__group" key={category.name}>
+              <strong>{category.name}</strong>
+              <div className="chip-list">
+                {category.tags.map((tag) => {
+                  const selected = hasTag(tag.name);
+                  return (
+                    <button
+                      className={selected ? "chip tag-reference__chip tag-reference__chip--active" : "chip tag-reference__chip"}
+                      key={tag.id}
+                      onClick={() => {
+                        if (selected) {
+                          onChange(tags.filter((existing) => existing.toLowerCase() !== tag.name.toLowerCase()));
+                          return;
+                        }
+                        onChange([...tags, tag.name]);
+                      }}
+                      type="button"
+                    >
+                      {tag.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           ))}
-          {allTags.length === 0 && <span className="muted">Aucun tag pour l'instant.</span>}
+          {categories.length === 0 && <span className="muted">Aucun tag pour l'instant.</span>}
         </div>
       </details>
     </label>

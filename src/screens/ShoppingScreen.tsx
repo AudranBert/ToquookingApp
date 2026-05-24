@@ -1,6 +1,6 @@
 ﻿import type { Dispatch, SetStateAction } from "react";
 import { useMemo, useRef, useState } from "react";
-import { FileDown, FileImage, MessageSquareText, Plus, Search, ShoppingBasket } from "lucide-react";
+import { FileDown, FileImage, MessageSquareText, Plus, Search, ShoppingBasket, Trash2 } from "lucide-react";
 import { basicFileName, shareElementAsPdf, shareElementAsPng } from "../exporters";
 import { t } from "../i18n";
 import type { Recipe, ShoppingItem } from "../types";
@@ -104,11 +104,37 @@ export function ShoppingScreen({ recipes, selectedRecipeIds, items, onAddItem, o
           <label className="search-field"><span className="label-with-icon"><Search size={16} /> Rechercher dans la liste</span><input aria-label="Rechercher une ligne de course" placeholder="Ingrédient..." type="search" value={itemQuery} onChange={(event) => setItemQuery(event.target.value)} /></label>
           <span className="muted count-label">{visibleItems.length} / {items.length} lignes</span>
           {visibleItems.map((item) => (
-            <label key={item.id} className={item.checked ? "shopping-item shopping-item--done" : "shopping-item"}>
-              <input checked={item.checked} onChange={(event) => onItemChange((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, checked: event.target.checked } : candidate))} type="checkbox" />
-              <input aria-label="Ligne de course" value={item.label} onChange={(event) => onItemChange((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, label: event.target.value } : candidate))} />
+            <div key={item.id} className={item.checked ? "shopping-item shopping-item--done" : "shopping-item"}>
+              <input
+                aria-label={`Cocher ${item.label}`}
+                checked={item.checked}
+                onChange={(event) =>
+                  onItemChange((current) =>
+                    current.map((candidate) => (candidate.id === item.id ? { ...candidate, checked: event.target.checked } : candidate)),
+                  )
+                }
+                type="checkbox"
+              />
+              <input
+                aria-label="Ligne de course"
+                value={item.label}
+                onChange={(event) =>
+                  onItemChange((current) =>
+                    current.map((candidate) => (candidate.id === item.id ? { ...candidate, label: event.target.value } : candidate)),
+                  )
+                }
+              />
               {item.pantry && <span className="chip chip--pantry">Placard</span>}
-            </label>
+              <button
+                className="button button--icon button--danger shopping-item__delete"
+                type="button"
+                title="Supprimer cette ligne"
+                aria-label={`Supprimer ${item.label}`}
+                onClick={() => onItemChange((current) => current.filter((candidate) => candidate.id !== item.id))}
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
           ))}
           {items.length > 0 && visibleItems.length === 0 && <p className="empty-inline">Aucune ligne ne correspond.</p>}
           <button className="button button--ghost button--full button--icon-mobile" onClick={onAddItem}><Plus size={18} /> {t("shopping.action.addLine")}</button>
