@@ -47,6 +47,8 @@ export function App() {
   const [handledSharedRecipe, setHandledSharedRecipe] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const tagColorByName = useMemo(() => buildTagColorMap(tagApi.tags), [tagApi.tags]);
+  const dialogState = dialog.dialogState;
+  const dialogPromptValue = dialogState.kind === "prompt" ? dialogState.promptValue : undefined;
 
   useEffect(() => {
     status.clear();
@@ -339,16 +341,16 @@ export function App() {
       )}
 
       <AppDialog
-        open={dialog.dialogState.open}
-        title={dialog.dialogState.title}
-        message={dialog.dialogState.message}
-        promptValue={dialog.dialogState.promptValue}
-        danger={dialog.dialogState.danger}
-        confirmLabel={dialog.dialogState.confirmLabel}
-        cancelLabel={dialog.dialogState.cancelLabel}
+        open={dialogState.open}
+        title={dialogState.title}
+        message={"message" in dialogState ? dialogState.message : undefined}
+        promptValue={dialogPromptValue}
+        danger={"danger" in dialogState ? dialogState.danger : undefined}
+        confirmLabel={"confirmLabel" in dialogState ? dialogState.confirmLabel : undefined}
+        cancelLabel={"cancelLabel" in dialogState ? dialogState.cancelLabel : undefined}
         onPromptValueChange={dialog.setPromptValue}
         onCancel={() => dialog.closeWith(null)}
-        onConfirm={() => dialog.closeWith(typeof dialog.dialogState.promptValue === "string" ? dialog.dialogState.promptValue : true)}
+        onConfirm={() => dialog.closeWith(typeof dialogPromptValue === "string" ? dialogPromptValue : true)}
       />
     </main>
   );

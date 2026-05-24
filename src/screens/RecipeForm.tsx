@@ -155,8 +155,8 @@ export function RecipeForm({
                 <li>marmiton.org: bon</li>
                 <li>cuisineaz.com: bon</li>
                 <li>cuisineactuelle.fr: bon</li>
-                <li>cuisine-libre.org: partiel</li>
-                <li>papillesetpupilles.fr: partiel</li>
+                <li>cuisine-libre.org: bon</li>
+                <li>papillesetpupilles.fr: bon a partiel selon la page</li>
                 <li>youtube.com/shorts: partiel (titre/description)</li>
               </ul>
             </div>
