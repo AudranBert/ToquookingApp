@@ -60,8 +60,8 @@ export function RecipeDetail({
         <button className="button button--primary button--icon-mobile" onClick={onShareText} title="Partager par SMS">
           <MessageSquareText size={18} /> SMS
         </button>
-        <button className="button button--icon-mobile" onClick={onExportRecipeFile} title="Exporter la recette">
-          <FileJson size={18} /> Fichier
+        <button className="button button--icon-mobile" onClick={onExportRecipeFile} title="Partager le lien recette">
+          <FileJson size={18} /> Lien
         </button>
         <button className="button button--danger button--icon-mobile" onClick={() => onDelete(recipe)} title="Supprimer">
           <Trash2 size={18} /> Supprimer

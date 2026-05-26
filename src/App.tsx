@@ -13,6 +13,7 @@ import {
   clearRecipeShareFromLocation,
   createRecipeShareUrl,
   readRecipeShareFromLocation,
+  shareRecipeLink,
   shareRecipeText,
   sharedRecipeToImport,
 } from "./utils/recipeShare";
@@ -97,7 +98,7 @@ export function App() {
   const seasonMonthName = MONTH_NAMES[new Date().getMonth()];
   const isAbortError = (error: unknown) => error instanceof DOMException && error.name === "AbortError";
 
-  async function withShareStatus(action: () => Promise<"shared" | "downloaded" | "copied" | "sms" | "manual">, fallbackError: string) {
+  async function withShareStatus(action: () => Promise<"shared" | "downloaded" | "copied" | "sms" | "manual" | "too_long">, fallbackError: string) {
     try {
       return await action();
     } catch (error) {
@@ -184,11 +185,22 @@ export function App() {
 
   async function exportSelectedRecipeFile() {
     if (!selectedRecipe) return;
-    const result = await withShareStatus(
-      () => shareSingleRecipeBackup(selectedRecipe),
-      "Le partage du fichier n'a pas abouti.",
+    let result = await withShareStatus(
+      () => shareRecipeLink(selectedRecipe),
+      "Le partage du lien n'a pas abouti.",
     );
-    if (result === "downloaded") status.setStatus("Fichier recette telecharge. Il peut etre importe depuis Sauvegarde.");
+    if (result === "too_long") {
+      result = await withShareStatus(
+        () => shareSingleRecipeBackup(selectedRecipe),
+        "Le partage du fichier recette n'a pas abouti.",
+      );
+      if (result === "downloaded") status.setStatus("Lien trop long. Fichier recette .txt telecharge.");
+      if (result === "shared") status.setStatus("Lien trop long. Fichier recette .txt partage.");
+      return;
+    }
+    if (result === "shared") status.setStatus("Lien recette partage.");
+    if (result === "copied") status.setStatus("Lien recette copie.");
+    if (result === "manual") status.setStatus("Lien recette pret a copier.");
   }
 
   async function exportRecipesFile() {

@@ -11,7 +11,7 @@ type RecipeDatabaseJson = {
 };
 
 export function downloadRecipesBackup(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
-  downloadBlob(recipesBackupBlob(recipes, tags), recipesBackupFileName());
+  downloadBlob(recipesBackupTextBlob(recipes, tags), recipesBackupFileName());
 }
 
 export function downloadRecipeImportExample() {
@@ -24,14 +24,9 @@ export function downloadRecipeDatabaseJson(recipes: Recipe[], tags: Array<Pick<R
 
 export async function shareRecipesBackup(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
   const filename = recipesBackupFileName();
-  const blob = recipesBackupBlob(recipes, tags);
-  const jsonFile = new File([blob], filename, { type: "application/json" });
-  if (await tryShare({ files: [jsonFile] })) {
-    return "shared";
-  }
-
-  const plainTextFile = new File([blob], filename, { type: "text/plain" });
-  if (await tryShare({ files: [plainTextFile] })) {
+  const blob = recipesBackupTextBlob(recipes, tags);
+  const textFile = new File([blob], filename, { type: "text/plain" });
+  if (await tryShare({ files: [textFile] })) {
     return "shared";
   }
 
@@ -39,7 +34,7 @@ export async function shareRecipesBackup(recipes: Recipe[], tags: Array<Pick<Rec
   return "downloaded";
 }
 
-function recipesBackupBlob(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
+function recipesBackupTextBlob(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
   const globalTags = normalizeTagRecords([
     ...tags,
     ...recipes.flatMap((recipe) => recipe.tags.map((name) => ({ name }))),
@@ -50,23 +45,18 @@ function recipesBackupBlob(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name"
     tags: globalTags,
     recipes,
   };
-  return new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  return new Blob([JSON.stringify(backup, null, 2)], { type: "text/plain;charset=utf-8" });
 }
 
 export function downloadSingleRecipeBackup(recipe: Recipe) {
-  downloadBlob(singleRecipeBackupBlob(recipe), recipeBackupFileName(recipe));
+  downloadBlob(singleRecipeBackupTextBlob(recipe), recipeBackupFileName(recipe));
 }
 
 export async function shareSingleRecipeBackup(recipe: Recipe) {
   const filename = recipeBackupFileName(recipe);
-  const blob = singleRecipeBackupBlob(recipe);
-  const jsonFile = new File([blob], filename, { type: "application/json" });
-  if (await tryShare({ files: [jsonFile] })) {
-    return "shared";
-  }
-
-  const plainTextFile = new File([blob], filename, { type: "text/plain" });
-  if (await tryShare({ files: [plainTextFile] })) {
+  const blob = singleRecipeBackupTextBlob(recipe);
+  const textFile = new File([blob], filename, { type: "text/plain" });
+  if (await tryShare({ files: [textFile] })) {
     return "shared";
   }
 
@@ -74,14 +64,14 @@ export async function shareSingleRecipeBackup(recipe: Recipe) {
   return "downloaded";
 }
 
-function singleRecipeBackupBlob(recipe: Recipe) {
+function singleRecipeBackupTextBlob(recipe: Recipe) {
   const backup: BackupFile = {
     version: 1,
     exportedAt: new Date().toISOString(),
     tags: normalizeTagRecords(recipe.tags.map((name) => ({ name }))),
     recipes: [recipe],
   };
-  return new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  return new Blob([JSON.stringify(backup, null, 2)], { type: "text/plain;charset=utf-8" });
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -122,11 +112,11 @@ function recipeBackupFileName(recipe: Recipe) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
-  return `toque-recette-${slug || "recette"}.json`;
+  return `toque-recette-${slug || "recette"}.txt`;
 }
 
 function recipesBackupFileName() {
-  return `toque-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
+  return `toque-sauvegarde-${new Date().toISOString().slice(0, 10)}.txt`;
 }
 
 function normalizeTagRecords(tags: Array<Pick<RecipeTag, "name" | "category" | "color">>) {
