@@ -33,3 +33,12 @@ export function shouldUseImageCrossOrigin(url?: string, baseUrl?: string) {
   if (!/^https?:\/\//.test(absolute)) return false;
   return /^(localhost|127\.0\.0\.1|::1)$/.test(window.location.hostname);
 }
+
+export function mergedRecipeImageUrls(recipe: { imageUrl?: string; imageUrls?: string[] }) {
+  const candidates = [recipe.imageUrl, ...(recipe.imageUrls ?? [])].map((value) => value?.trim()).filter(Boolean) as string[];
+  return Array.from(new Set(candidates));
+}
+
+export function primaryRecipeImageUrl(recipe: { imageUrl?: string; imageUrls?: string[] }) {
+  return mergedRecipeImageUrls(recipe)[0];
+}

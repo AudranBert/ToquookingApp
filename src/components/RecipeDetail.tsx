@@ -1,8 +1,9 @@
+import { useEffect, useState } from "react";
 import type { RefObject } from "react";
 import { BookOpen, ChefHat, Clock3, Copy, Edit3, FileDown, FileImage, Flame, Hourglass, MessageSquareText, Share2, Trash2, Users } from "lucide-react";
 import type { Recipe } from "../types";
 import { currentSeasonalIngredients, recipeContainsSeasonalIngredient } from "../seasonal";
-import { proxiedImageUrl, shouldUseImageCrossOrigin } from "../utils/images";
+import { mergedRecipeImageUrls, proxiedImageUrl, shouldUseImageCrossOrigin } from "../utils/images";
 import { isPantryIngredient } from "../utils/ingredients";
 import { ingredientLabel } from "../utils/recipes";
 import { getTagStyle } from "../utils/tagStyle";
@@ -41,6 +42,15 @@ export function RecipeDetail({
       </section>
     );
   }
+  const images = mergedRecipeImageUrls(recipe);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [recipe.id]);
+
+  const hasSeveralImages = images.length > 1;
+  const activeImage = images[Math.min(activeImageIndex, Math.max(0, images.length - 1))];
 
   return (
     <article className="recipe-detail">
@@ -69,13 +79,46 @@ export function RecipeDetail({
       </div>
 
       <div className="recipe-card" ref={printRef}>
-        {recipe.imageUrl && (
-          <img
-            className="recipe-image"
-            src={proxiedImageUrl(recipe.imageUrl, recipe.sourceUrl)}
-            crossOrigin={shouldUseImageCrossOrigin(recipe.imageUrl, recipe.sourceUrl) ? "anonymous" : undefined}
-            alt=""
-          />
+        {images.length > 0 && (
+          <div className="recipe-carousel">
+            <img
+              className="recipe-image"
+              src={proxiedImageUrl(activeImage, recipe.sourceUrl)}
+              crossOrigin={shouldUseImageCrossOrigin(activeImage, recipe.sourceUrl) ? "anonymous" : undefined}
+              alt=""
+            />
+            {hasSeveralImages && (
+              <>
+                <button
+                  className="recipe-carousel__nav recipe-carousel__nav--prev"
+                  type="button"
+                  onClick={() => setActiveImageIndex((current) => (current - 1 + images.length) % images.length)}
+                  aria-label="Image precedente"
+                >
+                  ‹
+                </button>
+                <button
+                  className="recipe-carousel__nav recipe-carousel__nav--next"
+                  type="button"
+                  onClick={() => setActiveImageIndex((current) => (current + 1) % images.length)}
+                  aria-label="Image suivante"
+                >
+                  ›
+                </button>
+                <div className="recipe-carousel__dots" role="tablist" aria-label="Navigation images">
+                  {images.map((_, index) => (
+                    <button
+                      key={index}
+                      className={index === activeImageIndex ? "recipe-carousel__dot recipe-carousel__dot--active" : "recipe-carousel__dot"}
+                      type="button"
+                      onClick={() => setActiveImageIndex(index)}
+                      aria-label={`Aller a l'image ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         )}
         <div className="recipe-title">
           <span className="eyebrow">Recette</span>

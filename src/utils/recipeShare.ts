@@ -1,6 +1,7 @@
 import type { Recipe, RecipeDraft } from "../types";
 import { createId } from "./id";
 import { cleanRecipeDraft, ingredientLabel, nowIso, recipeToDraft } from "./recipes";
+import { mergedRecipeImageUrls, primaryRecipeImageUrl } from "./images";
 
 const SHARE_HASH_KEY = "toqueRecipe";
 const MAX_SHARE_URL_LENGTH = 1000;
@@ -43,7 +44,7 @@ export function sharedRecipeToImport(recipe: Recipe, existingRecipes: Recipe[]):
 }
 
 export function recipeToShareText(recipe: Recipe) {
-  const shareableImageUrl = /^https?:\/\//i.test(recipe.imageUrl ?? "") ? recipe.imageUrl : "";
+  const shareableImageUrl = /^https?:\/\//i.test(primaryRecipeImageUrl(recipe) ?? "") ? primaryRecipeImageUrl(recipe) : "";
   const lines = [
     recipe.name,
     "",
@@ -117,8 +118,7 @@ function recipeTextFileName(recipe: Recipe) {
 }
 
 export function hasLocalRecipeImage(recipe: Recipe) {
-  const image = recipe.imageUrl?.trim() ?? "";
-  return Boolean(image) && !/^https?:\/\//i.test(image);
+  return mergedRecipeImageUrls(recipe).some((image) => !/^https?:\/\//i.test(image));
 }
 
 export function isRecipeShareUrlTooLong(recipe: Recipe, options?: { dropLocalImage?: boolean }) {
@@ -153,7 +153,7 @@ export async function shareRecipeLink(recipe: Recipe, options?: { dropLocalImage
 function buildRecipeShareUrl(recipe: Recipe, options?: { dropLocalImage?: boolean }) {
   const withLocalImageRemoved =
     options?.dropLocalImage && hasLocalRecipeImage(recipe)
-      ? { ...recipe, imageUrl: undefined, sourceImageUrl: undefined }
+      ? { ...recipe, imageUrl: undefined, imageUrls: [], sourceImageUrl: undefined, sourceImageUrls: [] }
       : recipe;
   return createRecipeShareUrl(withLocalImageRemoved);
 }
@@ -207,6 +207,8 @@ type CompactDraftV2 = {
   no?: string;
   im?: string;
   si?: string;
+  ims?: string[];
+  sis?: string[];
 };
 
 function compactRecipeDraft(draft: RecipeDraft): CompactDraftV2 {
@@ -227,6 +229,8 @@ function compactRecipeDraft(draft: RecipeDraft): CompactDraftV2 {
     no: draft.notes || undefined,
     im: draft.imageUrl || undefined,
     si: draft.sourceImageUrl || undefined,
+    ims: draft.imageUrls?.length ? draft.imageUrls : undefined,
+    sis: draft.sourceImageUrls?.length ? draft.sourceImageUrls : undefined,
   };
 }
 
@@ -260,7 +264,9 @@ function expandSharedDraft(parsed: unknown): RecipeDraft {
     totalTime: typeof compact.tt === "number" ? compact.tt : undefined,
     notes: typeof compact.no === "string" ? compact.no : "",
     imageUrl: typeof compact.im === "string" ? compact.im : "",
+    imageUrls: Array.isArray(compact.ims) ? compact.ims.map((x) => `${x}`) : [],
     sourceImageUrl: typeof compact.si === "string" ? compact.si : "",
+    sourceImageUrls: Array.isArray(compact.sis) ? compact.sis.map((x) => `${x}`) : [],
   };
 }
 

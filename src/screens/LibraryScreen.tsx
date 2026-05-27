@@ -6,7 +6,7 @@ import { RecipeDetail } from "../components/RecipeDetail";
 import { SectionToggleHeader } from "../components/SectionToggleHeader";
 import { SEASONAL_THRESHOLDS, SEASONAL_THRESHOLD_LABELS } from "../constants";
 import type { Recipe, RegimeFilter, SeasonalThreshold } from "../types";
-import { proxiedImageUrl } from "../utils/images";
+import { primaryRecipeImageUrl, proxiedImageUrl } from "../utils/images";
 import { normalizeText } from "../utils/text";
 import { getTagStyle } from "../utils/tagStyle";
 import type { TagCategory } from "../hooks/useTags";
@@ -468,7 +468,7 @@ function RecipeGrid({
     <section className="recipe-grid" aria-label="Toutes les recettes">
       {recipes.map((recipe) => (
         <button className="recipe-card-button" key={recipe.id} onClick={() => onSelectRecipe(recipe.id)}>
-          {recipe.imageUrl ? <img src={proxiedImageUrl(recipe.imageUrl, recipe.sourceUrl)} alt="" /> : <div className="recipe-card-placeholder" />}
+          {primaryRecipeImageUrl(recipe) ? <img src={proxiedImageUrl(primaryRecipeImageUrl(recipe), recipe.sourceUrl)} alt="" /> : <div className="recipe-card-placeholder" />}
           <span className="recipe-card-title">{recipe.name}</span>
           {recipe.origin && <span className="muted">{recipe.origin}</span>}
           <span className="recipe-card-meta">

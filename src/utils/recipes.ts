@@ -39,7 +39,9 @@ export function recipeToDraft(recipe: Recipe): RecipeDraft {
     totalTime: recipe.totalTime,
     notes: recipe.notes,
     imageUrl: recipe.imageUrl,
+    imageUrls: recipe.imageUrls,
     sourceImageUrl: recipe.sourceImageUrl,
+    sourceImageUrls: recipe.sourceImageUrls,
   };
 }
 
@@ -63,7 +65,9 @@ export function cleanRecipeDraft(draft: RecipeDraft): RecipeDraft {
     videoUrl: stripWrappingQuotes(draft.videoUrl?.trim()),
     notes: stripWrappingQuotes(draft.notes?.trim()),
     imageUrl: stripWrappingQuotes(draft.imageUrl?.trim()),
+    imageUrls: (draft.imageUrls ?? []).map((url) => stripWrappingQuotes(url?.trim()) ?? "").filter(Boolean),
     sourceImageUrl: stripWrappingQuotes(draft.sourceImageUrl?.trim()),
+    sourceImageUrls: (draft.sourceImageUrls ?? []).map((url) => stripWrappingQuotes(url?.trim()) ?? "").filter(Boolean),
   };
 }
 

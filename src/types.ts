@@ -22,7 +22,9 @@ export type Recipe = {
   totalTime?: number;
   notes?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   sourceImageUrl?: string;
+  sourceImageUrls?: string[];
   createdAt: string;
   updatedAt: string;
 };

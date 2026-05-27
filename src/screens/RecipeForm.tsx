@@ -6,6 +6,7 @@ import type { TagCategory } from "../hooks/useTags";
 import { RECIPE_ORIGINS } from "../origins";
 import type { Ingredient, RecipeDraft, ReimportMode } from "../types";
 import { createId } from "../utils/id";
+import { mergedRecipeImageUrls } from "../utils/images";
 import { getTagStyle } from "../utils/tagStyle";
 
 type Props = {
@@ -58,20 +59,35 @@ export function RecipeForm({
     setDraft((current) => ({ ...current, [field]: value }));
   }
 
-  function setImageOverride(imageUrl: string) {
+  function setImageOverride(imageUrls: string[]) {
+    const next = mergedRecipeImageUrls({ imageUrls });
     setDraft((current) => ({
       ...current,
-      imageUrl: imageUrl || undefined,
+      imageUrl: next[0],
+      imageUrls: next,
       sourceImageUrl:
         current.sourceImageUrl ?? (current.imageUrl && current.sourceUrl ? current.imageUrl : undefined),
+      sourceImageUrls:
+        current.sourceImageUrls ??
+        mergedRecipeImageUrls({ imageUrl: current.sourceImageUrl ?? current.imageUrl, imageUrls: current.imageUrls }),
     }));
   }
 
   function resetImageOverride() {
     setDraft((current) => ({
-      ...current,
-      imageUrl: current.sourceImageUrl,
-      sourceImageUrl: current.sourceImageUrl,
+      ...(() => {
+        const sourceImages = mergedRecipeImageUrls({
+          imageUrl: current.sourceImageUrl ?? current.imageUrl,
+          imageUrls: current.sourceImageUrls,
+        });
+        return {
+          ...current,
+          imageUrl: sourceImages[0],
+          imageUrls: sourceImages,
+          sourceImageUrl: sourceImages[0],
+          sourceImageUrls: sourceImages,
+        };
+      })(),
     }));
   }
 
@@ -277,8 +293,8 @@ export function RecipeForm({
       </div>
 
       <ImageField
-        value={draft.imageUrl ?? ""}
-        sourceValue={draft.sourceImageUrl}
+        values={mergedRecipeImageUrls({ imageUrl: draft.imageUrl, imageUrls: draft.imageUrls })}
+        sourceValues={mergedRecipeImageUrls({ imageUrl: draft.sourceImageUrl, imageUrls: draft.sourceImageUrls })}
         onChange={setImageOverride}
         onReset={resetImageOverride}
         onStatus={onStatus}
@@ -328,26 +344,28 @@ export function RecipeForm({
 }
 
 function ImageField({
-  value,
-  sourceValue,
+  values,
+  sourceValues,
   onChange,
   onReset,
   onStatus,
 }: {
-  value: string;
-  sourceValue?: string;
-  onChange: (value: string) => void;
+  values: string[];
+  sourceValues: string[];
+  onChange: (value: string[]) => void;
   onReset: () => void;
   onStatus: (message: string) => void;
 }) {
-  const hasImage = Boolean(value);
-  const hasCustomImage = hasImage && value !== sourceValue;
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const hasImage = values.length > 0;
+  const hasCustomImage = values.join("|") !== sourceValues.join("|");
 
   async function handleUpload(file: File | undefined) {
     if (!file) return;
 
     try {
-      onChange(await imageFileToDataUrl(file));
+      const image = await imageFileToDataUrl(file);
+      onChange([...values, image]);
     } catch {
       onStatus("Image impossible a lire. Essaie un autre fichier.");
     }
@@ -357,19 +375,19 @@ function ImageField({
     <section className="form-section image-field">
       <div className="image-field__header">
         <div>
-          <h3>Photo</h3>
-          <p className="muted">Cette image remplace l'apercu importe depuis le site source.</p>
+          <h3>Photos</h3>
+          <p className="muted">Ajoute plusieurs images. La premiere est utilisee en apercu.</p>
         </div>
         {hasCustomImage && (
           <button className="button button--danger button--icon-mobile" type="button" onClick={onReset}>
-            <Trash2 size={18} /> {sourceValue ? "Revenir a l'image source" : "Retirer"}
+            <Trash2 size={18} /> {sourceValues.length > 0 ? "Revenir a l'image source" : "Retirer"}
           </button>
         )}
       </div>
 
       <div className="image-field__body">
         {hasImage ? (
-          <img className="image-field__preview" src={value} alt="" />
+          <img className="image-field__preview" src={values[0]} alt="" />
         ) : (
           <div className="image-field__empty">
             <ImageIcon size={30} />
@@ -377,8 +395,20 @@ function ImageField({
         )}
         <div className="image-field__controls">
           <label>
-            URL de l'image
-            <input value={value.startsWith("data:") ? "" : value} placeholder="https://..." onChange={(event) => onChange(event.target.value)} />
+            URL de l'image a ajouter
+            <input
+              value={newImageUrl}
+              placeholder="https://..."
+              onChange={(event) => setNewImageUrl(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                const next = newImageUrl.trim();
+                if (!next) return;
+                onChange([...values, next]);
+                setNewImageUrl("");
+              }}
+            />
           </label>
           <label className="image-field__file-label">
             Image depuis l'appareil
@@ -392,6 +422,21 @@ function ImageField({
               }}
             />
           </label>
+          {values.length > 0 && (
+            <div className="stack">
+              {values.map((imageUrl, index) => (
+                <div className="image-field__list-row" key={`${imageUrl}-${index}`}>
+                  <input value={imageUrl} onChange={(event) => onChange(values.map((value, i) => (i === index ? event.target.value : value)))} />
+                  <button className="button" type="button" onClick={() => onChange([imageUrl, ...values.filter((_, i) => i !== index)])}>
+                    Principal
+                  </button>
+                  <button className="button button--danger" type="button" onClick={() => onChange(values.filter((_, i) => i !== index))}>
+                    Retirer
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>

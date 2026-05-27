@@ -642,6 +642,65 @@ label {
   border-radius: var(--radius-md);
 }
 
+.recipe-carousel {
+  position: relative;
+  margin-bottom: var(--section-gap);
+}
+
+.recipe-carousel .recipe-image {
+  margin-bottom: 0;
+}
+
+.recipe-carousel__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--color-primary-text);
+  background: rgba(41, 50, 65, 0.72);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.recipe-carousel__nav--prev {
+  left: var(--space-2);
+}
+
+.recipe-carousel__nav--next {
+  right: var(--space-2);
+}
+
+.recipe-carousel__dots {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-2);
+  transform: translateX(-50%);
+  display: inline-flex;
+  gap: var(--space-1);
+  padding: 6px 8px;
+  background: rgba(41, 50, 65, 0.38);
+  border-radius: 999px;
+}
+
+.recipe-carousel__dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  background: rgba(255, 253, 247, 0.62);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.recipe-carousel__dot--active {
+  background: var(--color-primary-text);
+}
+
 .recipe-title,
 .chip-list,
 .meta-list {
@@ -904,6 +963,12 @@ label {
 .image-field__controls {
   display: grid;
   gap: var(--space-3);
+}
+
+.image-field__list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--space-2);
 }
 
 .image-field__file-label {

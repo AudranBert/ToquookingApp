@@ -1796,7 +1796,9 @@ function parseRecipeFromToquePayloadText(content: string): ParsedRecipe | null {
       totalTime: numberValue(parsed.tt),
       notes: cleanText(parsed.no),
       imageUrl: cleanText(parsed.im),
+      imageUrls: Array.isArray(parsed.ims) ? parsed.ims.map((value) => cleanText(value)).filter(Boolean) : undefined,
       sourceImageUrl: cleanText(parsed.si),
+      sourceImageUrls: Array.isArray(parsed.sis) ? parsed.sis.map((value) => cleanText(value)).filter(Boolean) : undefined,
       warnings: undefined,
     };
   } catch {
@@ -1835,7 +1837,9 @@ function parseRecipeFromJsonText(content: string): ParsedRecipe | null {
       totalTime: numberValue(recipe.totalTime),
       notes: cleanText(recipe.notes),
       imageUrl: cleanText(recipe.imageUrl),
+      imageUrls: Array.isArray(recipe.imageUrls) ? recipe.imageUrls.map((value) => cleanText(value)).filter(Boolean) : undefined,
       sourceImageUrl: cleanText(recipe.sourceImageUrl),
+      sourceImageUrls: Array.isArray(recipe.sourceImageUrls) ? recipe.sourceImageUrls.map((value) => cleanText(value)).filter(Boolean) : undefined,
       warnings: undefined,
     };
   } catch {

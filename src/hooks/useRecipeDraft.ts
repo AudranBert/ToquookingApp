@@ -4,6 +4,7 @@ import type { ParsedRecipe, Recipe, RecipeDraft, ReimportMode } from "../types";
 import { createId } from "../utils/id";
 import { createEmptyDraft, recipeToDraft } from "../utils/recipes";
 import { normalizeText } from "../utils/text";
+import { mergedRecipeImageUrls } from "../utils/images";
 import type { StatusApi } from "./useStatus";
 
 export function useRecipeDraft(status: StatusApi, allTags: string[]) {
@@ -135,6 +136,7 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
 
 function parsedToDraft(parsed: ParsedRecipe, fallbackUrl: string, allTags: string[]): RecipeDraft {
   const imageUrl = parsed.imageUrl;
+  const imageUrls = mergedRecipeImageUrls({ imageUrl, imageUrls: parsed.imageUrls });
 
   return {
     ...createEmptyDraft(),
@@ -142,7 +144,9 @@ function parsedToDraft(parsed: ParsedRecipe, fallbackUrl: string, allTags: strin
     sourceUrl: parsed.sourceUrl ?? fallbackUrl,
     videoUrl: parsed.videoUrl,
     imageUrl,
+    imageUrls,
     sourceImageUrl: imageUrl,
+    sourceImageUrls: imageUrls,
     tags: matchKnownTags(parsed.tags ?? [], allTags),
     ingredients: parsed.ingredients?.length ? parsed.ingredients : [{ id: createId(), name: "" }],
     instructions: parsed.instructions?.length ? parsed.instructions : [""],
@@ -162,7 +166,15 @@ function mergeBlanks(current: RecipeDraft, imported: RecipeDraft): RecipeDraft {
     totalTime: current.totalTime ?? imported.totalTime,
     notes: current.notes || imported.notes,
     imageUrl: current.imageUrl || imported.imageUrl,
+    imageUrls: mergedRecipeImageUrls({
+      imageUrl: current.imageUrl || imported.imageUrl,
+      imageUrls: (current.imageUrls?.length ? current.imageUrls : imported.imageUrls) ?? [],
+    }),
     sourceImageUrl: current.sourceImageUrl || imported.sourceImageUrl,
+    sourceImageUrls: mergedRecipeImageUrls({
+      imageUrl: current.sourceImageUrl || imported.sourceImageUrl,
+      imageUrls: (current.sourceImageUrls?.length ? current.sourceImageUrls : imported.sourceImageUrls) ?? [],
+    }),
     origin: current.origin || imported.origin,
     tags: current.tags.length ? current.tags : imported.tags,
     ingredients: hasFilledIngredients(current) ? current.ingredients : imported.ingredients,

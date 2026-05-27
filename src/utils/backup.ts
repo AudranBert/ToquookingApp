@@ -2,6 +2,7 @@ import { normalizeText } from "../seasonal";
 import type { BackupFile, Recipe, RecipeTag } from "../types";
 import { createId } from "./id";
 import JSZip from "jszip";
+import { mergedRecipeImageUrls } from "./images";
 
 type RecipeDatabaseJson = {
   version: 1;
@@ -62,7 +63,13 @@ async function recipesBackupZipBlob(recipes: Recipe[], tags: Array<Pick<RecipeTa
   for (const recipe of recipes) {
     const recipeForFile: Recipe = { ...recipe };
     recipeForFile.imageUrl = await exportImageToZip(recipe.imageUrl, imageFolder, imagePathByDataUrl, recipe.id, "image");
+    recipeForFile.imageUrls = (
+      await Promise.all((recipe.imageUrls ?? []).map((url) => exportImageToZip(url, imageFolder, imagePathByDataUrl, recipe.id, "image")))
+    ).filter((url): url is string => Boolean(url));
     recipeForFile.sourceImageUrl = await exportImageToZip(recipe.sourceImageUrl, imageFolder, imagePathByDataUrl, recipe.id, "source");
+    recipeForFile.sourceImageUrls = (
+      await Promise.all((recipe.sourceImageUrls ?? []).map((url) => exportImageToZip(url, imageFolder, imagePathByDataUrl, recipe.id, "source")))
+    ).filter((url): url is string => Boolean(url));
     const name = `${safeSlug(recipe.name)}-${recipe.id}.json`;
     recipeFolder?.file(name, JSON.stringify(recipeForFile, null, 2));
   }
@@ -276,7 +283,15 @@ function normalizeImportedRecipe(input: unknown, now: string): Recipe {
     totalTime: typeof record.totalTime === "number" ? record.totalTime : undefined,
     notes: typeof record.notes === "string" && record.notes.trim() ? record.notes : undefined,
     imageUrl: typeof record.imageUrl === "string" && record.imageUrl.trim() ? record.imageUrl.trim() : undefined,
+    imageUrls: mergedRecipeImageUrls({
+      imageUrl: typeof record.imageUrl === "string" ? record.imageUrl : undefined,
+      imageUrls: Array.isArray(record.imageUrls) ? record.imageUrls.map((value) => `${value}`) : [],
+    }),
     sourceImageUrl: typeof record.sourceImageUrl === "string" && record.sourceImageUrl.trim() ? record.sourceImageUrl.trim() : undefined,
+    sourceImageUrls: mergedRecipeImageUrls({
+      imageUrl: typeof record.sourceImageUrl === "string" ? record.sourceImageUrl : undefined,
+      imageUrls: Array.isArray(record.sourceImageUrls) ? record.sourceImageUrls.map((value) => `${value}`) : [],
+    }),
     createdAt: typeof record.createdAt === "string" && record.createdAt.trim() ? record.createdAt : now,
     updatedAt: typeof record.updatedAt === "string" && record.updatedAt.trim() ? record.updatedAt : now,
   };
@@ -339,7 +354,9 @@ function hydrateRecipeImageRefs(raw: unknown, images: Map<string, string>) {
   return {
     ...record,
     imageUrl: hydrateImageRef(record.imageUrl, images),
+    imageUrls: Array.isArray(record.imageUrls) ? record.imageUrls.map((url) => hydrateImageRef(url, images) ?? "").filter(Boolean) : undefined,
     sourceImageUrl: hydrateImageRef(record.sourceImageUrl, images),
+    sourceImageUrls: Array.isArray(record.sourceImageUrls) ? record.sourceImageUrls.map((url) => hydrateImageRef(url, images) ?? "").filter(Boolean) : undefined,
   };
 }
 
