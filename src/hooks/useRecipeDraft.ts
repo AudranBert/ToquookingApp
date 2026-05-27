@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { importRecipeFromUrl } from "../importer";
+import { importRecipeFromText, importRecipeFromUrl } from "../importer";
 import type { ParsedRecipe, Recipe, RecipeDraft, ReimportMode } from "../types";
 import { createId } from "../utils/id";
 import { createEmptyDraft, recipeToDraft } from "../utils/recipes";
@@ -11,17 +11,20 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
   const [importUrl, setImportUrl] = useState("");
+  const [importText, setImportText] = useState("");
 
   function startNew() {
     setEditingId(null);
     setDraft(createEmptyDraft());
     setImportWarnings([]);
+    setImportText("");
   }
 
   function startEdit(recipe: Recipe) {
     setEditingId(recipe.id);
     setDraft(recipeToDraft(recipe));
     setImportWarnings([]);
+    setImportText("");
   }
 
   async function importFromUrl() {
@@ -54,6 +57,25 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
       errorStatus: "Reimport impossible pour ce lien source.",
       apply: (imported) => setDraft((current) => (mode === "replace" ? imported : mergeBlanks(current, imported))),
     });
+  }
+
+  function importFromText() {
+    const text = importText.trim();
+    if (!text) return false;
+
+    status.setStatus("Analyse du texte en cours (nom, ingredients, etapes)...");
+    try {
+      const parsed = importRecipeFromText(text);
+      const imported = parsedToDraft(parsed, parsed.sourceUrl ?? "", allTags);
+      setDraft(imported);
+      setEditingId(null);
+      setImportWarnings(parsed.warnings ?? []);
+      status.setStatus("Import texte termine. Verifie les champs puis enregistre la recette.");
+      return true;
+    } catch {
+      status.setStatus("Import texte impossible. Colle un texte plus complet.");
+      return false;
+    }
   }
 
   async function runImport({
@@ -91,9 +113,12 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
     importWarnings,
     importUrl,
     setImportUrl,
+    importText,
+    setImportText,
     startNew,
     startEdit,
     importFromUrl,
+    importFromText,
     reimport,
   };
 }

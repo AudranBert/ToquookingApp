@@ -25,7 +25,7 @@ export function downloadRecipeDatabaseJson(recipes: Recipe[], tags: Array<Pick<R
 export async function shareRecipesBackup(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
   const filename = recipesBackupFileName();
   const blob = recipesBackupTextBlob(recipes, tags);
-  const textFile = new File([blob], filename, { type: "text/plain" });
+  const textFile = new File([blob], filename, { type: "application/json" });
   if (await tryShare({ files: [textFile] })) {
     return "shared";
   }
@@ -45,7 +45,7 @@ function recipesBackupTextBlob(recipes: Recipe[], tags: Array<Pick<RecipeTag, "n
     tags: globalTags,
     recipes,
   };
-  return new Blob([JSON.stringify(backup, null, 2)], { type: "text/plain;charset=utf-8" });
+  return new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
 }
 
 export function downloadSingleRecipeBackup(recipe: Recipe) {
@@ -55,7 +55,7 @@ export function downloadSingleRecipeBackup(recipe: Recipe) {
 export async function shareSingleRecipeBackup(recipe: Recipe) {
   const filename = recipeBackupFileName(recipe);
   const blob = singleRecipeBackupTextBlob(recipe);
-  const textFile = new File([blob], filename, { type: "text/plain" });
+  const textFile = new File([blob], filename, { type: "application/json" });
   if (await tryShare({ files: [textFile] })) {
     return "shared";
   }
@@ -71,7 +71,7 @@ function singleRecipeBackupTextBlob(recipe: Recipe) {
     tags: normalizeTagRecords(recipe.tags.map((name) => ({ name }))),
     recipes: [recipe],
   };
-  return new Blob([JSON.stringify(backup, null, 2)], { type: "text/plain;charset=utf-8" });
+  return new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -112,11 +112,11 @@ function recipeBackupFileName(recipe: Recipe) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
-  return `toque-recette-${slug || "recette"}.txt`;
+  return `toque-recette-${slug || "recette"}.json`;
 }
 
 function recipesBackupFileName() {
-  return `toque-sauvegarde-${new Date().toISOString().slice(0, 10)}.txt`;
+  return `toque-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
 }
 
 function normalizeTagRecords(tags: Array<Pick<RecipeTag, "name" | "category" | "color">>) {

@@ -341,6 +341,15 @@ label {
   gap: var(--space-2);
 }
 
+.text-import-control {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.text-import-control textarea {
+  min-height: 120px;
+}
+
 .import-support {
   display: grid;
   gap: var(--space-2);

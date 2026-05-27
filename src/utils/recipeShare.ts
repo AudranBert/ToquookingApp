@@ -4,6 +4,7 @@ import { cleanRecipeDraft, ingredientLabel, nowIso, recipeToDraft } from "./reci
 
 const SHARE_HASH_KEY = "toqueRecipe";
 const MAX_SHARE_URL_LENGTH = 3200;
+const MAX_SMS_BODY_LENGTH = 1800;
 
 export function createRecipeShareUrl(recipe: Recipe) {
   const url = new URL(window.location.href);
@@ -42,6 +43,7 @@ export function sharedRecipeToImport(recipe: Recipe, existingRecipes: Recipe[]):
 }
 
 export function recipeToShareText(recipe: Recipe) {
+  const shareableImageUrl = /^https?:\/\//i.test(recipe.imageUrl ?? "") ? recipe.imageUrl : "";
   const lines = [
     recipe.name,
     "",
@@ -57,6 +59,8 @@ export function recipeToShareText(recipe: Recipe) {
     recipe.notes ? "" : "",
     recipe.notes ? "Notes:" : "",
     recipe.notes ?? "",
+    shareableImageUrl ? "" : "",
+    shareableImageUrl ? `Image: ${shareableImageUrl}` : "",
     recipe.sourceUrl ? "" : "",
     recipe.sourceUrl ? `Source: ${recipe.sourceUrl}` : "",
     recipe.videoUrl ? `Video: ${recipe.videoUrl}` : "",
@@ -77,6 +81,10 @@ export async function shareRecipeText(recipe: Recipe) {
   }
 
   if (isLikelyMobile()) {
+    if (text.length > MAX_SMS_BODY_LENGTH) {
+      downloadTextFile(text, recipeTextFileName(recipe));
+      return "downloaded";
+    }
     window.location.href = `sms:?&body=${encodeURIComponent(text)}`;
     return "sms";
   }
@@ -87,6 +95,25 @@ export async function shareRecipeText(recipe: Recipe) {
   } catch {
     return "manual";
   }
+}
+
+function downloadTextFile(text: string, filename: string) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function recipeTextFileName(recipe: Recipe) {
+  const slug = recipe.name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  return `toque-recette-${slug || "recette"}.txt`;
 }
 
 export async function shareRecipeLink(recipe: Recipe) {

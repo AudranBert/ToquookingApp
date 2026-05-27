@@ -147,6 +147,11 @@ export function App() {
     if (ok) setActivePanel("form");
   }
 
+  function handleTextImport() {
+    const ok = draftApi.importFromText();
+    if (ok) setActivePanel("form");
+  }
+
   async function handleBackupImport(file: File) {
     const firstId = await importBackup(file);
     if (firstId) setSelectedId(firstId);
@@ -178,6 +183,7 @@ export function App() {
     if (!selectedRecipe) return;
 
     const result = await withShareStatus(() => shareRecipeText(selectedRecipe), "Le partage texte n'a pas abouti.");
+    if (result === "downloaded") status.setStatus("Texte trop long pour SMS. Fichier .txt telecharge.");
     if (result === "copied") status.setStatus("Texte de la recette copie.");
     if (result === "sms") status.setStatus("Ouverture de l'app SMS.");
     if (result === "manual") status.setStatus("Texte pret a copier.");
@@ -194,8 +200,8 @@ export function App() {
         () => shareSingleRecipeBackup(selectedRecipe),
         "Le partage du fichier recette n'a pas abouti.",
       );
-      if (result === "downloaded") status.setStatus("Lien trop long. Fichier recette .txt telecharge.");
-      if (result === "shared") status.setStatus("Lien trop long. Fichier recette .txt partage.");
+      if (result === "downloaded") status.setStatus("Lien trop long. Fichier recette .json telecharge.");
+      if (result === "shared") status.setStatus("Lien trop long. Fichier recette .json partage.");
       return;
     }
     if (result === "shared") status.setStatus("Lien recette partage.");
@@ -299,6 +305,9 @@ export function App() {
           importUrl={draftApi.importUrl}
           onImportUrlChange={draftApi.setImportUrl}
           onImport={handleAssistedImport}
+          importText={draftApi.importText}
+          onImportTextChange={draftApi.setImportText}
+          onImportText={handleTextImport}
           onCancel={() => setActivePanel("library")}
           onReimport={draftApi.reimport}
           onSubmit={handleSubmit}

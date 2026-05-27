@@ -35,7 +35,7 @@ export function BackupScreen({ onExport, onImport, onDownloadExample, onDownload
         </div>
 
         <p className="muted">
-          Les fichiers de sauvegarde contiennent toutes les recettes au format texte (.txt). Ils peuvent être envoyés par mail,
+          Les fichiers de sauvegarde contiennent toutes les recettes au format JSON (.json). Ils peuvent être envoyés par mail,
           messagerie ou câble USB entre téléphone et ordinateur.
         </p>
       </div>

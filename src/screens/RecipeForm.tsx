@@ -19,6 +19,9 @@ type Props = {
   importUrl: string;
   onImportUrlChange: (url: string) => void;
   onImport: () => void;
+  importText: string;
+  onImportTextChange: (text: string) => void;
+  onImportText: () => void;
   onReimport: (mode: ReimportMode) => void;
   onSubmit: (event: FormEvent) => void;
   onCancel: () => void;
@@ -37,6 +40,9 @@ export function RecipeForm({
   importUrl,
   onImportUrlChange,
   onImport,
+  importText,
+  onImportTextChange,
+  onImportText,
   onSubmit,
   onCancel,
   onReimport,
@@ -146,6 +152,18 @@ export function RecipeForm({
               type="button"
             >
               <Info size={18} />
+            </button>
+          </div>
+          <label htmlFor="new-recipe-import-text">Importer depuis un texte (SMS / partage)</label>
+          <div className="text-import-control">
+            <textarea
+              id="new-recipe-import-text"
+              value={importText}
+              onChange={(event) => onImportTextChange(event.target.value)}
+              placeholder="Colle ici le texte partage par SMS (titre, ingredients, etapes...)"
+            />
+            <button className="button button--primary" onClick={onImportText} type="button">
+              Importer le texte
             </button>
           </div>
           {isImportSupportOpen && (
