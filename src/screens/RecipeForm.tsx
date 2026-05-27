@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Dispatch, FormEvent, KeyboardEvent, SetStateAction } from "react";
-import { Check, ChefHat, Clock3, Flame, Hourglass, Image as ImageIcon, Info, Link, Plus, RefreshCcw, Replace, Trash2, Users, X } from "lucide-react";
+import { Check, ChefHat, Clock3, Flame, Hourglass, Image as ImageIcon, Info, Link, PenSquare, Plus, RefreshCcw, Replace, Text, Trash2, Upload, Users, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { TagCategory } from "../hooks/useTags";
 import { RECIPE_ORIGINS } from "../origins";
@@ -22,6 +22,7 @@ type Props = {
   importText: string;
   onImportTextChange: (text: string) => void;
   onImportText: () => void;
+  onImportFile: (file: File) => void;
   onReimport: (mode: ReimportMode) => void;
   onSubmit: (event: FormEvent) => void;
   onCancel: () => void;
@@ -43,6 +44,7 @@ export function RecipeForm({
   importText,
   onImportTextChange,
   onImportText,
+  onImportFile,
   onSubmit,
   onCancel,
   onReimport,
@@ -50,6 +52,7 @@ export function RecipeForm({
   onStatus,
 }: Props) {
   const [isImportSupportOpen, setIsImportSupportOpen] = useState(false);
+  const [creationMode, setCreationMode] = useState<"manual" | "url" | "text" | "file">("manual");
 
   function updateField<K extends keyof RecipeDraft>(field: K, value: RecipeDraft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -132,51 +135,94 @@ export function RecipeForm({
 
       {!editing && (
         <section className="form-section form-section--import">
-          <label htmlFor="new-recipe-import-url">Importer depuis un lien</label>
-          <div className="inline-control">
-            <input
-              id="new-recipe-import-url"
-              value={importUrl}
-              onChange={(event) => onImportUrlChange(event.target.value)}
-              placeholder="Marmiton, CuisineAZ, YouTube..."
-            />
-            <button className="button button--primary button--icon-mobile" onClick={onImport} type="button">
-              <Link size={18} /> Importer
+          <div className="creation-mode-tabs" role="tablist" aria-label="Mode de creation de recette">
+            <button className={creationMode === "manual" ? "button button--primary" : "button"} type="button" onClick={() => setCreationMode("manual")}>
+              <PenSquare size={16} /> <span className="creation-mode-tabs__label">Manuel</span>
             </button>
-            <button
-              aria-label="Niveaux de support des sites d'import"
-              aria-expanded={isImportSupportOpen}
-              aria-controls="import-support-panel"
-              className="button button--ghost button--icon-mobile"
-              onClick={() => setIsImportSupportOpen((current) => !current)}
-              type="button"
-            >
-              <Info size={18} />
+            <button className={creationMode === "url" ? "button button--primary" : "button"} type="button" onClick={() => setCreationMode("url")}>
+              <Link size={16} /> <span className="creation-mode-tabs__label">Lien</span>
+            </button>
+            <button className={creationMode === "text" ? "button button--primary" : "button"} type="button" onClick={() => setCreationMode("text")}>
+              <Text size={16} /> <span className="creation-mode-tabs__label">Texte</span>
+            </button>
+            <button className={creationMode === "file" ? "button button--primary" : "button"} type="button" onClick={() => setCreationMode("file")}>
+              <Upload size={16} /> <span className="creation-mode-tabs__label">Fichier</span>
             </button>
           </div>
-          <label htmlFor="new-recipe-import-text">Importer depuis un texte (SMS / partage)</label>
-          <div className="text-import-control">
-            <textarea
-              id="new-recipe-import-text"
-              value={importText}
-              onChange={(event) => onImportTextChange(event.target.value)}
-              placeholder="Colle ici le texte partage par SMS (titre, ingredients, etapes...)"
-            />
-            <button className="button button--primary" onClick={onImportText} type="button">
-              Importer le texte
-            </button>
-          </div>
-          {isImportSupportOpen && (
-            <div className="import-support" id="import-support-panel" role="status">
-              <p className="import-support__title">Niveaux de support</p>
-              <ul>
-                <li>marmiton.org: bon</li>
-                <li>cuisineaz.com: bon</li>
-                <li>cuisineactuelle.fr: bon</li>
-                <li>cuisine-libre.org: bon</li>
-                <li>papillesetpupilles.fr: bon a partiel selon la page</li>
-                <li>youtube.com/shorts: partiel (titre/description)</li>
-              </ul>
+
+          {creationMode === "url" && (
+            <>
+              <label htmlFor="new-recipe-import-url">Importer depuis un lien</label>
+              <div className="inline-control">
+                <input
+                  id="new-recipe-import-url"
+                  value={importUrl}
+                  onChange={(event) => onImportUrlChange(event.target.value)}
+                  placeholder="Marmiton, CuisineAZ, YouTube..."
+                />
+                <button className="button button--primary button--icon-mobile" onClick={onImport} type="button">
+                  <Link size={18} /> Importer
+                </button>
+                <button
+                  aria-label="Niveaux de support des sites d'import"
+                  aria-expanded={isImportSupportOpen}
+                  aria-controls="import-support-panel"
+                  className="button button--ghost button--icon-mobile"
+                  onClick={() => setIsImportSupportOpen((current) => !current)}
+                  type="button"
+                >
+                  <Info size={18} />
+                </button>
+              </div>
+              {isImportSupportOpen && (
+                <div className="import-support" id="import-support-panel" role="status">
+                  <p className="import-support__title">Niveaux de support</p>
+                  <ul>
+                    <li>marmiton.org: bon</li>
+                    <li>cuisineaz.com: bon</li>
+                    <li>cuisineactuelle.fr: bon</li>
+                    <li>cuisine-libre.org: bon</li>
+                    <li>papillesetpupilles.fr: bon a partiel selon la page</li>
+                    <li>youtube.com/shorts: partiel (titre/description)</li>
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+
+          {creationMode === "text" && (
+            <>
+              <label htmlFor="new-recipe-import-text">Importer depuis un texte (SMS / partage)</label>
+              <div className="text-import-control">
+                <textarea
+                  id="new-recipe-import-text"
+                  value={importText}
+                  onChange={(event) => onImportTextChange(event.target.value)}
+                  placeholder="Colle ici le texte partage par SMS (titre, ingredients, etapes...)"
+                />
+                <button className="button button--primary" onClick={onImportText} type="button">
+                  Importer le texte
+                </button>
+              </div>
+            </>
+          )}
+
+          {creationMode === "file" && (
+            <div className="text-import-control">
+              <label className="button button--ghost">
+                <Upload size={18} /> Importer un fichier JSON/ZIP
+                <input
+                  accept=".zip,.json,application/zip,application/json,text/plain,.toquooking,.txt"
+                  type="file"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) onImportFile(file);
+                    event.currentTarget.value = "";
+                  }}
+                  style={{ display: "none" }}
+                />
+              </label>
+              <p className="muted">Pour un fichier avec plusieurs recettes, utilise le menu Sauvegardes.</p>
             </div>
           )}
         </section>

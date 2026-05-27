@@ -3,7 +3,7 @@ import { createId } from "./id";
 import { cleanRecipeDraft, ingredientLabel, nowIso, recipeToDraft } from "./recipes";
 
 const SHARE_HASH_KEY = "toqueRecipe";
-const MAX_SHARE_URL_LENGTH = 3200;
+const MAX_SHARE_URL_LENGTH = 1000;
 const MAX_SMS_BODY_LENGTH = 1800;
 
 export function createRecipeShareUrl(recipe: Recipe) {
@@ -116,8 +116,18 @@ function recipeTextFileName(recipe: Recipe) {
   return `toque-recette-${slug || "recette"}.txt`;
 }
 
-export async function shareRecipeLink(recipe: Recipe) {
-  const url = createRecipeShareUrl(recipe);
+export function hasLocalRecipeImage(recipe: Recipe) {
+  const image = recipe.imageUrl?.trim() ?? "";
+  return Boolean(image) && !/^https?:\/\//i.test(image);
+}
+
+export function isRecipeShareUrlTooLong(recipe: Recipe, options?: { dropLocalImage?: boolean }) {
+  const url = buildRecipeShareUrl(recipe, options);
+  return url.length > MAX_SHARE_URL_LENGTH;
+}
+
+export async function shareRecipeLink(recipe: Recipe, options?: { dropLocalImage?: boolean }) {
+  const url = buildRecipeShareUrl(recipe, options);
   if (url.length > MAX_SHARE_URL_LENGTH) {
     return "too_long";
   }
@@ -138,6 +148,14 @@ export async function shareRecipeLink(recipe: Recipe) {
   } catch {
     return "manual";
   }
+}
+
+function buildRecipeShareUrl(recipe: Recipe, options?: { dropLocalImage?: boolean }) {
+  const withLocalImageRemoved =
+    options?.dropLocalImage && hasLocalRecipeImage(recipe)
+      ? { ...recipe, imageUrl: undefined, sourceImageUrl: undefined }
+      : recipe;
+  return createRecipeShareUrl(withLocalImageRemoved);
 }
 
 function encodeRecipeSharePayload(recipe: Recipe) {

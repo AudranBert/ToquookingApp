@@ -346,6 +346,12 @@ label {
   gap: var(--space-2);
 }
 
+.creation-mode-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
 .text-import-control textarea {
   min-height: 120px;
 }
@@ -1234,6 +1240,23 @@ label {
 
   .inline-control {
     grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .creation-mode-tabs .button {
+    width: var(--button-icon-size);
+    min-width: var(--button-icon-size);
+    padding: 9px;
+    font-size: 0;
+    gap: 0;
+  }
+
+  .creation-mode-tabs .button svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .creation-mode-tabs__label {
+    display: none;
   }
 
   .management-tags-grid {

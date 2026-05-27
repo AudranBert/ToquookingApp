@@ -78,6 +78,15 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
     }
   }
 
+  function importFromRecipe(recipe: Recipe) {
+    setDraft(recipeToDraft(recipe));
+    setEditingId(null);
+    setImportWarnings([]);
+    setImportText("");
+    status.setStatus("Recette chargee depuis le fichier. Verifie les champs puis enregistre.");
+    return true;
+  }
+
   async function runImport({
     url,
     loadingStatus,
@@ -119,6 +128,7 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
     startEdit,
     importFromUrl,
     importFromText,
+    importFromRecipe,
     reimport,
   };
 }

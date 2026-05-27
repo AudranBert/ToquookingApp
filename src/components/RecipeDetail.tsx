@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { BookOpen, ChefHat, Clock3, Copy, Edit3, FileDown, FileImage, FileJson, Flame, Hourglass, MessageSquareText, Trash2, Users } from "lucide-react";
+import { BookOpen, ChefHat, Clock3, Copy, Edit3, FileDown, FileImage, Flame, Hourglass, MessageSquareText, Share2, Trash2, Users } from "lucide-react";
 import type { Recipe } from "../types";
 import { currentSeasonalIngredients, recipeContainsSeasonalIngredient } from "../seasonal";
 import { proxiedImageUrl, shouldUseImageCrossOrigin } from "../utils/images";
@@ -60,8 +60,8 @@ export function RecipeDetail({
         <button className="button button--primary button--icon-mobile" onClick={onShareText} title="Partager par SMS">
           <MessageSquareText size={18} /> SMS
         </button>
-        <button className="button button--icon-mobile" onClick={onExportRecipeFile} title="Partager le lien recette">
-          <FileJson size={18} /> Lien
+        <button className="button button--icon-mobile" onClick={onExportRecipeFile} title="Partager recette (lien ou ZIP)">
+          <Share2 size={18} /> Lien
         </button>
         <button className="button button--danger button--icon-mobile" onClick={() => onDelete(recipe)} title="Supprimer">
           <Trash2 size={18} /> Supprimer

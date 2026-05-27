@@ -27,7 +27,7 @@ export function BackupScreen({ onExport, onImport, onDownloadExample, onDownload
           <label className="button file-button backup-import-button button--icon-mobile">
             <Upload size={18} /> {t("backup.action.import")}
             <input
-              accept=".txt,.toquooking,.json,text/plain,application/json"
+              accept=".zip,.txt,.toquooking,.json,application/zip,text/plain,application/json"
               onChange={(event) => event.target.files?.[0] && onImport(event.target.files[0])}
               type="file"
             />
@@ -35,7 +35,7 @@ export function BackupScreen({ onExport, onImport, onDownloadExample, onDownload
         </div>
 
         <p className="muted">
-          Les fichiers de sauvegarde contiennent toutes les recettes au format JSON (.json). Ils peuvent être envoyés par mail,
+          Les fichiers de sauvegarde contiennent toutes les recettes au format ZIP (.zip) avec JSON + images. Ils peuvent être envoyés par mail,
           messagerie ou câble USB entre téléphone et ordinateur.
         </p>
       </div>

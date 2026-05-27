@@ -1,6 +1,7 @@
 import { normalizeText } from "../seasonal";
 import type { BackupFile, Recipe, RecipeTag } from "../types";
 import { createId } from "./id";
+import JSZip from "jszip";
 
 type RecipeDatabaseJson = {
   version: 1;
@@ -11,7 +12,7 @@ type RecipeDatabaseJson = {
 };
 
 export function downloadRecipesBackup(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
-  downloadBlob(recipesBackupTextBlob(recipes, tags), recipesBackupFileName());
+  void recipesBackupZipBlob(recipes, tags).then((blob) => downloadBlob(blob, recipesBackupFileName()));
 }
 
 export function downloadRecipeImportExample() {
@@ -24,9 +25,9 @@ export function downloadRecipeDatabaseJson(recipes: Recipe[], tags: Array<Pick<R
 
 export async function shareRecipesBackup(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
   const filename = recipesBackupFileName();
-  const blob = recipesBackupTextBlob(recipes, tags);
-  const textFile = new File([blob], filename, { type: "application/json" });
-  if (await tryShare({ files: [textFile] })) {
+  const blob = await recipesBackupZipBlob(recipes, tags);
+  const zipFile = new File([blob], filename, { type: "application/zip" });
+  if (await tryShare({ files: [zipFile] })) {
     return "shared";
   }
 
@@ -48,15 +49,36 @@ function recipesBackupTextBlob(recipes: Recipe[], tags: Array<Pick<RecipeTag, "n
   return new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
 }
 
+async function recipesBackupZipBlob(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
+  const zip = new JSZip();
+  const recipeFolder = zip.folder("recipes");
+  const imageFolder = zip.folder("images");
+  const imagePathByDataUrl = new Map<string, string>();
+
+  const backupBlob = recipesBackupTextBlob(recipes, tags);
+  zip.file("backup.json", await backupBlob.text());
+  zip.file("database.json", await recipeDatabaseBlob(recipes, tags).text());
+
+  for (const recipe of recipes) {
+    const recipeForFile: Recipe = { ...recipe };
+    recipeForFile.imageUrl = await exportImageToZip(recipe.imageUrl, imageFolder, imagePathByDataUrl, recipe.id, "image");
+    recipeForFile.sourceImageUrl = await exportImageToZip(recipe.sourceImageUrl, imageFolder, imagePathByDataUrl, recipe.id, "source");
+    const name = `${safeSlug(recipe.name)}-${recipe.id}.json`;
+    recipeFolder?.file(name, JSON.stringify(recipeForFile, null, 2));
+  }
+
+  return zip.generateAsync({ type: "blob" });
+}
+
 export function downloadSingleRecipeBackup(recipe: Recipe) {
-  downloadBlob(singleRecipeBackupTextBlob(recipe), recipeBackupFileName(recipe));
+  void singleRecipeBackupZipBlob(recipe).then((blob) => downloadBlob(blob, recipeBackupFileName(recipe)));
 }
 
 export async function shareSingleRecipeBackup(recipe: Recipe) {
   const filename = recipeBackupFileName(recipe);
-  const blob = singleRecipeBackupTextBlob(recipe);
-  const textFile = new File([blob], filename, { type: "application/json" });
-  if (await tryShare({ files: [textFile] })) {
+  const blob = await singleRecipeBackupZipBlob(recipe);
+  const zipFile = new File([blob], filename, { type: "application/zip" });
+  if (await tryShare({ files: [zipFile] })) {
     return "shared";
   }
 
@@ -74,6 +96,10 @@ function singleRecipeBackupTextBlob(recipe: Recipe) {
   return new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
 }
 
+async function singleRecipeBackupZipBlob(recipe: Recipe) {
+  return recipesBackupZipBlob([recipe], normalizeTagRecords(recipe.tags.map((name) => ({ name }))));
+}
+
 function downloadBlob(blob: Blob, filename: string) {
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
@@ -83,15 +109,15 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 export async function parseBackupFile(file: File, existingRecipes: Recipe[]) {
-  const backup = JSON.parse(await file.text()) as Partial<BackupFile> & { recipes?: unknown[] };
-  if (backup.version !== 1 || !Array.isArray(backup.recipes)) {
-    throw new Error("Invalid backup format");
-  }
+  const parsed = file.name.toLowerCase().endsWith(".zip")
+    ? await parseZipBackup(file)
+    : parseJsonBackup(await file.text());
+  if (!Array.isArray(parsed.recipes)) throw new Error("Invalid backup format");
 
   const existingKeys = new Set(existingRecipes.map((recipe) => normalizeText(`${recipe.name} ${recipe.sourceUrl ?? ""}`)));
   const now = new Date().toISOString();
 
-  const recipes = backup.recipes.map((rawRecipe) => {
+  const recipes = parsed.recipes.map((rawRecipe) => {
     const recipe = normalizeImportedRecipe(rawRecipe, now);
     const key = normalizeText(`${recipe.name} ${recipe.sourceUrl ?? ""}`);
     return existingKeys.has(key)
@@ -101,7 +127,7 @@ export async function parseBackupFile(file: File, existingRecipes: Recipe[]) {
 
   return {
     recipes,
-    tags: parseImportedTags(backup.tags),
+    tags: parseImportedTags(parsed.tags),
   };
 }
 
@@ -112,11 +138,11 @@ function recipeBackupFileName(recipe: Recipe) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
-  return `toque-recette-${slug || "recette"}.json`;
+  return `toque-recette-${slug || "recette"}.zip`;
 }
 
 function recipesBackupFileName() {
-  return `toque-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
+  return `toque-sauvegarde-${new Date().toISOString().slice(0, 10)}.zip`;
 }
 
 function normalizeTagRecords(tags: Array<Pick<RecipeTag, "name" | "category" | "color">>) {
@@ -270,4 +296,131 @@ async function tryShare(shareData: ShareData) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
     return false;
   }
+}
+
+function parseJsonBackup(text: string) {
+  const backup = JSON.parse(text) as Partial<BackupFile> & { recipes?: unknown[] };
+  if (backup.version !== 1 || !Array.isArray(backup.recipes)) throw new Error("Invalid backup format");
+  return backup;
+}
+
+async function parseZipBackup(file: File) {
+  const zip = await JSZip.loadAsync(file);
+  const backupFile = zip.file("backup.json");
+  const recipeFiles = Object.values(zip.files).filter((entry) => /^recipes\/.+\.json$/i.test(entry.name));
+
+  const base = backupFile ? parseJsonBackup(await backupFile.async("string")) : ({ version: 1 } as Partial<BackupFile>);
+  let recipes: unknown[] = [];
+
+  if (recipeFiles.length > 0) {
+    recipes = await Promise.all(recipeFiles.map(async (entry) => JSON.parse(await entry.async("string")) as unknown));
+  } else if (Array.isArray(base.recipes)) {
+    recipes = base.recipes;
+  } else {
+    throw new Error("Invalid backup format");
+  }
+
+  const images = new Map<string, string>();
+  const imageFiles = Object.values(zip.files).filter((entry) => /^images\/.+$/i.test(entry.name));
+  await Promise.all(
+    imageFiles.map(async (entry) => {
+      const bytes = await entry.async("uint8array");
+      images.set(entry.name, uint8ToDataUrl(bytes, guessMimeType(entry.name)));
+    }),
+  );
+
+  const hydratedRecipes = recipes.map((raw) => hydrateRecipeImageRefs(raw, images));
+  return { ...base, recipes: hydratedRecipes };
+}
+
+function hydrateRecipeImageRefs(raw: unknown, images: Map<string, string>) {
+  if (!raw || typeof raw !== "object") return raw;
+  const record = raw as Partial<Recipe>;
+  return {
+    ...record,
+    imageUrl: hydrateImageRef(record.imageUrl, images),
+    sourceImageUrl: hydrateImageRef(record.sourceImageUrl, images),
+  };
+}
+
+function hydrateImageRef(value: string | undefined, images: Map<string, string>) {
+  if (!value) return value;
+  if (/^https?:\/\//i.test(value) || value.startsWith("data:")) return value;
+  const normalized = value.replace(/^\.?\//, "");
+  return images.get(normalized) ?? value;
+}
+
+async function exportImageToZip(
+  value: string | undefined,
+  folder: JSZip | null,
+  imagePathByDataUrl: Map<string, string>,
+  recipeId: string,
+  role: "image" | "source",
+) {
+  if (!value) return value;
+  if (/^https?:\/\//i.test(value)) return value;
+  if (!value.startsWith("data:")) return value;
+
+  const existingPath = imagePathByDataUrl.get(value);
+  if (existingPath) return existingPath;
+
+  const parsed = parseDataUrl(value);
+  if (!parsed) return value;
+  const extension = extensionFromMime(parsed.mimeType);
+  const path = `images/${recipeId}-${role}.${extension}`;
+  folder?.file(`${recipeId}-${role}.${extension}`, parsed.bytes);
+  imagePathByDataUrl.set(value, path);
+  return path;
+}
+
+function parseDataUrl(dataUrl: string) {
+  const match = dataUrl.match(/^data:([^;,]+)?(;base64)?,(.*)$/);
+  if (!match) return null;
+  const mimeType = match[1] || "application/octet-stream";
+  const isBase64 = match[2] === ";base64";
+  const raw = match[3] ?? "";
+  if (!isBase64) {
+    const text = decodeURIComponent(raw);
+    return { mimeType, bytes: new TextEncoder().encode(text) };
+  }
+  const binary = atob(raw);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return { mimeType, bytes };
+}
+
+function extensionFromMime(mimeType: string) {
+  if (mimeType.includes("png")) return "png";
+  if (mimeType.includes("webp")) return "webp";
+  if (mimeType.includes("gif")) return "gif";
+  if (mimeType.includes("svg")) return "svg";
+  if (mimeType.includes("bmp")) return "bmp";
+  return "jpg";
+}
+
+function guessMimeType(path: string) {
+  if (path.endsWith(".png")) return "image/png";
+  if (path.endsWith(".webp")) return "image/webp";
+  if (path.endsWith(".gif")) return "image/gif";
+  if (path.endsWith(".svg")) return "image/svg+xml";
+  if (path.endsWith(".bmp")) return "image/bmp";
+  return "image/jpeg";
+}
+
+function uint8ToDataUrl(bytes: Uint8Array, mimeType: string) {
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return `data:${mimeType};base64,${btoa(binary)}`;
+}
+
+function safeSlug(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "") || "recette";
 }

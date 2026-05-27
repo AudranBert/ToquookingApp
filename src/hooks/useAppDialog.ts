@@ -29,9 +29,9 @@ const CLOSED: ClosedDialogState = { open: false, title: "" };
 export function useAppDialog() {
   const [state, setState] = useState<DialogState>(CLOSED);
 
-  const confirm = useCallback((title: string, message?: string, danger = false) => {
+  const confirm = useCallback((title: string, message?: string, danger = false, confirmLabel = "Confirmer", cancelLabel = "Annuler") => {
     return new Promise<boolean>((resolve) => {
-      setState({ open: true, kind: "confirm", title, message, danger, resolve, confirmLabel: "Confirmer", cancelLabel: "Annuler" });
+      setState({ open: true, kind: "confirm", title, message, danger, resolve, confirmLabel, cancelLabel });
     });
   }, []);
 
