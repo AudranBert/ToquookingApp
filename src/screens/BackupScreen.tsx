@@ -27,7 +27,7 @@ export function BackupScreen({ onExport, onImport, onDownloadExample, onDownload
           <label className="button file-button backup-import-button button--icon-mobile">
             <Upload size={18} /> {t("backup.action.import")}
             <input
-              accept=".zip,.txt,.toquooking,.json,application/zip,text/plain,application/json"
+              accept=".zip,.txt,.json,application/zip,text/plain,application/json"
               onChange={(event) => event.target.files?.[0] && onImport(event.target.files[0])}
               type="file"
             />
@@ -50,7 +50,7 @@ export function BackupScreen({ onExport, onImport, onDownloadExample, onDownload
           </button>
         </div>
 
-        <p className="muted">L'exemple JSON montre le format attendu pour créer des recettes en dehors de l'application puis les importer.</p>
+        <p className="muted">L'exemple ZIP montre le format attendu pour créer des recettes en dehors de l'application puis les importer.</p>
         <p className="muted">La base JSON liste les tags, ingrédients et noms de recettes actuellement disponibles.</p>
       </div>
 

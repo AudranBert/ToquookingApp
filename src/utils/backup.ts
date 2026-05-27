@@ -17,7 +17,7 @@ export function downloadRecipesBackup(recipes: Recipe[], tags: Array<Pick<Recipe
 }
 
 export function downloadRecipeImportExample() {
-  downloadBlob(recipeImportExampleBlob(), "toque-exemple-import.json");
+  void recipeImportExampleZipBlob().then((blob) => downloadBlob(blob, "toque-exemple-import.zip"));
 }
 
 export function downloadRecipeDatabaseJson(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
@@ -246,13 +246,33 @@ function recipeImportExampleBlob() {
         totalTime: 30,
         notes: "NotesExample",
         imageUrl: "https://example.com/image-example.jpg",
+        imageUrls: [
+          "https://example.com/image-example.jpg",
+          "https://example.com/image-example-2.jpg",
+        ],
         sourceImageUrl: "https://example.com/image-source-example.jpg",
+        sourceImageUrls: [
+          "https://example.com/image-source-example.jpg",
+          "https://example.com/image-source-example-2.jpg",
+        ],
         createdAt: "2026-05-23T12:00:00.000Z",
         updatedAt: "2026-05-23T12:00:00.000Z",
       },
     ],
   };
   return new Blob([JSON.stringify(example, null, 2)], { type: "application/json" });
+}
+
+async function recipeImportExampleZipBlob() {
+  const zip = new JSZip();
+  const recipeFolder = zip.folder("recipes");
+  zip.folder("images");
+  const backup = JSON.parse(await recipeImportExampleBlob().text()) as BackupFile;
+  zip.file("backup.json", JSON.stringify(backup, null, 2));
+  for (const recipe of backup.recipes) {
+    recipeFolder?.file(`${safeSlug(recipe.name)}-${recipe.id}.json`, JSON.stringify(recipe, null, 2));
+  }
+  return zip.generateAsync({ type: "blob" });
 }
 
 function normalizeImportedRecipe(input: unknown, now: string): Recipe {

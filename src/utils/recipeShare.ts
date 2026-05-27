@@ -94,7 +94,8 @@ export async function shareRecipeText(recipe: Recipe) {
     await navigator.clipboard.writeText(text);
     return "copied";
   } catch {
-    return "manual";
+    downloadTextFile(text, recipeTextFileName(recipe));
+    return "downloaded";
   }
 }
 

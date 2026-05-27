@@ -38,8 +38,8 @@ TO DO:
 - ✔️ Better shopping list recipe selection
 - ✔️ In save menu: can download an example json. So people can generate recipe json with IA. For example they scan a recipe book -> ia formatting (json ) -> import in app.
 - ✔️ Tooltip for showing which website are supported when importing
-- Can have multiples images
-- Saves: handle images (saving and reloading, use zip maybe)
+- ✔️ Can have multiples images
+- ✔️ Saves: handle images (saving and reloading, use zip maybe)
 - Can personnalize app as it was our cooking book.
 - ✔️ English UI
 - In recipes needed tools : like oven, fryer, toaster... So we can filter on fryer for example 

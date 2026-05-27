@@ -36,7 +36,7 @@ export const en: Messages = {
   "backup.title": "Local backup",
   "backup.action.exportAll": "Export all recipes",
   "backup.action.import": "Import backup",
-  "backup.action.downloadExample": "Download JSON example",
+  "backup.action.downloadExample": "Download ZIP example",
   "backup.action.downloadDatabase": "Download database JSON",
 
   "manage.eyebrow": "Administration",

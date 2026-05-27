@@ -64,6 +64,13 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
     const text = importText.trim();
     if (!text) return false;
 
+    return importFromRawText(text);
+  }
+
+  function importFromRawText(rawText: string) {
+    const text = rawText.trim();
+    if (!text) return false;
+
     status.setStatus("Analyse du texte en cours (nom, ingredients, etapes)...");
     try {
       const parsed = importRecipeFromText(text);
@@ -129,6 +136,7 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
     startEdit,
     importFromUrl,
     importFromText,
+    importFromRawText,
     importFromRecipe,
     reimport,
   };

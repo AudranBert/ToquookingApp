@@ -34,7 +34,7 @@ export const fr = {
   "backup.title": "Sauvegarde locale",
   "backup.action.exportAll": "Exporter toutes les recettes",
   "backup.action.import": "Importer une sauvegarde",
-  "backup.action.downloadExample": "Télécharger un exemple JSON",
+  "backup.action.downloadExample": "Télécharger un exemple ZIP",
   "backup.action.downloadDatabase": "Télécharger la base JSON",
 
   "manage.eyebrow": "Administration",

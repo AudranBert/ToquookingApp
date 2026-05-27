@@ -35,6 +35,10 @@ import { AppDialog } from "./components/AppDialog";
 const BackupScreen = lazy(async () => import("./screens/BackupScreen").then((module) => ({ default: module.BackupScreen })));
 const ManagementScreen = lazy(async () => import("./screens/ManagementScreen").then((module) => ({ default: module.ManagementScreen })));
 
+function isZipFile(file: File) {
+  return file.name.toLowerCase().endsWith(".zip");
+}
+
 export function App() {
   const status = useStatus();
   const { recipes, refresh, save, remove, duplicate, importBackup } = useRecipes(status);
@@ -156,13 +160,23 @@ export function App() {
 
   async function handleRecipeFileImport(file: File) {
     try {
+      if (!isZipFile(file)) {
+        const ok = draftApi.importFromRawText(await file.text());
+        if (!ok) {
+          status.setStatus("Fichier texte/JSON illisible.");
+          return;
+        }
+        setActivePanel("form");
+        return;
+      }
+
       const imported = await parseBackupFile(file, []);
       if (imported.recipes.length === 0) {
         status.setStatus("Aucune recette trouvee dans ce fichier.");
         return;
       }
       if (imported.recipes.length > 1) {
-        status.setStatus("Ce fichier contient plusieurs recettes. Utilise le menu Sauvegardes pour un import global.");
+        status.setStatus("Ce fichier contient plusieurs recettes. Utilise le menu Sauvegarde pour un import global.");
         return;
       }
       draftApi.importFromRecipe(imported.recipes[0]);
@@ -183,7 +197,7 @@ export function App() {
       () => shareElementAsPdf(printRef.current!, recipeFileName(selectedRecipe, "pdf"), selectedRecipe.name),
       "Le partage PDF n'a pas abouti.",
     );
-    if (result === "downloaded") status.setStatus("PDF telecharge. Le partage natif n'est pas disponible sur cet appareil.");
+    if (result === "downloaded") status.setStatus("PDF téléchargé. Le partage natif n'est pas disponible sur cet appareil.");
   }
 
   async function shareSelectedImage() {
@@ -196,17 +210,16 @@ export function App() {
         shareElementAsPng(target, recipeFileName(selectedRecipe, "png"), selectedRecipe.name, `Recette Toque: ${selectedRecipe.name}\n${shareUrl}`),
       "Le partage n'a pas abouti.",
     );
-    if (result === "downloaded") status.setStatus("PNG telecharge. Le partage natif n'est pas disponible sur cet appareil.");
+    if (result === "downloaded") status.setStatus("PNG téléchargé. Le partage natif n'est pas disponible sur cet appareil.");
   }
 
   async function shareSelectedText() {
     if (!selectedRecipe) return;
 
     const result = await withShareStatus(() => shareRecipeText(selectedRecipe), "Le partage texte n'a pas abouti.");
-    if (result === "downloaded") status.setStatus("Texte trop long pour SMS. Fichier .txt telecharge.");
-    if (result === "copied") status.setStatus("Texte de la recette copie.");
+    if (result === "downloaded") status.setStatus("Fichier .txt téléchargé.");
+    if (result === "copied") status.setStatus("Texte de la recette copié.");
     if (result === "sms") status.setStatus("Ouverture de l'app SMS.");
-    if (result === "manual") status.setStatus("Texte pret a copier.");
   }
 
   async function exportSelectedRecipeFile() {
@@ -218,7 +231,7 @@ export function App() {
 
     if (shouldAskLocalImageChoice) {
       const chooseZip = await dialog.confirm(
-        "Image locale déctectée",
+        "Image locale détectée",
         "Télécharger un ZIP pour conserver l'image?",
         false,
         "ZIP (conserver image)",
@@ -229,17 +242,17 @@ export function App() {
           () => shareSingleRecipeBackup(selectedRecipe),
           "Le partage du fichier recette n'a pas abouti.",
         );
-        if (zipResult === "downloaded") status.setStatus("Fichier recette .zip telecharge.");
-        if (zipResult === "shared") status.setStatus("Fichier recette .zip partage.");
+        if (zipResult === "downloaded") status.setStatus("Fichier recette .zip téléchargé.");
+        if (zipResult === "shared") status.setStatus("Fichier recette .zip partagé.");
         return;
       }
       const noImageResult = await withShareStatus(
         () => shareRecipeLink(selectedRecipe, { dropLocalImage: true }),
         "Le partage du lien n'a pas abouti.",
       );
-      if (noImageResult === "shared") status.setStatus("Lien recette partage (image locale retiree).");
-      if (noImageResult === "copied") status.setStatus("Lien recette copie (image locale retiree).");
-      if (noImageResult === "manual") status.setStatus("Lien recette pret a copier (image locale retiree).");
+      if (noImageResult === "shared") status.setStatus("Lien recette partagé (image locale retirée).");
+      if (noImageResult === "copied") status.setStatus("Lien recette copié (image locale retirée).");
+      if (noImageResult === "manual") status.setStatus("Lien recette prêt à copier (image locale retirée).");
       if (noImageResult === "too_long") status.setStatus("Lien encore trop long. Utilise l'export ZIP.");
       return;
     }
@@ -249,8 +262,8 @@ export function App() {
         () => shareSingleRecipeBackup(selectedRecipe),
         "Le partage du fichier recette n'a pas abouti.",
       );
-      if (zipResult === "downloaded") status.setStatus("Lien trop long. Fichier recette .zip telecharge.");
-      if (zipResult === "shared") status.setStatus("Lien trop long. Fichier recette .zip partage.");
+      if (zipResult === "downloaded") status.setStatus("Lien trop long. Fichier recette .zip téléchargé.");
+      if (zipResult === "shared") status.setStatus("Lien trop long. Fichier recette .zip partagé.");
       return;
     }
 
@@ -263,13 +276,13 @@ export function App() {
         () => shareSingleRecipeBackup(selectedRecipe),
         "Le partage du fichier recette n'a pas abouti.",
       );
-      if (result === "downloaded") status.setStatus("Lien trop long. Fichier recette .zip telecharge.");
-      if (result === "shared") status.setStatus("Lien trop long. Fichier recette .zip partage.");
+      if (result === "downloaded") status.setStatus("Lien trop long. Fichier recette .zip téléchargé.");
+      if (result === "shared") status.setStatus("Lien trop long. Fichier recette .zip partagé.");
       return;
     }
-    if (result === "shared") status.setStatus("Lien recette partage.");
-    if (result === "copied") status.setStatus("Lien recette copie.");
-    if (result === "manual") status.setStatus("Lien recette pret a copier.");
+    if (result === "shared") status.setStatus("Lien recette partagé.");
+    if (result === "copied") status.setStatus("Lien recette copié.");
+    if (result === "manual") status.setStatus("Lien recette prêt à copier.");
   }
 
   async function exportRecipesFile() {
@@ -277,17 +290,17 @@ export function App() {
       () => shareRecipesBackup(recipes, tagApi.tags),
       "Le partage de la sauvegarde n'a pas abouti.",
     );
-    if (result === "downloaded") status.setStatus("Sauvegarde telechargee. Le partage natif n'est pas disponible sur cet appareil.");
+    if (result === "downloaded") status.setStatus("Sauvegarde téléchargée. Le partage natif n'est pas disponible sur cet appareil.");
   }
 
   function downloadImportExampleFile() {
     downloadRecipeImportExample();
-    status.setStatus("Exemple JSON telecharge.");
+    status.setStatus("Exemple ZIP téléchargé.");
   }
 
   function downloadDatabaseJsonFile() {
     downloadRecipeDatabaseJson(recipes, tagApi.tags);
-    status.setStatus("Base JSON telechargee.");
+    status.setStatus("Base JSON téléchargée.");
   }
 
   return (

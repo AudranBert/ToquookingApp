@@ -226,9 +226,9 @@ export function RecipeForm({
           {creationMode === "file" && (
             <div className="text-import-control">
               <label className="button button--ghost">
-                <Upload size={18} /> Importer un fichier JSON/ZIP
+                <Upload size={18} /> Importer un fichier JSON/ZIP/TXT
                 <input
-                  accept=".zip,.json,application/zip,application/json,text/plain,.toquooking,.txt"
+                  accept=".zip,.json,.txt,application/zip,application/json,text/plain"
                   type="file"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
@@ -238,17 +238,19 @@ export function RecipeForm({
                   style={{ display: "none" }}
                 />
               </label>
-              <p className="muted">Pour un fichier avec plusieurs recettes, utilise le menu Sauvegardes.</p>
+              <p className="muted">Pour un fichier avec plusieurs recettes, utilise le menu Sauvegarde.</p>
             </div>
           )}
         </section>
       )}
 
-      <ReimportControls
-        sourceUrl={draft.sourceUrl ?? ""}
-        onSourceUrlChange={(sourceUrl) => updateField("sourceUrl", sourceUrl)}
-        onReimport={onReimport}
-      />
+      {creationMode === "url" && (
+        <ReimportControls
+          sourceUrl={draft.sourceUrl ?? ""}
+          onSourceUrlChange={(sourceUrl) => updateField("sourceUrl", sourceUrl)}
+          onReimport={onReimport}
+        />
+      )}
 
       {warnings.length > 0 && (
         <div className="notice notice--warning">

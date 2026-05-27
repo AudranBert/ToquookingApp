@@ -40,10 +40,10 @@ export function ShoppingScreen({ recipes, selectedRecipeIds, items, onAddItem, o
   async function handleShareText() {
     if (!canExport) return;
     try {
-      const result = await shareShoppingListText(formatShoppingListText(items, selectedRecipes, exportDate));
+      const result = await shareShoppingListText(formatShoppingListText(items, selectedRecipes, exportDate), `${exportFilename}.txt`);
       if (result === "copied") onStatus("Texte de la liste de courses copie.");
       if (result === "sms") onStatus("Ouverture de l'app SMS.");
-      if (result === "manual") onStatus("Texte pret a copier.");
+      if (result === "downloaded") onStatus("Texte trop long pour SMS. Fichier .txt téléchargé.");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       onStatus("Le partage texte n'a pas abouti.");
@@ -162,12 +162,22 @@ function formatShoppingListText(items: ShoppingItem[], recipes: Recipe[], export
   return `${lines.join("\n")}\n`;
 }
 
-async function shareShoppingListText(text: string) {
+async function shareShoppingListText(text: string, filename: string) {
   if (navigator.share) {
     try { await navigator.share({ title: "Liste de courses", text }); return "shared"; } catch (error) { if (error instanceof DOMException && error.name === "AbortError") throw error; }
   }
-  if (isLikelyMobile()) { window.location.href = `sms:?&body=${encodeURIComponent(text)}`; return "sms"; }
-  try { await copyText(text); return "copied"; } catch { return "manual"; }
+  if (isLikelyMobile()) {
+    const maxSmsBodyLength = 1800;
+    if (text.length > maxSmsBodyLength) {
+      downloadTextFile(text, filename);
+      return "downloaded";
+    }
+    window.location.href = `sms:?&body=${encodeURIComponent(text)}`;
+    return "sms";
+  }
+  try { await copyText(text); return "copied"; } catch {}
+  downloadTextFile(text, filename);
+  return "downloaded";
 }
 
 async function copyText(text: string) {
@@ -185,3 +195,12 @@ async function copyText(text: string) {
 }
 
 function isLikelyMobile() { return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent); }
+
+function downloadTextFile(text: string, filename: string) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
