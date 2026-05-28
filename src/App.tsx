@@ -96,7 +96,7 @@ export function App() {
           setActivePanel("library");
           status.setStatus(t("app.status.importedRecipe"));
         })
-        .catch(() => status.setStatus("Impossible d'importer cette recette."));
+        .catch(() => status.setStatus(t("app.status.importFailed")));
     })();
   }, [dialog, handledSharedRecipe, refresh, status]);
 
@@ -172,7 +172,7 @@ export function App() {
 
       const imported = await parseBackupFile(file, []);
       if (imported.recipes.length === 0) {
-        status.setStatus("Aucune recette trouvee dans ce fichier.");
+        status.setStatus("Aucune recette trouvée dans ce fichier.");
         return;
       }
       if (imported.recipes.length > 1) {
@@ -232,7 +232,7 @@ export function App() {
     if (shouldAskLocalImageChoice) {
       const chooseZip = await dialog.confirm(
         "Image locale détectée",
-        "Télécharger un ZIP pour conserver l'image?",
+        "Télécharger un ZIP pour conserver l'image ?",
         false,
         "ZIP (conserver image)",
         "Lien (sans image)",

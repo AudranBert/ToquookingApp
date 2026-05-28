@@ -41,12 +41,12 @@ export function ShoppingScreen({ recipes, selectedRecipeIds, items, onAddItem, o
     if (!canExport) return;
     try {
       const result = await shareShoppingListText(formatShoppingListText(items, selectedRecipes, exportDate), `${exportFilename}.txt`);
-      if (result === "copied") onStatus("Texte de la liste de courses copie.");
-      if (result === "sms") onStatus("Ouverture de l'app SMS.");
-      if (result === "downloaded") onStatus("Texte trop long pour SMS. Fichier .txt téléchargé.");
+      if (result === "copied") onStatus(t("shopping.status.textCopied"));
+      if (result === "sms") onStatus(t("shopping.status.smsOpen"));
+      if (result === "downloaded") onStatus(t("shopping.status.textDownloaded"));
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      onStatus("Le partage texte n'a pas abouti.");
+      onStatus(t("shopping.status.textFailed"));
     }
   }
 
@@ -54,10 +54,10 @@ export function ShoppingScreen({ recipes, selectedRecipeIds, items, onAddItem, o
     if (!exportRef.current || !canExport) return;
     try {
       const result = await shareElementAsPng(exportRef.current, `${exportFilename}.png`, "Liste de courses", "Liste de courses Toque");
-      if (result === "downloaded") onStatus("PNG telecharge. Le partage natif n'est pas disponible sur cet appareil.");
+      if (result === "downloaded") onStatus(t("shopping.status.pngDownloaded"));
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      onStatus("Le partage n'a pas abouti.");
+      onStatus(t("shopping.status.shareFailed"));
     }
   }
 
@@ -65,10 +65,10 @@ export function ShoppingScreen({ recipes, selectedRecipeIds, items, onAddItem, o
     if (!exportRef.current || !canExport) return;
     try {
       const result = await shareElementAsPdf(exportRef.current, `${exportFilename}.pdf`, "Liste de courses", "Liste de courses Toque");
-      if (result === "downloaded") onStatus("PDF telecharge. Le partage natif n'est pas disponible sur cet appareil.");
+      if (result === "downloaded") onStatus(t("shopping.status.pdfDownloaded"));
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      onStatus("Le partage PDF n'a pas abouti.");
+      onStatus(t("shopping.status.pdfFailed"));
     }
   }
 
@@ -80,29 +80,29 @@ export function ShoppingScreen({ recipes, selectedRecipeIds, items, onAddItem, o
           <h2>{t("shopping.title")}</h2>
         </div>
         <div className="action-bar">
-          <button className="button button--icon-mobile" onClick={handleSharePdf} disabled={!canExport} title="Exporter en PDF"><FileDown size={18} /> {t("shopping.action.pdf")}</button>
-          <button className="button button--icon-mobile" onClick={handleShareImage} disabled={!canExport} title="Partager ou telecharger le PNG"><FileImage size={18} /> {t("shopping.action.png")}</button>
-          <button className="button button--primary button--icon-mobile" onClick={handleShareText} disabled={!canExport} title="Partager par SMS"><MessageSquareText size={18} /> {t("shopping.action.sms")}</button>
+          <button className="button button--icon-mobile" onClick={handleSharePdf} disabled={!canExport} title={t("shopping.title.pdf")}><FileDown size={18} /> {t("shopping.action.pdf")}</button>
+          <button className="button button--icon-mobile" onClick={handleShareImage} disabled={!canExport} title={t("shopping.title.png")}><FileImage size={18} /> {t("shopping.action.png")}</button>
+          <button className="button button--primary button--icon-mobile" onClick={handleShareText} disabled={!canExport} title={t("shopping.title.sms")}><MessageSquareText size={18} /> {t("shopping.action.sms")}</button>
           <button className="button button--icon-mobile" onClick={onGenerate}><ShoppingBasket size={18} /> {t("shopping.action.generate")}</button>
         </div>
       </div>
 
       <div className="layout layout--split">
         <div className="stack">
-          <label className="search-field"><span className="label-with-icon"><Search size={16} /> Rechercher une recette</span><input aria-label="Rechercher une recette pour la liste de courses" placeholder="Nom, origine, tag..." type="search" value={recipeQuery} onChange={(event) => setRecipeQuery(event.target.value)} /></label>
-          <span className="muted count-label">{visibleRecipes.length} / {recipes.length} recettes</span>
+          <label className="search-field"><span className="label-with-icon"><Search size={16} /> {t("shopping.search.recipe")}</span><input aria-label={t("shopping.search.recipeAria")} placeholder={t("shopping.search.recipePlaceholder")} type="search" value={recipeQuery} onChange={(event) => setRecipeQuery(event.target.value)} /></label>
+          <span className="muted count-label">{t("shopping.count.recipes", { visible: visibleRecipes.length, total: recipes.length })}</span>
           {visibleRecipes.map((recipe) => (
             <label key={recipe.id} className="check-control">
               <input checked={selectedRecipeIds.includes(recipe.id)} onChange={(event) => onSelectionChange((ids) => event.target.checked ? [...ids, recipe.id] : ids.filter((id) => id !== recipe.id))} type="checkbox" />
               {recipe.name}
             </label>
           ))}
-          {visibleRecipes.length === 0 && <p className="empty-inline">Aucune recette ne correspond.</p>}
+          {visibleRecipes.length === 0 && <p className="empty-inline">{t("shopping.empty.recipeMatch")}</p>}
         </div>
 
         <div className="stack">
-          <label className="search-field"><span className="label-with-icon"><Search size={16} /> Rechercher dans la liste</span><input aria-label="Rechercher une ligne de course" placeholder="Ingrédient..." type="search" value={itemQuery} onChange={(event) => setItemQuery(event.target.value)} /></label>
-          <span className="muted count-label">{visibleItems.length} / {items.length} lignes</span>
+          <label className="search-field"><span className="label-with-icon"><Search size={16} /> {t("shopping.search.list")}</span><input aria-label={t("shopping.search.listAria")} placeholder={t("shopping.search.listPlaceholder")} type="search" value={itemQuery} onChange={(event) => setItemQuery(event.target.value)} /></label>
+          <span className="muted count-label">{t("shopping.count.lines", { visible: visibleItems.length, total: items.length })}</span>
           {visibleItems.map((item) => (
             <div key={item.id} className={item.checked ? "shopping-item shopping-item--done" : "shopping-item"}>
               <input
@@ -116,7 +116,7 @@ export function ShoppingScreen({ recipes, selectedRecipeIds, items, onAddItem, o
                 type="checkbox"
               />
               <input
-                aria-label="Ligne de course"
+                aria-label={t("shopping.item.lineAria")}
                 value={item.label}
                 onChange={(event) =>
                   onItemChange((current) =>
@@ -124,11 +124,11 @@ export function ShoppingScreen({ recipes, selectedRecipeIds, items, onAddItem, o
                   )
                 }
               />
-              {item.pantry && <span className="chip chip--pantry">Placard</span>}
+              {item.pantry && <span className="chip chip--pantry">{t("recipe.detail.pantry")}</span>}
               <button
                 className="button button--icon button--danger shopping-item__delete"
                 type="button"
-                title="Supprimer cette ligne"
+                title={t("shopping.item.deleteTitle")}
                 aria-label={`Supprimer ${item.label}`}
                 onClick={() => onItemChange((current) => current.filter((candidate) => candidate.id !== item.id))}
               >
@@ -136,7 +136,7 @@ export function ShoppingScreen({ recipes, selectedRecipeIds, items, onAddItem, o
               </button>
             </div>
           ))}
-          {items.length > 0 && visibleItems.length === 0 && <p className="empty-inline">Aucune ligne ne correspond.</p>}
+          {items.length > 0 && visibleItems.length === 0 && <p className="empty-inline">{t("shopping.empty.lineMatch")}</p>}
           <button className="button button--ghost button--full button--icon-mobile" onClick={onAddItem}><Plus size={18} /> {t("shopping.action.addLine")}</button>
         </div>
       </div>
@@ -144,9 +144,9 @@ export function ShoppingScreen({ recipes, selectedRecipeIds, items, onAddItem, o
       <div className="shopping-export-canvas" aria-hidden="true">
         <div className="shopping-export-sheet" ref={exportRef}>
           <div className="shopping-export-sheet__header"><span className="eyebrow">{exportDate}</span><h2>{t("shopping.eyebrow")}</h2></div>
-          {selectedRecipes.length > 0 && <div className="shopping-export-sheet__recipes"><h3>Recettes</h3><p>{selectedRecipes.map((recipe) => recipe.name).join(", ")}</p></div>}
+          {selectedRecipes.length > 0 && <div className="shopping-export-sheet__recipes"><h3>{t("app.nav.library")}</h3><p>{selectedRecipes.map((recipe) => recipe.name).join(", ")}</p></div>}
           <div className="shopping-export-sheet__items">{items.map((item) => (
-            <div key={item.id} className="shopping-export-row"><span className="shopping-export-row__check">{item.checked ? "x" : ""}</span><span className={item.checked ? "shopping-export-row__label shopping-export-row__label--done" : "shopping-export-row__label"}>{item.label}</span>{item.pantry && <span className="chip chip--pantry">Placard</span>}</div>
+            <div key={item.id} className="shopping-export-row"><span className="shopping-export-row__check">{item.checked ? "x" : ""}</span><span className={item.checked ? "shopping-export-row__label shopping-export-row__label--done" : "shopping-export-row__label"}>{item.label}</span>{item.pantry && <span className="chip chip--pantry">{t("recipe.detail.pantry")}</span>}</div>
           ))}</div>
         </div>
       </div>
@@ -155,16 +155,16 @@ export function ShoppingScreen({ recipes, selectedRecipeIds, items, onAddItem, o
 }
 
 function formatShoppingListText(items: ShoppingItem[], recipes: Recipe[], exportDate: string) {
-  const lines = ["Liste de courses", exportDate, ""];
-  if (recipes.length > 0) lines.push("Recettes:", ...recipes.map((recipe) => `- ${recipe.name}`), "");
-  lines.push("Courses:");
-  items.forEach((item) => lines.push(`${item.checked ? "[x]" : "[ ]"} ${item.label}${item.pantry ? " (Placard)" : ""}`));
+  const lines = [t("shopping.eyebrow"), exportDate, ""];
+  if (recipes.length > 0) lines.push(`${t("app.nav.library")}:`, ...recipes.map((recipe) => `- ${recipe.name}`), "");
+  lines.push(`${t("app.nav.shopping")}:`);
+  items.forEach((item) => lines.push(`${item.checked ? "[x]" : "[ ]"} ${item.label}${item.pantry ? ` (${t("recipe.detail.pantry")})` : ""}`));
   return `${lines.join("\n")}\n`;
 }
 
 async function shareShoppingListText(text: string, filename: string) {
   if (navigator.share) {
-    try { await navigator.share({ title: "Liste de courses", text }); return "shared"; } catch (error) { if (error instanceof DOMException && error.name === "AbortError") throw error; }
+    try { await navigator.share({ title: t("shopping.eyebrow"), text }); return "shared"; } catch (error) { if (error instanceof DOMException && error.name === "AbortError") throw error; }
   }
   if (isLikelyMobile()) {
     const maxSmsBodyLength = 1800;

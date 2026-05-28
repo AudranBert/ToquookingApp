@@ -37,7 +37,7 @@ export function useRecipes(status: StatusApi) {
       try {
         await db.recipes.put(recipe);
         await refresh();
-        status.setStatus(editingId ? "Recette mise a jour." : "Recette enregistree.");
+        status.setStatus(editingId ? "Recette mise à jour." : "Recette enregistrée.");
         return recipe;
       } catch (firstError) {
         try {
@@ -45,7 +45,7 @@ export function useRecipes(status: StatusApi) {
           await db.open();
           await db.recipes.put(recipe);
           await refresh();
-          status.setStatus(editingId ? "Recette mise a jour." : "Recette enregistree.");
+          status.setStatus(editingId ? "Recette mise à jour." : "Recette enregistrée.");
           return recipe;
         } catch (retryError) {
           const error = retryError ?? firstError;
@@ -63,7 +63,7 @@ export function useRecipes(status: StatusApi) {
     async (recipe: Recipe) => {
       await db.recipes.delete(recipe.id);
       await refresh();
-      status.setStatus("Recette supprimee.");
+      status.setStatus("Recette supprimée.");
       return true;
     },
     [refresh, status],
@@ -81,7 +81,7 @@ export function useRecipes(status: StatusApi) {
 
       await db.recipes.put(copy);
       await refresh();
-      status.setStatus("Recette dupliquee.");
+      status.setStatus("Recette dupliquée.");
       return copy;
     },
     [refresh, status],
@@ -108,7 +108,7 @@ export function useRecipes(status: StatusApi) {
           }),
         );
         await refresh();
-        status.setStatus(`${imported.recipes.length} recette(s) importee(s).`);
+        status.setStatus(`${imported.recipes.length} recette(s) importée(s).`);
         return imported.recipes[0]?.id;
       } catch {
         status.setStatus("Le fichier de sauvegarde n'est pas lisible.");

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import type { RefObject } from "react";
 import { BookOpen, ChefHat, Clock3, Copy, Edit3, FileDown, FileImage, Flame, Hourglass, MessageSquareText, Share2, Trash2, Users } from "lucide-react";
 import type { Recipe } from "../types";
@@ -7,6 +7,7 @@ import { mergedRecipeImageUrls, proxiedImageUrl, shouldUseImageCrossOrigin } fro
 import { isPantryIngredient } from "../utils/ingredients";
 import { ingredientLabel } from "../utils/recipes";
 import { getTagStyle } from "../utils/tagStyle";
+import { t } from "../i18n";
 
 type Props = {
   recipe?: Recipe;
@@ -37,8 +38,8 @@ export function RecipeDetail({
     return (
       <section className="empty-state panel">
         <BookOpen size={44} />
-        <h2>Ton carnet est prêt</h2>
-        <p>Ajoute une recette manuellement ou importe un lien pour commencer.</p>
+        <h2>{t("recipe.detail.emptyTitle")}</h2>
+        <p>{t("recipe.detail.emptyBody")}</p>
       </section>
     );
   }
@@ -55,26 +56,26 @@ export function RecipeDetail({
   return (
     <article className="recipe-detail">
       <div className="action-bar">
-        <button className="button button--icon-mobile" onClick={() => onEdit(recipe)} title="Modifier">
-          <Edit3 size={18} /> Modifier
+        <button className="button button--icon-mobile" onClick={() => onEdit(recipe)} title={t("recipe.detail.edit")}>
+          <Edit3 size={18} /> {t("recipe.detail.edit")}
         </button>
-        <button className="button button--icon-mobile" onClick={() => onDuplicate(recipe)} title="Dupliquer">
-          <Copy size={18} /> Dupliquer
+        <button className="button button--icon-mobile" onClick={() => onDuplicate(recipe)} title={t("recipe.detail.duplicate")}>
+          <Copy size={18} /> {t("recipe.detail.duplicate")}
         </button>
-        <button className="button button--icon-mobile" onClick={onExportPdf} title="Exporter en PDF">
+        <button className="button button--icon-mobile" onClick={onExportPdf} title={t("recipe.detail.exportPdf")}>
           <FileDown size={18} /> PDF
         </button>
-        <button className="button button--icon-mobile" onClick={onShareImage} title="Partager ou telecharger le PNG">
+        <button className="button button--icon-mobile" onClick={onShareImage} title={t("recipe.detail.sharePng")}>
           <FileImage size={18} /> PNG
         </button>
-        <button className="button button--primary button--icon-mobile" onClick={onShareText} title="Partager par SMS">
+        <button className="button button--primary button--icon-mobile" onClick={onShareText} title={t("recipe.detail.shareSms")}>
           <MessageSquareText size={18} /> SMS
         </button>
-        <button className="button button--icon-mobile" onClick={onExportRecipeFile} title="Partager recette (lien ou ZIP)">
-          <Share2 size={18} /> Lien
+        <button className="button button--icon-mobile" onClick={onExportRecipeFile} title={t("recipe.detail.shareRecipe")}>
+          <Share2 size={18} /> {t("recipe.detail.link")}
         </button>
-        <button className="button button--danger button--icon-mobile" onClick={() => onDelete(recipe)} title="Supprimer">
-          <Trash2 size={18} /> Supprimer
+        <button className="button button--danger button--icon-mobile" onClick={() => onDelete(recipe)} title={t("recipe.detail.delete")}>
+          <Trash2 size={18} /> {t("recipe.detail.delete")}
         </button>
       </div>
 
@@ -93,7 +94,7 @@ export function RecipeDetail({
                   className="recipe-carousel__nav recipe-carousel__nav--prev"
                   type="button"
                   onClick={() => setActiveImageIndex((current) => (current - 1 + images.length) % images.length)}
-                  aria-label="Image precedente"
+                  aria-label={t("recipe.detail.prevImage")}
                 >
                   ‹
                 </button>
@@ -101,18 +102,18 @@ export function RecipeDetail({
                   className="recipe-carousel__nav recipe-carousel__nav--next"
                   type="button"
                   onClick={() => setActiveImageIndex((current) => (current + 1) % images.length)}
-                  aria-label="Image suivante"
+                  aria-label={t("recipe.detail.nextImage")}
                 >
                   ›
                 </button>
-                <div className="recipe-carousel__dots" role="tablist" aria-label="Navigation images">
+                <div className="recipe-carousel__dots" role="tablist" aria-label={t("recipe.detail.imagesNav")}>
                   {images.map((_, index) => (
                     <button
                       key={index}
                       className={index === activeImageIndex ? "recipe-carousel__dot recipe-carousel__dot--active" : "recipe-carousel__dot"}
                       type="button"
                       onClick={() => setActiveImageIndex(index)}
-                      aria-label={`Aller a l'image ${index + 1}`}
+                      aria-label={t("recipe.detail.goImage", { index: index + 1 })}
                     />
                   ))}
                 </div>
@@ -121,7 +122,7 @@ export function RecipeDetail({
           </div>
         )}
         <div className="recipe-title">
-          <span className="eyebrow">Recette</span>
+          <span className="eyebrow">{t("recipe.detail.eyebrow")}</span>
           <h2>{recipe.name}</h2>
         </div>
         <div className="chip-list">
@@ -132,62 +133,62 @@ export function RecipeDetail({
             </span>
           ))}
         </div>
-        <div className="meta-list" role="list" aria-label="Informations recette">
+        <div className="meta-list" role="list" aria-label={t("recipe.detail.infoAria")}>
           {hasValue(recipe.servings) && (
-            <span className="meta-pill" role="listitem" title="Personnes" aria-label={`${recipe.servings} personne(s)`}>
+            <span className="meta-pill" role="listitem" title={t("recipe.detail.servings")} aria-label={`${recipe.servings} personne(s)`}>
               <Users size={15} />
               <strong>{recipe.servings}</strong>
-              <span className="meta-pill__label">Parts</span>
+              <span className="meta-pill__label">{t("recipe.detail.parts")}</span>
             </span>
           )}
           {hasPositiveValue(recipe.prepTime) && (
-            <span className="meta-pill" role="listitem" title="Préparation" aria-label={`Préparation ${recipe.prepTime} min`}>
+            <span className="meta-pill" role="listitem" title={t("recipe.detail.prep")} aria-label={`${t("recipe.detail.prep")} ${recipe.prepTime} min`}>
               <ChefHat size={15} />
               <strong>{recipe.prepTime} min</strong>
-              <span className="meta-pill__label">Prep</span>
+              <span className="meta-pill__label">{t("recipe.detail.prepShort")}</span>
             </span>
           )}
           {hasPositiveValue(recipe.restTime) && (
-            <span className="meta-pill" role="listitem" title="Repos" aria-label={`Repos ${recipe.restTime} min`}>
+            <span className="meta-pill" role="listitem" title={t("recipe.detail.rest")} aria-label={`${t("recipe.detail.rest")} ${recipe.restTime} min`}>
               <Hourglass size={15} />
               <strong>{recipe.restTime} min</strong>
-              <span className="meta-pill__label">repos</span>
+              <span className="meta-pill__label">{t("recipe.detail.rest")}</span>
             </span>
           )}
           {hasPositiveValue(recipe.cookTime) && (
-            <span className="meta-pill" role="listitem" title="Cuisson" aria-label={`Cuisson ${recipe.cookTime} min`}>
+            <span className="meta-pill" role="listitem" title={t("recipe.detail.cook")} aria-label={`${t("recipe.detail.cook")} ${recipe.cookTime} min`}>
               <Flame size={15} />
               <strong>{recipe.cookTime} min</strong>
-              <span className="meta-pill__label">Cuisson</span>
+              <span className="meta-pill__label">{t("recipe.detail.cook")}</span>
             </span>
           )}
           {hasPositiveValue(recipe.totalTime) && (
-            <span className="meta-pill" role="listitem" title="Total" aria-label={`Total ${recipe.totalTime} min`}>
+            <span className="meta-pill" role="listitem" title={t("recipe.detail.total")} aria-label={`${t("recipe.detail.total")} ${recipe.totalTime} min`}>
               <Clock3 size={15} />
               <strong>{recipe.totalTime} min</strong>
-              <span className="meta-pill__label">Total</span>
+              <span className="meta-pill__label">{t("recipe.detail.total")}</span>
             </span>
           )}
         </div>
         <div className="recipe-columns">
           <section>
-            <h3>Ingrédients</h3>
+            <h3>{t("recipe.detail.ingredients")}</h3>
             <ul>
               {recipe.ingredients.map((ingredient) => (
                 <li className="ingredient-status-row" key={ingredient.id}>
                   <span>{ingredientLabel(ingredient)}</span>
                   <span className="ingredient-badges">
                     {recipeContainsSeasonalIngredient([ingredient.name], currentSeasonalIngredients()) && (
-                      <span className="chip chip--seasonal">De saison</span>
+                      <span className="chip chip--seasonal">{t("recipe.detail.seasonal")}</span>
                     )}
-                    {isPantryIngredient(ingredient) && <span className="chip chip--pantry">Placard</span>}
+                    {isPantryIngredient(ingredient) && <span className="chip chip--pantry">{t("recipe.detail.pantry")}</span>}
                   </span>
                 </li>
               ))}
             </ul>
           </section>
           <section>
-            <h3>Instructions</h3>
+            <h3>{t("recipe.detail.instructions")}</h3>
             <ol>
               {recipe.instructions.map((step, index) => (
                 <li key={`${step}-${index}`}>{step}</li>
@@ -197,15 +198,15 @@ export function RecipeDetail({
         </div>
         {recipe.notes && (
           <section>
-            <h3>Notes</h3>
+            <h3>{t("recipe.detail.notes")}</h3>
             <p>{recipe.notes}</p>
           </section>
         )}
         {recipe.videoUrl && <VideoEmbed url={recipe.videoUrl} />}
         {(recipe.sourceUrl || recipe.videoUrl) && (
           <footer className="link-row">
-            {recipe.sourceUrl && <a href={recipe.sourceUrl}>Source</a>}
-            {recipe.videoUrl && <a href={recipe.videoUrl}>Vidéo</a>}
+            {recipe.sourceUrl && <a href={recipe.sourceUrl}>{t("recipe.detail.source")}</a>}
+            {recipe.videoUrl && <a href={recipe.videoUrl}>{t("recipe.detail.video")}</a>}
           </footer>
         )}
       </div>
@@ -220,7 +221,7 @@ function VideoEmbed({ url }: { url: string }) {
     <section className="recipe-video">
       <iframe
         src={embed}
-        title="Vidéo de la recette"
+        title={t("recipe.detail.videoTitle")}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
       />

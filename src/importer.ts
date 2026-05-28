@@ -1694,9 +1694,9 @@ function parseRecipeFromToqueShareText(content: string): ParsedRecipe | null {
   const name = cleanText(nonEmpty[0] ?? "");
   if (!name) return null;
 
-  const metaLine = nonEmpty.find((line) => /personne\(s\)|Preparation|Cuisson|Total|Repos/i.test(line)) ?? "";
+  const metaLine = nonEmpty.find((line) => /personne\(s\)|Préparation|Preparation|Cuisson|Total|Repos/i.test(line)) ?? "";
   const servings = Number.parseInt(metaLine.match(/(\d+)\s*personne\(s\)/i)?.[1] ?? "", 10) || undefined;
-  const prepTime = Number.parseInt(metaLine.match(/Preparation\s+(\d+)\s*min/i)?.[1] ?? "", 10) || undefined;
+  const prepTime = Number.parseInt(metaLine.match(/(?:Préparation|Preparation)\s+(\d+)\s*min/i)?.[1] ?? "", 10) || undefined;
   const restTime = Number.parseInt(metaLine.match(/Repos\s+(\d+)\s*min/i)?.[1] ?? "", 10) || undefined;
   const cookTime = Number.parseInt(metaLine.match(/Cuisson\s+(\d+)\s*min/i)?.[1] ?? "", 10) || undefined;
   const totalTime = Number.parseInt(metaLine.match(/Total\s+(\d+)\s*min/i)?.[1] ?? "", 10) || undefined;

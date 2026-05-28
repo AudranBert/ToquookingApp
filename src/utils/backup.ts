@@ -277,7 +277,7 @@ async function recipeImportExampleZipBlob() {
 
 function normalizeImportedRecipe(input: unknown, now: string): Recipe {
   const record = (input && typeof input === "object" ? input : {}) as Partial<Recipe>;
-  const name = (typeof record.name === "string" ? record.name.trim() : "") || "Recette importee";
+  const name = (typeof record.name === "string" ? record.name.trim() : "") || "Recette importée";
 
   return {
     id: typeof record.id === "string" && record.id.trim() ? record.id : createId(),
