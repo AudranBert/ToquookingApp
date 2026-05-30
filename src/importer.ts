@@ -792,6 +792,16 @@ function fallbackNameFromUrl(sourceUrl: string) {
   }
 }
 
+function isInvalidImportedTitle(value: string | undefined, sourceUrl: string) {
+  const title = cleanText(value ?? "");
+  if (!title) return true;
+  if (/^noname$/i.test(title)) return true;
+  if (/^just a moment\b/i.test(title)) return true;
+  if (/attention required|cloudflare|checking your browser/i.test(title)) return true;
+  if (/youtube\.com|youtu\.be/i.test(sourceUrl) && /^(subscribe|s['’]abonner)$/i.test(title)) return true;
+  return false;
+}
+
 function cuisineLibreFallback(content: string, sourceUrl: string): ParsedRecipe | null {
   if (!/cuisine-libre\.org/i.test(sourceUrl)) return null;
 
@@ -1598,7 +1608,7 @@ function parseYouTubeImport(text: string, sourceUrl: string): ParsedRecipe {
   return {
     sourceUrl,
     videoUrl: sourceUrl,
-    name: title || "Recette YouTube",
+    name: isInvalidImportedTitle(title, sourceUrl) ? "Recette YouTube" : title,
     ingredients: ingredients.length ? ingredients : undefined,
     instructions: maybeSteps.length ? maybeSteps : undefined,
     warnings: ["Import YouTube partiel : description détectée partiellement. Vérifie titre, ingrédients et étapes manuellement."],
@@ -1607,8 +1617,12 @@ function parseYouTubeImport(text: string, sourceUrl: string): ParsedRecipe {
 
 function sanitizeMergedResult(recipe: ParsedRecipe, sourceUrl: string): ParsedRecipe {
   const merged = { ...recipe };
-  if (!merged.name || /^noname$/i.test(merged.name.trim())) {
-    merged.name = fallbackNameFromUrl(sourceUrl) ?? merged.name;
+  if (isInvalidImportedTitle(merged.name, sourceUrl)) {
+    if (/youtube\.com|youtu\.be/i.test(sourceUrl)) {
+      merged.name = "Recette YouTube";
+    } else {
+      merged.name = fallbackNameFromUrl(sourceUrl) ?? merged.name;
+    }
   }
   if (merged.instructions?.length) {
     merged.instructions = merged.instructions.filter((line) => !isInstructionNoise(line));

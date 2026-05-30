@@ -1,5 +1,5 @@
 import { build } from "esbuild";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -37,6 +37,16 @@ function hasPartialWarning(warnings) {
   return warnings.some((warning) => /import partiel/i.test(warning));
 }
 
+function hasInvalidTitle(name, url) {
+  const title = String(name ?? "").trim();
+  if (!title) return true;
+  if (/^noname$/i.test(title)) return true;
+  if (/^just a moment\b/i.test(title)) return true;
+  if (/attention required|cloudflare|checking your browser/i.test(title)) return true;
+  if (/youtube\.com|youtu\.be/i.test(url) && /^(subscribe|s['’]abonner)$/i.test(title)) return true;
+  return false;
+}
+
 async function run() {
   const args = parseArgs(process.argv.slice(2));
   const urls = args.urls.length > 0 ? args.urls : DEFAULT_URLS;
@@ -66,13 +76,17 @@ async function run() {
       try {
         const recipe = await importRecipeFromUrl(url);
         const warnings = recipe.warnings ?? [];
+        const invalidTitle = hasInvalidTitle(recipe.name, url);
         results.push({
           url,
-          ok: (recipe.ingredients?.length ?? 0) > 0 || (recipe.instructions?.length ?? 0) > 0 || /youtube\.com|youtu\.be/i.test(url),
+          ok:
+            !invalidTitle &&
+            ((recipe.ingredients?.length ?? 0) > 0 || (recipe.instructions?.length ?? 0) > 0 || /youtube\.com|youtu\.be/i.test(url)),
           name: recipe.name ?? "",
           ingredients: recipe.ingredients?.length ?? 0,
           instructions: recipe.instructions?.length ?? 0,
           hasImage: Boolean(recipe.imageUrl),
+          invalidTitle,
           partial: hasPartialWarning(warnings),
           warnings,
         });
@@ -102,9 +116,13 @@ async function run() {
       lines.push(`- ${status} ${result.url}`);
       lines.push(`  name: ${result.name || "(none)"}`);
       lines.push(`  ingredients: ${result.ingredients}, instructions: ${result.instructions}, image: ${result.hasImage ? "yes" : "no"}`);
+      if (result.invalidTitle) lines.push("  invalid-title: yes");
       if (result.warnings.length > 0) lines.push(`  warnings: ${result.warnings.join(" | ")}`);
     }
     process.stdout.write(`${lines.join("\n")}\n`);
+
+    const hasFailure = results.some((result) => "error" in result || !result.ok);
+    if (hasFailure) process.exitCode = 1;
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

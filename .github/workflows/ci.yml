@@ -14,8 +14,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint-and-format:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
   build-and-importers:
-    name: Build and Importer Checks
+    name: Build
     runs-on: ubuntu-latest
 
     steps:
@@ -34,5 +54,58 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Importer checks
-        run: npm run check:importers
+  feature-tests:
+    name: Feature Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run feature tests
+        run: npm run test:features
+
+  importer-checks:
+    name: Importer Check - ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: cuisine-libre
+            url: https://www.cuisine-libre.org/osso-bucco-lombard
+          - label: marmiton
+            url: https://www.marmiton.org/recettes/recette_pot-au-feu-facile_44578.aspx
+          - label: cuisineaz
+            url: https://www.cuisineaz.com/recettes/tzatziki-facile-17295.aspx
+          - label: papillesetpupilles
+            url: https://www.papillesetpupilles.fr/2026/05/cotes-de-porc-au-citron-et-au-thym-cuisson-douce-au-four.html/
+          - label: cuisineactuelle
+            url: https://www.cuisineactuelle.fr/recettes/pizza-facile-106483.aspx
+          - label: youtube-shorts
+            url: https://www.youtube.com/shorts/eEB6pkC4X5o
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run importer check for URL
+        run: npm run check:importers -- --url "${{ matrix.url }}"
