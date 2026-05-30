@@ -1,36 +1,107 @@
 # Toquooking
 
-Your own digital recipe book! An all in one app for importing, personalizing, searching, saving, sharing recipes. Everything is done locally.
+Toquooking is a local-first digital recipe book for importing, personalizing, searching, saving, and sharing recipes.
 
-## What is it ?
+## Overview
 
-Goal: keep your own recipe library which regroups recipes from various sources, fully local, easy to import/search/share.
+Main capabilities:
+- Import recipes from supported websites and free text.
+- Edit imported content (title, ingredients, steps, images, tags, notes).
+- Search by name, ingredient, tags, origin, and seasonal hints.
+- Export/share recipes as PDF, PNG, text, and JSON.
+- Build shopping lists from selected recipes.
 
-- Recipes can be imported from various sources automatically. You can add tags, note, change the image, adjuste the instructions...
-- You can search recipes using filters on country of origin, tags, name, ingredients. You can search for seasonal dishes.
-- They can be shared through PDF, PNG, text or JSON. On phone you can share through messages!
-- You can export or import all (or one) recipes with JSON.
-- You can generate a shopping list by selecting recipes (PDF, PNG or Text).
+Supported import sources (expected good or near-good extraction):
+- `marmiton.org`
+- `cuisineaz.com`
+- `cuisine-libre.org`
+- `papillesetpupilles.fr`
+- `cuisineactuelle.fr`
 
-Import sources (should import correctly or almost): Marmiton, CuisineAZ, Cuisine-Libre...
+YouTube imports are supported in partial mode.
 
-In lesser extend you can import videos, it will try to get the recipe name and ingredients.
-
-## How to run it
+## Local Development
 
 ```powershell
 npm install
 npm run dev
+```
+
+## Production Build
+
+```powershell
+npm run build
+```
+
+## Preview Like GitHub Pages (without pushing)
+
+Use static preview from the production bundle:
+
+```powershell
 npm run build
 npm run preview
+```
+
+Open the preview URL (usually `http://localhost:4173/ToquookingApp/`).
+
+This matches GitHub Pages behavior:
+- Static files served from `dist/`.
+- No runtime dependency on serverless `api/` handlers.
+- Frontend importer path from `src/importer.ts`.
+
+Note for local development:
+- `npm run dev` exposes `/api/import` and `/api/image` via Vite middleware.
+- Those routes are backed by `src/dev/recipeImportCore.ts` and `src/dev/imageProxyCore.ts`.
+
+## Offline Test Flow
+
+To validate offline-like behavior:
+1. Run `npm run build` then `npm run preview`.
+2. Open browser DevTools Network tab.
+3. Switch network to `Offline`.
+4. Reload and verify fallback UX/messages.
+
+Expected behavior:
+- App shell should still load if already cached by browser/service worker policy.
+- External URL imports fail gracefully offline and keep manual-entry workflow usable.
+
+## Deployment
+
+Automatic deploy:
+- On every push/merge to `main`, `.github/workflows/deploy-pages.yml` builds and deploys to `gh-pages`.
+
+Manual deploy from GitHub Actions:
+- Run the `Deploy GitHub Pages` workflow.
+- Optional input `ref` lets you deploy a specific branch, tag, or commit SHA.
+
+Manual local deploy (including local uncommitted changes):
+
+```powershell
+npm run build
 npm run deploy
 ```
 
-Import behavior:
-- Local dev uses `/api/import` and `/api/image` through Vite middleware.
-- GitHub Pages (static) falls back to client-side import parsing and direct image URLs.
+Manual local deploy from a specific commit:
 
-##  What is next
+```powershell
+git checkout <commit-sha>
+npm ci
+npm run build
+npm run deploy
+git checkout -
+```
+
+## Useful Commands
+
+```powershell
+npm run build
+npm run preview
+npm run check:importers
+npm run check:importers -- --json
+npm run check:importers -- --url "https://www.cuisineaz.com/recettes/poulet-teriyaki-79496.aspx"
+```
+
+## What is next
 
 TO DO:
 - ✔️ HTTPS/Phone App
@@ -42,5 +113,5 @@ TO DO:
 - ✔️ Saves: handle images (saving and reloading, use zip maybe)
 - Can personnalize app as it was our cooking book.
 - ✔️ English UI
-- In recipes needed tools : like oven, fryer, toaster... So we can filter on fryer for example 
+- In recipes needed tools : like oven, fryer, toaster... So we can filter on fryer for example
 - Maybe some AI tools: better autofilling of the import form, scan book ans import recipe directly, translate recipes

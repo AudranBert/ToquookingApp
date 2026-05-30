@@ -1,5 +1,5 @@
-import { parseIngredientLine, type ParsedIngredient } from "../src/utils/ingredientParser";
-import { findKnownRecipeOrigin } from "../src/origins";
+import { parseIngredientLine, type ParsedIngredient } from "../utils/ingredientParser";
+import { findKnownRecipeOrigin } from "../origins";
 
 type ImportedIngredient = ParsedIngredient;
 
@@ -70,7 +70,7 @@ function cleanText(value: unknown) {
     .trim();
 }
 
-function textArray(value: unknown) {
+function textArray(value: unknown): string[] {
   if (Array.isArray(value)) return value.flatMap(textArray).filter(Boolean);
   if (typeof value === "string" || typeof value === "number") {
     return String(value)
