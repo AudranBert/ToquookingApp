@@ -34,7 +34,7 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
 
     return runImport({
       url,
-      loadingStatus: "Analyse du lien en cours (nom, ingredients, etapes, image)...",
+      loadingStatus: "Analyse du lien en cours (nom, ingrédients, étapes, image)...",
       successStatus: "Import termine. Verifie les champs puis enregistre la recette.",
       errorStatus: "Import impossible pour ce lien. Le lien est conserve, complete la recette manuellement.",
       apply: (imported) => {
@@ -71,7 +71,7 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
     const text = rawText.trim();
     if (!text) return false;
 
-    status.setStatus("Analyse du texte en cours (nom, ingredients, etapes)...");
+    status.setStatus("Analyse du texte en cours (nom, ingrédients, étapes)...");
     try {
       const parsed = importRecipeFromText(text);
       const imported = parsedToDraft(parsed, parsed.sourceUrl ?? "", allTags);

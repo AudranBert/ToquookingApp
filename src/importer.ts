@@ -559,7 +559,7 @@ function defaultMarkdownFallback(content: string, sourceUrl: string): ParsedReci
     imageUrl,
     ingredients: ingredientLines.map(parseIngredientLine),
     instructions: instructionLines,
-    warnings: ["Import partiel depuis contenu non structure. Verifie ingredients, etapes et quantites avant de sauvegarder."],
+    warnings: ["Import partiel depuis contenu non structuré. Vérifie ingrédients, étapes et quantités avant de sauvegarder."],
   };
 }
 
@@ -771,7 +771,7 @@ function marmitonFallback(content: string, sourceUrl: string): ParsedRecipe | nu
     instructions: cleanedInstructions.length ? cleanedInstructions : undefined,
     warnings: hasCoreFields || hasStructuredEnough
       ? undefined
-      : ["Import partiel depuis contenu non structure. Verifie ingredients, etapes et quantites avant de sauvegarder."],
+      : ["Import partiel depuis contenu non structuré. Vérifie ingrédients, étapes et quantités avant de sauvegarder."],
   };
 }
 
@@ -906,6 +906,59 @@ function cuisineLibreFallback(content: string, sourceUrl: string): ParsedRecipe 
     }
   }
 
+  if (instructions.length === 0) {
+    const htmlSteps = [...normalized.matchAll(/<(?:li|p)[^>]*>([\s\S]*?)<\/(?:li|p)>/gi)]
+      .map((match) => cleanText(match[1]))
+      .filter(Boolean)
+      .filter((line) => line.length > 20)
+      .filter((line) => !isInstructionNoise(line))
+      .filter((line) => !/^(ingr\S*dients?|préparation|preparation|temps|cuisson|repos)\b/i.test(line))
+      .filter((line) => /[a-zà-ÿ]/i.test(line));
+    for (const line of htmlSteps) {
+      if (instructions.includes(line)) continue;
+      instructions.push(line.replace(/^\d+[.)]\s*/, ""));
+      if (instructions.length >= 12) break;
+    }
+  }
+
+  if (instructions.length === 0) {
+    const numberedSteps = [...normalized.matchAll(/(?:^|\n)\s*\d+[.)]\s+([^\n]+)/g)]
+      .map((match) => cleanText(match[1]))
+      .filter(Boolean)
+      .filter((line) => line.length > 20)
+      .filter((line) => !isInstructionNoise(line))
+      .filter((line) => !/^(ingr\S*dients?|préparation|preparation|temps|cuisson|repos)\b/i.test(line));
+    for (const step of numberedSteps) {
+      if (instructions.includes(step)) continue;
+      instructions.push(step);
+      if (instructions.length >= 12) break;
+    }
+  }
+
+  if (instructions.length === 0) {
+    const jsonLdScripts = [
+      ...normalized.matchAll(
+        /<script[^>]+type=["'](?:application\/ld\+json|application&#x2F;ld&#x2B;json)["'][^>]*>([\s\S]*?)<\/script>/gi,
+      ),
+    ];
+    for (const match of jsonLdScripts) {
+      for (const body of [match[1], decodeHtmlEntities(match[1])]) {
+        try {
+          const parsed = extractRecipeFromJsonLd(JSON.parse(body), sourceUrl);
+          if (!parsed?.instructions?.length) continue;
+          for (const step of parsed.instructions) {
+            const cleaned = cleanText(step);
+            if (!cleaned || isInstructionNoise(cleaned)) continue;
+            if (!instructions.includes(cleaned)) instructions.push(cleaned);
+          }
+        } catch {
+          // Ignore invalid JSON-LD.
+        }
+      }
+      if (instructions.length > 0) break;
+    }
+  }
+
   const servingsText =
     cleanText(normalized.match(/itemprop=["']recipeYield["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1]) ||
     cleanText(normalized.match(/Ingr\S*dients?\s+[^<\n]*pour\s+([^<\n]+)/i)?.[1]);
@@ -938,9 +991,11 @@ function cuisineLibreFallback(content: string, sourceUrl: string): ParsedRecipe 
   const noisyInstructionHit = instructions.some((line) =>
     /(value=|formulaire_action|jQuery|autosave|_gaq|Rated \d+\.\d+ out of 5|Adresse [ée]lectronique|Votre pseudo)/i.test(line),
   );
-  if (ingredientLines.length > 25 || instructions.length > 20 || noisyInstructionHit) {
+  if (ingredientLines.length > 25 || noisyInstructionHit) {
     return null;
   }
+
+  const cappedInstructions = instructions.slice(0, 20);
 
   return {
     sourceUrl,
@@ -951,8 +1006,8 @@ function cuisineLibreFallback(content: string, sourceUrl: string): ParsedRecipe 
     cookTime,
     totalTime,
     ingredients: ingredientLines.map(parseIngredientLine),
-    instructions,
-    warnings: ["Import partiel depuis contenu non structure. Verifie ingredients, etapes et quantites avant de sauvegarder."],
+    instructions: cappedInstructions,
+    warnings: ["Import partiel depuis contenu non structuré. Vérifie ingrédients, étapes et quantités avant de sauvegarder."],
   };
 }
 
@@ -1015,17 +1070,106 @@ function markdownSectionExtractor(
     imageUrl,
     ingredients: ingredients.length ? ingredients : undefined,
     instructions: instructions.length ? instructions : undefined,
-    warnings: ["Import partiel depuis contenu non structure. Verifie ingredients, etapes et quantites avant de sauvegarder."],
+    warnings: ["Import partiel depuis contenu non structuré. Vérifie ingrédients, étapes et quantités avant de sauvegarder."],
   };
 }
 
 function cuisineAzFallback(content: string, sourceUrl: string): ParsedRecipe | null {
   if (!/cuisineaz\.com/i.test(sourceUrl)) return null;
-  return markdownSectionExtractor(content, sourceUrl, {
+
+  const normalized = content.replace(/\r\n/g, "\n");
+  const title =
+    cleanText(normalized.match(/<h1[^>]*class=["'][^"']*recipe-title[^"']*["'][^>]*>([\s\S]*?)<\/h1>/i)?.[1]) ||
+    cleanText(normalized.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)?.[1]) ||
+    cleanText(normalized.match(/^\s*Title:\s*(.+)$/im)?.[1]);
+
+  const ingredients = [...normalized.matchAll(/<li[^>]*class=["'][^"']*ingredient_item[^"']*["'][\s\S]*?<\/li>/gi)]
+    .map((match) => {
+      const block = match[0];
+      const label = cleanText(block.match(/<span[^>]*class=["'][^"']*ingredient_label[^"']*["'][^>]*>([\s\S]*?)<\/span>/i)?.[1]);
+      const quantity = cleanText(block.match(/<span[^>]*class=["'][^"']*ingredient_qte[^"']*["'][^>]*>([\s\S]*?)<\/span>/i)?.[1]);
+      const line = cleanText(`${quantity} ${label}`);
+      return line ? parseIngredientLine(line) : null;
+    })
+    .filter((item): item is ReturnType<typeof parseIngredientLine> => Boolean(item));
+
+  const instructions = [...normalized.matchAll(/<li[^>]*class=["'][^"']*preparation_step[^"']*["'][\s\S]*?<p>([\s\S]*?)<\/p>/gi)]
+    .map((match) => cleanText(match[1]))
+    .filter(Boolean)
+    .filter((line) => !isInstructionNoise(line));
+  const cleanedInstructions = instructions.filter((line) => !isCuisineAzInstructionNoise(line));
+
+  const servings = Number.parseInt(
+    cleanText(normalized.match(/<p[^>]*class=["'][^"']*recipe_utils_information[^"']*["'][^>]*>\s*(\d+)\s*pers\./i)?.[1] ?? ""),
+    10,
+  ) || undefined;
+
+  const prepTime = parseDurationText(
+    cleanText(normalized.match(/<p[^>]*class=["'][^"']*recipe_time_information_title[^"']*["'][^>]*>\s*Pr[ée]paration\s*<\/p>[\s\S]*?<p[^>]*class=["'][^"']*recipe_time_information[^"']*["'][^>]*>([\s\S]*?)<\/p>/i)?.[1] ?? ""),
+  );
+  const cookTime = parseDurationText(
+    cleanText(normalized.match(/<p[^>]*class=["'][^"']*recipe_time_information_title[^"']*["'][^>]*>\s*Cuisson\s*<\/p>[\s\S]*?<p[^>]*class=["'][^"']*recipe_time_information[^"']*["'][^>]*>([\s\S]*?)<\/p>/i)?.[1] ?? ""),
+  );
+  const totalTime = parseDurationText(
+    cleanText(normalized.match(/<p[^>]*class=["'][^"']*recipe_time_information_title[^"']*["'][^>]*>\s*Total\s*<\/p>[\s\S]*?<p[^>]*class=["'][^"']*recipe_time_information[^"']*["'][^>]*>([\s\S]*?)<\/p>/i)?.[1] ?? ""),
+  );
+
+  const imageUrl = pickBestImageCandidate(
+    [
+      normalized.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1],
+      normalized.match(/<img[^>]+class=["'][^"']*ingredient_img[^"']*["'][^>]+src=["']([^"']+)["']/i)?.[1],
+      normalized.match(/<img[^>]+src=["']([^"']+cuisineaz[^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)["']/i)?.[1],
+    ],
+    sourceUrl,
+  );
+
+  let fallbackIngredients = ingredients;
+  if (fallbackIngredients.length === 0) {
+    const description =
+      cleanText(normalized.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i)?.[1]) ||
+      cleanText(normalized.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i)?.[1]);
+    const list = description.match(/ingr[ée]dients?\s+de\s+la\s+recette\s*:\s*(.+)$/i)?.[1];
+    if (list) {
+      fallbackIngredients = list
+        .split(/,\s*/)
+        .map((item) => cleanText(item))
+        .filter((item) => item.length > 2)
+        .slice(0, 20)
+        .map((item) => parseIngredientLine(item));
+    }
+  }
+
+  if (fallbackIngredients.length > 0 || cleanedInstructions.length > 0) {
+    return {
+      sourceUrl,
+      name: title || undefined,
+      imageUrl,
+      ingredients: fallbackIngredients.length ? fallbackIngredients : undefined,
+      instructions: cleanedInstructions.length ? cleanedInstructions : undefined,
+      servings,
+      prepTime,
+      cookTime,
+      totalTime,
+      warnings: undefined,
+    };
+  }
+
+  const fallback = markdownSectionExtractor(content, sourceUrl, {
     ingredients: /ingr\S*dients?/i,
     instructions: /(pr\S*paration|etapes?|instructions?)/i,
     stop: /(astuces|conseils|questions|commentaires?|a lire aussi|newsletter)/i,
   });
+  if (!fallback) return null;
+  if (fallback.instructions?.length) {
+    fallback.instructions = fallback.instructions.filter((line) => !isCuisineAzInstructionNoise(line));
+  }
+  if ((fallback.ingredients?.length ?? 0) >= 3 && (fallback.instructions?.length ?? 0) >= 2) {
+    return {
+      ...fallback,
+      warnings: undefined,
+    };
+  }
+  return fallback;
 }
 
 function papillesEtPupillesFallback(content: string, sourceUrl: string): ParsedRecipe | null {
@@ -1037,6 +1181,7 @@ function papillesEtPupillesFallback(content: string, sourceUrl: string): ParsedR
       lines.find((line) => !/^(URL Source|Published Time|Markdown Content|Image)\s*:/i.test(line)) ??
       "",
   );
+  if (/^just a moment/i.test(title) || /cloudflare|attention required/i.test(normalized)) return null;
   const ingStart = lines.findIndex((line) => /^ingr\S*dients?$/i.test(line));
   const prepStart = lines.findIndex((line) => /^pr\S*paration$/i.test(line));
   const stop = /(questions|pourquoi j'aime|r[ée]dig[ée] par|tags\s*:|newsletter|commentaires?)/i;
@@ -1080,7 +1225,7 @@ function papillesEtPupillesFallback(content: string, sourceUrl: string): ParsedR
     imageUrl,
     ingredients: ingredients.length ? ingredients : undefined,
     instructions: instructions.length ? instructions : undefined,
-    warnings: ["Import partiel depuis contenu non structure. Verifie ingredients, etapes et quantites avant de sauvegarder."],
+    warnings: ["Import partiel depuis contenu non structuré. Vérifie ingrédients, étapes et quantités avant de sauvegarder."],
   };
 }
 
@@ -1130,7 +1275,8 @@ function parseWithDomainPriority(content: string, sourceUrl: string): ParsedReci
   const normalized = content.replace(/\r\n/g, "\n");
 
   const domainResult = domainParser(content, sourceUrl);
-  const defaultResult = defaultMarkdownFallback(content, sourceUrl);
+  const domainUseful = hasUsefulRecipeData(domainResult);
+  let structuredResult: ParsedRecipe | null = null;
   let jsonLdImage: string | undefined;
   const jsonLdScripts = [
     ...normalized.matchAll(
@@ -1141,15 +1287,20 @@ function parseWithDomainPriority(content: string, sourceUrl: string): ParsedReci
     for (const body of [match[1], decodeHtmlEntities(match[1])]) {
       try {
         const parsed = extractRecipeFromJsonLd(JSON.parse(body), sourceUrl);
-        if (parsed?.imageUrl) {
+        if (!parsed) continue;
+        structuredResult = mergeRecipes(structuredResult, parsed);
+        if (!jsonLdImage && parsed.imageUrl) {
           jsonLdImage = parsed.imageUrl;
-          break;
         }
       } catch {
         // ignore invalid JSON-LD snippets
       }
     }
-    if (jsonLdImage) break;
+  }
+
+  const microdata = extractRecipeFromMicrodataHtml(normalized, sourceUrl);
+  if (microdata) {
+    structuredResult = mergeRecipes(structuredResult, microdata);
   }
 
   const name =
@@ -1183,21 +1334,105 @@ function parseWithDomainPriority(content: string, sourceUrl: string): ParsedReci
     ),
   );
 
-  const enrichedDomain: ParsedRecipe = {
-    ...(domainResult ?? {}),
+  const mergedStructured = mergeRecipes(structuredResult, domainResult ?? {
     sourceUrl,
-    name: domainResult?.name ?? name ?? undefined,
-    imageUrl: domainResult?.imageUrl ?? imageUrl ?? undefined,
-    servings: domainResult?.servings ?? servingsValue ?? undefined,
-    prepTime: domainResult?.prepTime ?? prepTime ?? undefined,
-    restTime: domainResult?.restTime ?? restTime ?? undefined,
-    cookTime: domainResult?.cookTime ?? cookTime ?? undefined,
-    totalTime: domainResult?.totalTime ?? totalTime ?? undefined,
+    warnings: undefined,
+  });
+  const enrichedDomain: ParsedRecipe = {
+    ...(mergedStructured ?? domainResult ?? {}),
+    sourceUrl,
+    name: mergedStructured?.name ?? name ?? undefined,
+    imageUrl: mergedStructured?.imageUrl ?? imageUrl ?? undefined,
+    servings: mergedStructured?.servings ?? servingsValue ?? undefined,
+    prepTime: mergedStructured?.prepTime ?? prepTime ?? undefined,
+    restTime: mergedStructured?.restTime ?? restTime ?? undefined,
+    cookTime: mergedStructured?.cookTime ?? cookTime ?? undefined,
+    totalTime: mergedStructured?.totalTime ?? totalTime ?? undefined,
   };
 
-  if ((enrichedDomain.ingredients?.length ?? 0) === 0 && defaultResult) return mergeRecipes(enrichedDomain, defaultResult);
-  if ((enrichedDomain.instructions?.length ?? 0) === 0 && defaultResult) return mergeRecipes(enrichedDomain, defaultResult);
-  return enrichedDomain;
+  if (/cuisineaz\.com/i.test(sourceUrl)) {
+    if ((enrichedDomain.ingredients?.length ?? 0) === 0) {
+      const description =
+        cleanText(normalized.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i)?.[1]) ||
+        cleanText(normalized.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i)?.[1]);
+      const listMatch = description.match(/ingr[ée]dients?\s+de\s+la\s+recette\s*:\s*(.+)$/i);
+      if (listMatch?.[1]) {
+        const fromMeta = listMatch[1]
+          .split(/,\s*/)
+          .map((item) => cleanText(item))
+          .filter((item) => item.length > 2)
+          .slice(0, 20)
+          .map((item) => parseIngredientLine(item));
+        if (fromMeta.length > 0) enrichedDomain.ingredients = fromMeta;
+      }
+    }
+
+    if ((enrichedDomain.instructions?.length ?? 0) === 0) {
+      const numberedSteps = [...normalized.matchAll(/(?:^|\n)\s*\d+[.)]\s+([^\n]+)/g)]
+        .map((match) => cleanText(match[1]))
+        .filter(Boolean)
+        .filter((line) => line.length > 12)
+        .filter((line) => !isCuisineAzInstructionNoise(line))
+        .slice(0, 30);
+      if (numberedSteps.length > 0) {
+        enrichedDomain.instructions = Array.from(new Set(numberedSteps));
+      }
+    }
+
+    if (!enrichedDomain.prepTime) {
+      const prepText = cleanText(normalized.match(/Pr[ée]paration\s*:?\s*([0-9hmin\s]+)/i)?.[1]);
+      const parsedPrep = parseDurationText(prepText);
+      if (parsedPrep) enrichedDomain.prepTime = parsedPrep;
+    }
+    if (!enrichedDomain.cookTime) {
+      const cookText = cleanText(normalized.match(/Cuisson\s*:?\s*([0-9hmin\s]+)/i)?.[1]);
+      const parsedCook = parseDurationText(cookText);
+      if (parsedCook) enrichedDomain.cookTime = parsedCook;
+    }
+    if (!enrichedDomain.totalTime) {
+      const totalText = cleanText(normalized.match(/Total\s*:?\s*([0-9hmin\s]+)/i)?.[1]);
+      const parsedTotal = parseDurationText(totalText);
+      if (parsedTotal) enrichedDomain.totalTime = parsedTotal;
+    }
+    if (!enrichedDomain.servings) {
+      const servingsText = cleanText(normalized.match(/(\d+)\s*pers\./i)?.[0]);
+      const parsedServings = servings(servingsText);
+      if (parsedServings) enrichedDomain.servings = parsedServings;
+    }
+  }
+
+  if (/cuisine-libre\.org/i.test(sourceUrl) && (enrichedDomain.instructions?.length ?? 0) === 0) {
+    const numberedSteps = [...normalized.matchAll(/(?:^|\n)\s*\d+[.)]\s+([^\n]+)/g)]
+      .map((match) => cleanText(match[1]))
+      .filter(Boolean)
+      .filter((line) => line.length > 20)
+      .filter((line) => !isInstructionNoise(line))
+      .filter((line) => !/^(ingr\S*dients?|préparation|preparation|temps|cuisson|repos)\b/i.test(line));
+    if (numberedSteps.length > 0) {
+      enrichedDomain.instructions = Array.from(new Set(numberedSteps)).slice(0, 20);
+    }
+  }
+
+  if (hasUsefulRecipeData(structuredResult)) {
+    return {
+      ...enrichedDomain,
+      warnings: undefined,
+    };
+  }
+
+  if (domainUseful) {
+    return {
+      ...enrichedDomain,
+      warnings: domainResult?.warnings,
+    };
+  }
+
+  // Last resort only: if special importer produced no usable data, allow generic fallback.
+  const defaultResult = defaultMarkdownFallback(content, sourceUrl);
+  if (defaultResult) return mergeRecipes(enrichedDomain, defaultResult);
+  return enrichedDomain.name || enrichedDomain.imageUrl || enrichedDomain.prepTime || enrichedDomain.cookTime || enrichedDomain.totalTime
+    ? enrichedDomain
+    : null;
 }
 
 function hasKnownDomain(sourceUrl: string) {
@@ -1366,7 +1601,7 @@ function parseYouTubeImport(text: string, sourceUrl: string): ParsedRecipe {
     name: title || "Recette YouTube",
     ingredients: ingredients.length ? ingredients : undefined,
     instructions: maybeSteps.length ? maybeSteps : undefined,
-    warnings: ["Import YouTube partiel : description detectee partiellement. Verifie titre, ingredients et etapes manuellement."],
+    warnings: ["Import YouTube partiel : description détectée partiellement. Vérifie titre, ingrédients et étapes manuellement."],
   };
 }
 
@@ -1389,13 +1624,31 @@ function sanitizeMergedResult(recipe: ParsedRecipe, sourceUrl: string): ParsedRe
   if (/cuisineactuelle\.fr/i.test(sourceUrl) && merged.ingredients?.length) {
     merged.ingredients = merged.ingredients.filter((ing) => !/^ingr\S*dients?$/i.test(cleanText(ing.name ?? "")));
   }
+  if (/cuisineaz\.com/i.test(sourceUrl) && merged.instructions?.length) {
+    merged.instructions = merged.instructions.filter((line) => !isCuisineAzInstructionNoise(cleanText(line)));
+  }
   if (hasKnownDomain(sourceUrl) && merged.instructions && merged.instructions.length > 120) {
     merged.instructions = merged.instructions.slice(0, 40);
   }
   if (hasKnownDomain(sourceUrl) && merged.ingredients && merged.ingredients.length > 60) {
     merged.ingredients = merged.ingredients.slice(0, 30);
   }
+  if (hasKnownDomain(sourceUrl) && (merged.ingredients?.length ?? 0) >= 3 && (merged.instructions?.length ?? 0) >= 2 && merged.warnings?.length) {
+    merged.warnings = merged.warnings.filter((warning) => !/Import partiel depuis contenu non structuré/i.test(warning));
+    if (merged.warnings.length === 0) merged.warnings = undefined;
+  }
   return merged;
+}
+
+function isCuisineAzInstructionNoise(value: string) {
+  const line = cleanText(value);
+  if (!line) return true;
+  if (/^(pr[ée]paration|cuisson|total|facile|enregistrer|imprimer|partager)$/i.test(line)) return true;
+  if (/^\d+\s*pers?\.?$/i.test(line)) return true;
+  if (/^\d+\s*min$/i.test(line)) return true;
+  if (/^\d+\s*h(?:\s*\d+\s*min)?$/i.test(line)) return true;
+  if (/^le\s+\w+.*sp[ée]cialit[ée]\s+japonaise/i.test(line)) return true;
+  return false;
 }
 
 function finalizeRecipe(sourceUrl: string, structured: ParsedRecipe | null, fallback: ParsedRecipe | null): ParsedRecipe | null {
@@ -1505,32 +1758,7 @@ function mergeRecipes(base: ParsedRecipe | null, incoming: ParsedRecipe): Parsed
   };
 }
 
-function isLocalDevHost() {
-  return /^(localhost|127\.0\.0\.1|::1)$/.test(window.location.hostname);
-}
-
-function shouldUseLocalImportApi() {
-  return import.meta.env.VITE_USE_LOCAL_IMPORT_API === "true";
-}
-
 export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), 12000);
-
-  try {
-    // Opt-in only: local API may run a different parser than the frontend build.
-    // Keep frontend importer as the default to match GitHub Pages behavior.
-    if (isLocalDevHost() && shouldUseLocalImportApi()) {
-      const endpoint = `${import.meta.env.BASE_URL}api/import?url=${encodeURIComponent(url)}`;
-      const response = await fetch(endpoint, { signal: controller.signal });
-      if (response.ok) return response.json();
-    }
-  } catch {
-    // Static builds do not have the local API endpoint.
-  } finally {
-    window.clearTimeout(timer);
-  }
-
   try {
     const htmlSourcesRaw = await fetchRecipeHtmls(url);
     const isMarmiton = /(^https?:\/\/)?([^/]+\.)?marmiton\.org\//i.test(url);
@@ -1583,7 +1811,7 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
               sourceUrl: url,
               warnings: parsed.name?.trim()
                 ? undefined
-                : ["Nom non detecte automatiquement. Renseigne le titre manuellement."],
+                : ["Nom non détecté automatiquement. Renseigne le titre manuellement."],
             };
             structuredMerged = mergeRecipes(structuredMerged, enriched);
           } catch {
@@ -1614,13 +1842,13 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
   } catch {
     return {
       sourceUrl: url,
-      warnings: ["Import automatique indisponible pour ce site pour le moment. Le lien est conserve, complete la recette manuellement."],
+      warnings: ["Import automatique indisponible pour ce site pour le moment. Le lien est conservé, complète la recette manuellement."],
     };
   }
 
   return {
     sourceUrl: url,
-    warnings: ["Aucune recette exploitable detectee sur cette page. Le lien est conserve, complete les champs manquants."],
+    warnings: ["Aucune recette exploitable détectée sur cette page. Le lien est conservé, complète les champs manquants."],
   };
 }
 
@@ -1904,6 +2132,23 @@ async function fetchRecipeHtmls(url: string): Promise<string[]> {
     // Keep existing behavior: caller handles no-source case.
   }
 
+  const jinaHttpsUrl = `https://r.jina.ai/https://${url.replace(/^https?:\/\//i, "")}`;
+  try {
+    const response = await fetch(jinaHttpsUrl);
+    if (response.ok) sources.push(decodeResponseBody(await response.arrayBuffer()));
+  } catch {
+    // Keep existing behavior: caller handles no-source case.
+  }
+
   if (sources.length === 0) throw new Error("Unable to fetch source HTML");
-  return sources;
+  const nonBlocked = sources.filter((source) => !isLikelyAntiBotPage(source));
+  return nonBlocked.length > 0 ? nonBlocked : sources;
+}
+
+function isLikelyAntiBotPage(content: string) {
+  const text = cleanText(content).toLowerCase();
+  return (
+    text.startsWith("just a moment") ||
+    /cloudflare|cf-ray|cf-chl-|attention required|checking your browser/.test(text)
+  );
 }

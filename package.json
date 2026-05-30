@@ -7,6 +7,9 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
     "build:budget": "npm run build && node scripts/check-bundle-size.mjs",
+    "check:importers": "node scripts/check-importers.mjs",
+    "test:features": "node scripts/test-features.mjs",
+    "test:features:network": "node scripts/test-features.mjs --with-network",
     "preview": "vite preview --host 0.0.0.0",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
