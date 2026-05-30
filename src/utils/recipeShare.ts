@@ -1,4 +1,4 @@
-﻿import type { Recipe, RecipeDraft } from "../types";
+import type { Recipe, RecipeDraft } from "../types";
 import { t } from "../i18n";
 import { createId } from "./id";
 import { cleanRecipeDraft, ingredientLabel, nowIso, recipeToDraft } from "./recipes";

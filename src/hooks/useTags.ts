@@ -2,25 +2,45 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { db } from "../db";
 import { t } from "../i18n";
 import type { Recipe, RecipeTag } from "../types";
+import { DEFAULT_RECIPE_TOOLS } from "../constants";
 import { createId } from "../utils/id";
 import { nowIso } from "../utils/recipes";
 import { normalizeText } from "../utils/text";
 import type { StatusApi } from "./useStatus";
 
-const DEFAULT_PROTECTED_TAGS = [
-  { name: "omnivore", category: "Régime alimentaire" },
-  { name: "pescétarien", category: "Régime alimentaire" },
-  { name: "végétarien", category: "Régime alimentaire" },
-  { name: "végétalien", category: "Régime alimentaire" },
-  { name: "entrée", category: "Type de repas" },
-  { name: "boisson", category: "Type de repas" },
-  { name: "apéritif", category: "Type de repas" },
-  { name: "plat", category: "Type de repas" },
-  { name: "accompagnement", category: "Type de repas" },
-  { name: "dessert", category: "Type de repas" },
-  { name: "chaud", category: "Type de repas" },
-  { name: "froid", category: "Type de repas" },
-] as const;
+function defaultProtectedTags() {
+  const dietCategory = t("manage.category.diet");
+  const mealTypeCategory = t("manage.category.mealType");
+  const toolsCategory = t("manage.category.tools");
+  return [
+    { name: "omnivore", category: dietCategory },
+    { name: "pescétarien", category: dietCategory },
+    { name: "végétarien", category: dietCategory },
+    { name: "végétalien", category: dietCategory },
+    { name: "entrée", category: mealTypeCategory },
+    { name: "boisson", category: mealTypeCategory },
+    { name: "apéritif", category: mealTypeCategory },
+    { name: "plat", category: mealTypeCategory },
+    { name: "accompagnement", category: mealTypeCategory },
+    { name: "dessert", category: mealTypeCategory },
+    { name: "chaud", category: mealTypeCategory },
+    { name: "froid", category: mealTypeCategory },
+    ...DEFAULT_RECIPE_TOOLS.map((name) => ({ name, category: toolsCategory })),
+  ];
+}
+
+const TAG_MOJIBAKE_FIXES: Record<string, string> = {
+  "entrÃ©e": "entrée",
+  "apÃ©ritif": "apéritif",
+  "pescÃ©tarien": "pescétarien",
+  "vÃ©gÃ©tarien": "végétarien",
+  "vÃ©gÃ©talien": "végétalien",
+};
+
+function repairTagName(value: string) {
+  const trimmed = value.trim();
+  return TAG_MOJIBAKE_FIXES[trimmed] ?? trimmed;
+}
 
 export type TagCategory = {
   name: string;
@@ -43,12 +63,16 @@ function uniqueByNormalized(values: string[]) {
 }
 
 function uniqueRecipeTags(recipes: Recipe[]) {
-  return uniqueByNormalized(recipes.flatMap((recipe) => recipe.tags));
+  return uniqueByNormalized(recipes.flatMap((recipe) => recipe.tags.map(repairTagName)));
 }
 
 export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: () => Promise<unknown>) {
   const [tags, setTags] = useState<RecipeTag[]>([]);
-  const protectedTagKeys = useMemo(() => new Set(DEFAULT_PROTECTED_TAGS.map((tag) => normalizeText(tag.name))), []);
+  const protectedDefaults = defaultProtectedTags();
+  const protectedTagKeys = useMemo(
+    () => new Set(protectedDefaults.map((tag) => normalizeText(tag.name))),
+    [protectedDefaults],
+  );
 
   const refresh = useCallback(async () => {
     const stored = await db.tags.toArray();
@@ -64,48 +88,68 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
   }, [refresh]);
 
   useEffect(() => {
-    void db.transaction("rw", db.tags, async () => {
-      const now = nowIso();
-      const existing = await db.tags.toArray();
-      const byKey = new Map(existing.map((tag) => [normalizeText(tag.name), tag]));
-      const queuedKeys = new Set<string>();
-      const toUpsert: RecipeTag[] = [];
+    void db
+      .transaction("rw", db.tags, async () => {
+        const now = nowIso();
+        const existing = await db.tags.toArray();
+        const recipesToFix = await db.recipes.toArray();
+        const repairedTags = existing
+          .map((tag) => {
+            const repaired = repairTagName(tag.name);
+            return repaired === tag.name ? null : { ...tag, name: repaired, updatedAt: now };
+          })
+          .filter((tag): tag is RecipeTag => Boolean(tag));
+        if (repairedTags.length > 0) await db.tags.bulkPut(repairedTags);
+        const repairedRecipes = recipesToFix
+          .map((recipe) => {
+            const nextTags = recipe.tags.map(repairTagName);
+            const changed = nextTags.some((value, index) => value !== recipe.tags[index]);
+            return changed ? { ...recipe, tags: uniqueByNormalized(nextTags), updatedAt: now } : null;
+          })
+          .filter((recipe): recipe is Recipe => Boolean(recipe));
+        if (repairedRecipes.length > 0) await db.recipes.bulkPut(repairedRecipes);
 
-      for (const defaultTag of DEFAULT_PROTECTED_TAGS) {
-        const key = normalizeText(defaultTag.name);
-        const current = byKey.get(key);
-        if (queuedKeys.has(key)) continue;
-        if (!current) {
-          toUpsert.push({
-            id: createId(),
-            name: defaultTag.name,
-            category: defaultTag.category,
-            createdAt: now,
-            updatedAt: now,
-          });
-          queuedKeys.add(key);
-        } else if (current.name !== defaultTag.name || current.category !== defaultTag.category) {
-          toUpsert.push({ ...current, name: defaultTag.name, category: defaultTag.category, updatedAt: now });
-          queuedKeys.add(key);
+        const refreshedTags = repairedTags.length > 0 ? await db.tags.toArray() : existing;
+        const byKey = new Map(refreshedTags.map((tag) => [normalizeText(tag.name), tag]));
+        const queuedKeys = new Set<string>();
+        const toUpsert: RecipeTag[] = [];
+
+        for (const defaultTag of protectedDefaults) {
+          const key = normalizeText(defaultTag.name);
+          const current = byKey.get(key);
+          if (queuedKeys.has(key)) continue;
+          if (!current) {
+            toUpsert.push({
+              id: createId(),
+              name: defaultTag.name,
+              category: defaultTag.category,
+              createdAt: now,
+              updatedAt: now,
+            });
+            queuedKeys.add(key);
+          } else if (current.name !== defaultTag.name || current.category !== defaultTag.category) {
+            toUpsert.push({ ...current, name: defaultTag.name, category: defaultTag.category, updatedAt: now });
+            queuedKeys.add(key);
+          }
         }
-      }
 
-      for (const name of uniqueRecipeTags(recipes)) {
-        const key = normalizeText(name);
-        const current = byKey.get(key);
-        if (queuedKeys.has(key)) continue;
-        if (!current) {
-          toUpsert.push({ id: createId(), name, createdAt: now, updatedAt: now });
-          queuedKeys.add(key);
-        } else if (current.name !== name) {
-          toUpsert.push({ ...current, name, updatedAt: now });
-          queuedKeys.add(key);
+        for (const name of uniqueRecipeTags(recipes)) {
+          const key = normalizeText(name);
+          const current = byKey.get(key);
+          if (queuedKeys.has(key)) continue;
+          if (!current) {
+            toUpsert.push({ id: createId(), name, createdAt: now, updatedAt: now });
+            queuedKeys.add(key);
+          } else if (current.name !== name) {
+            toUpsert.push({ ...current, name, updatedAt: now });
+            queuedKeys.add(key);
+          }
         }
-      }
 
-      if (toUpsert.length > 0) await db.tags.bulkPut(toUpsert);
-    }).then(refresh);
-  }, [recipes, refresh]);
+        if (toUpsert.length > 0) await db.tags.bulkPut(toUpsert);
+      })
+      .then(refresh);
+  }, [recipes, refresh, protectedDefaults]);
 
   const allTags = useMemo(() => tags.map((tag) => tag.name), [tags]);
 
@@ -273,7 +317,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
     tags,
     allTags,
     categories,
-    protectedTags: DEFAULT_PROTECTED_TAGS.map((tag) => tag.name),
+    protectedTags: protectedDefaults.map((tag) => tag.name),
     isProtectedTag,
     createTag,
     renameTag,

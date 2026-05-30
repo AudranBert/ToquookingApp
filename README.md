@@ -115,3 +115,14 @@ TO DO:
 - ✔️ English UI
 - In recipes needed tools : like oven, fryer, toaster... So we can filter on fryer for example
 - Maybe some AI tools: better autofilling of the import form, scan book ans import recipe directly, translate recipes
+- Smart servings scaling + unit conversions (metric/imperial).
+- Import quality inspector with per-field confidence and review hints.
+- Ingredient normalization (aliases/synonyms) to improve search and shopping-list merge.
+- Recipe version history with restore points.
+- Meal planner/calendar with weekly shopping list generation.
+- Pantry mode (exclude ingredients already available at home).
+- Optional nutrition estimates per serving (clearly marked as estimates).
+- Backup/sync UX improvements (integrity checks and optional cloud-folder sync workflow).
+
+- Recipe tools/equipment support: add a tools field (oven, air fryer, blender, etc.) with filtering and batch tagging.
+- Smart scaling + unit conversion: scale servings with better fractional display and metric/imperial conversion.
