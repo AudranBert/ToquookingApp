@@ -13,7 +13,11 @@ function detectLocale(): Locale {
   } catch {
     // ignore
   }
-  return navigator.language.toLowerCase().startsWith("fr") ? "fr" : "en";
+  const language =
+    typeof navigator !== "undefined" && typeof navigator.language === "string"
+      ? navigator.language.toLowerCase()
+      : "";
+  return language.startsWith("fr") ? "fr" : "en";
 }
 
 let currentLocale: Locale = detectLocale();
