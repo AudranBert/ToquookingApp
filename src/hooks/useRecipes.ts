@@ -16,7 +16,7 @@ export function useRecipes(status: StatusApi) {
   }, []);
 
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
   const save = useCallback(
@@ -26,7 +26,6 @@ export function useRecipes(status: StatusApi) {
         status.setStatus("Ajoute au minimum un nom.");
         return null;
       }
-
       const existing = editingId ? await db.recipes.get(editingId) : undefined;
       const recipe: Recipe = {
         ...cleaned,
@@ -35,17 +34,33 @@ export function useRecipes(status: StatusApi) {
         updatedAt: nowIso(),
       };
 
-      await db.recipes.put(recipe);
-      await refresh();
-      status.setStatus(editingId ? "Recette mise à jour." : "Recette enregistrée.");
-      return recipe;
+      try {
+        await db.recipes.put(recipe);
+        await refresh();
+        status.setStatus(editingId ? "Recette mise à jour." : "Recette enregistrée.");
+        return recipe;
+      } catch (firstError) {
+        try {
+          if (db.isOpen()) db.close();
+          await db.open();
+          await db.recipes.put(recipe);
+          await refresh();
+          status.setStatus(editingId ? "Recette mise à jour." : "Recette enregistrée.");
+          return recipe;
+        } catch (retryError) {
+          const error = retryError ?? firstError;
+          const details =
+            error instanceof Error ? `${error.name}: ${error.message}` : typeof error === "string" ? error : "erreur inconnue";
+          status.setStatus(`Enregistrement impossible (${details}).`);
+          return null;
+        }
+      }
     },
     [refresh, status],
   );
 
   const remove = useCallback(
     async (recipe: Recipe) => {
-      if (!window.confirm(`Supprimer "${recipe.name}" ?`)) return false;
       await db.recipes.delete(recipe.id);
       await refresh();
       status.setStatus("Recette supprimée.");
@@ -77,12 +92,20 @@ export function useRecipes(status: StatusApi) {
       try {
         const imported = await parseBackupFile(file, await db.recipes.toArray());
         await db.recipes.bulkPut(imported.recipes);
+        const existingTags = await db.tags.toArray();
+        const existingByName = new Map(existingTags.map((tag) => [tag.name.toLowerCase(), tag]));
         await db.tags.bulkPut(
-          imported.tags.map((name) => ({
-            name,
-            createdAt: nowIso(),
-            updatedAt: nowIso(),
-          })),
+          imported.tags.map((tag) => {
+            const existing = existingByName.get(tag.name.toLowerCase());
+            return {
+              id: existing?.id ?? createId(),
+              name: existing?.name ?? tag.name,
+              category: tag.category ?? existing?.category,
+              color: tag.color ?? existing?.color,
+              createdAt: existing?.createdAt ?? nowIso(),
+              updatedAt: nowIso(),
+            };
+          }),
         );
         await refresh();
         status.setStatus(`${imported.recipes.length} recette(s) importée(s).`);

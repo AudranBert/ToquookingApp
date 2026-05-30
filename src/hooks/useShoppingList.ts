@@ -10,7 +10,10 @@ export function useShoppingList(recipes: Recipe[], status: StatusApi) {
 
   function regenerate() {
     const selected = recipes.filter((recipe) => selectedIds.includes(recipe.id));
-    setItems(buildShoppingList(selected));
+    setItems((current) => {
+      const manualItems = current.filter((item) => item.recipeIds.length === 0);
+      return [...buildShoppingList(selected), ...manualItems];
+    });
     status.setStatus("Liste de courses générée.");
   }
 

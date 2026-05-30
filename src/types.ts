@@ -22,13 +22,18 @@ export type Recipe = {
   totalTime?: number;
   notes?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   sourceImageUrl?: string;
+  sourceImageUrls?: string[];
   createdAt: string;
   updatedAt: string;
 };
 
 export type RecipeTag = {
+  id: string;
   name: string;
+  category?: string;
+  color?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -42,7 +47,7 @@ export type ParsedRecipe = Partial<RecipeDraft> & {
 export type BackupFile = {
   version: 1;
   exportedAt: string;
-  tags?: string[];
+  tags?: Array<Pick<RecipeTag, "name" | "category" | "color">>;
   recipes: Recipe[];
 };
 
@@ -54,6 +59,7 @@ export type ShoppingItem = {
   pantry?: boolean;
 };
 
-export type Panel = "library" | "form" | "shopping" | "backup";
+export type Panel = "library" | "form" | "shopping" | "backup" | "management";
 export type SeasonalThreshold = 0 | 1 | 3;
 export type ReimportMode = "replace" | "fill-blanks";
+export type RegimeFilter = "" | "omnivore" | "végétarien" | "végétalien" | "pescétarien";

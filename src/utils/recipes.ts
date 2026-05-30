@@ -39,32 +39,57 @@ export function recipeToDraft(recipe: Recipe): RecipeDraft {
     totalTime: recipe.totalTime,
     notes: recipe.notes,
     imageUrl: recipe.imageUrl,
+    imageUrls: recipe.imageUrls,
     sourceImageUrl: recipe.sourceImageUrl,
+    sourceImageUrls: recipe.sourceImageUrls,
   };
 }
 
 export function cleanRecipeDraft(draft: RecipeDraft): RecipeDraft {
   return {
     ...draft,
-    name: draft.name.trim(),
-    tags: draft.tags.map((tag) => tag.trim()).filter(Boolean),
-    origin: draft.origin?.trim(),
+    name: stripWrappingQuotes(draft.name.trim()) ?? "",
+    tags: draft.tags.map((tag) => stripWrappingQuotes(tag.trim()) ?? "").filter(Boolean),
+    origin: stripWrappingQuotes(draft.origin?.trim()),
     ingredients: draft.ingredients
       .map((ingredient) => ({
         ...ingredient,
-        name: ingredient.name.trim(),
-        quantity: ingredient.quantity?.trim(),
-        unit: ingredient.unit?.trim(),
-        note: ingredient.note?.trim(),
+        name: stripWrappingQuotes(ingredient.name.trim()) ?? "",
+        quantity: stripWrappingQuotes(ingredient.quantity?.trim()),
+        unit: stripWrappingQuotes(ingredient.unit?.trim()),
+        note: stripWrappingQuotes(ingredient.note?.trim()),
       }))
       .filter((ingredient) => ingredient.name),
-    instructions: draft.instructions.map((step) => step.trim()).filter(Boolean),
-    sourceUrl: draft.sourceUrl?.trim(),
-    videoUrl: draft.videoUrl?.trim(),
-    notes: draft.notes?.trim(),
-    imageUrl: draft.imageUrl?.trim(),
-    sourceImageUrl: draft.sourceImageUrl?.trim(),
+    instructions: draft.instructions.map((step) => stripWrappingQuotes(step.trim()) ?? "").filter(Boolean),
+    sourceUrl: stripWrappingQuotes(draft.sourceUrl?.trim()),
+    videoUrl: stripWrappingQuotes(draft.videoUrl?.trim()),
+    notes: stripWrappingQuotes(draft.notes?.trim()),
+    imageUrl: stripWrappingQuotes(draft.imageUrl?.trim()),
+    imageUrls: (draft.imageUrls ?? []).map((url) => stripWrappingQuotes(url?.trim()) ?? "").filter(Boolean),
+    sourceImageUrl: stripWrappingQuotes(draft.sourceImageUrl?.trim()),
+    sourceImageUrls: (draft.sourceImageUrls ?? []).map((url) => stripWrappingQuotes(url?.trim()) ?? "").filter(Boolean),
   };
+}
+
+function stripWrappingQuotes(value: string | undefined) {
+  if (!value) return value;
+  const trimmed = value.trim();
+  const pairs: Array<[string, string]> = [
+    ['"', '"'],
+    ["'", "'"],
+    ["“", "”"],
+    ["‘", "’"],
+    ["«", "»"],
+    ["â€œ", "â€"],
+    ["â€˜", "â€™"],
+    ["Â«", "Â»"],
+  ];
+  for (const [start, end] of pairs) {
+    if (trimmed.startsWith(start) && trimmed.endsWith(end) && trimmed.length >= start.length + end.length) {
+      return trimmed.slice(start.length, trimmed.length - end.length).trim();
+    }
+  }
+  return trimmed;
 }
 
 export function ingredientLabel(ingredient: Ingredient) {

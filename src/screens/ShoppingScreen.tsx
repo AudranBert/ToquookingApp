@@ -1,7 +1,8 @@
-import type { Dispatch, SetStateAction } from "react";
+﻿import type { Dispatch, SetStateAction } from "react";
 import { useMemo, useRef, useState } from "react";
-import { FileDown, FileImage, MessageSquareText, Plus, Search, ShoppingBasket } from "lucide-react";
+import { FileDown, FileImage, MessageSquareText, Plus, Search, ShoppingBasket, Trash2 } from "lucide-react";
 import { basicFileName, shareElementAsPdf, shareElementAsPng } from "../exporters";
+import { t } from "../i18n";
 import type { Recipe, ShoppingItem } from "../types";
 import { normalizeText } from "../utils/text";
 
@@ -16,16 +17,7 @@ type Props = {
   onStatus: (message: string) => void;
 };
 
-export function ShoppingScreen({
-  recipes,
-  selectedRecipeIds,
-  items,
-  onAddItem,
-  onGenerate,
-  onItemChange,
-  onSelectionChange,
-  onStatus,
-}: Props) {
+export function ShoppingScreen({ recipes, selectedRecipeIds, items, onAddItem, onGenerate, onItemChange, onSelectionChange, onStatus }: Props) {
   const [recipeQuery, setRecipeQuery] = useState("");
   const [itemQuery, setItemQuery] = useState("");
   const exportRef = useRef<HTMLDivElement>(null);
@@ -33,29 +25,14 @@ export function ShoppingScreen({
   const normalizedRecipeQuery = normalizeText(recipeQuery);
   const normalizedItemQuery = normalizeText(itemQuery);
 
-  const visibleRecipes = useMemo(
-    () =>
-      normalizedRecipeQuery
-        ? recipes.filter((recipe) =>
-            normalizeText([recipe.name, recipe.origin, ...recipe.tags].filter(Boolean).join(" ")).includes(
-              normalizedRecipeQuery,
-            ),
-          )
-        : recipes,
-    [normalizedRecipeQuery, recipes],
-  );
+  const visibleRecipes = useMemo(() =>
+    normalizedRecipeQuery
+      ? recipes.filter((recipe) => normalizeText([recipe.name, recipe.origin, ...recipe.tags].filter(Boolean).join(" ")).includes(normalizedRecipeQuery))
+      : recipes,
+  [normalizedRecipeQuery, recipes]);
 
-  const visibleItems = useMemo(
-    () =>
-      normalizedItemQuery
-        ? items.filter((item) => normalizeText(item.label).includes(normalizedItemQuery))
-        : items,
-    [items, normalizedItemQuery],
-  );
-  const selectedRecipes = useMemo(
-    () => recipes.filter((recipe) => selectedRecipeIds.includes(recipe.id)),
-    [recipes, selectedRecipeIds],
-  );
+  const visibleItems = useMemo(() => normalizedItemQuery ? items.filter((item) => normalizeText(item.label).includes(normalizedItemQuery)) : items, [items, normalizedItemQuery]);
+  const selectedRecipes = useMemo(() => recipes.filter((recipe) => selectedRecipeIds.includes(recipe.id)), [recipes, selectedRecipeIds]);
   const exportDate = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(new Date());
   const exportFilename = basicFileName("liste de courses", "png").replace(".png", "");
   const canExport = items.length > 0;
@@ -63,49 +40,35 @@ export function ShoppingScreen({
   async function handleShareText() {
     if (!canExport) return;
     try {
-      const result = await shareShoppingListText(formatShoppingListText(items, selectedRecipes, exportDate));
-      if (result === "copied") onStatus("Texte de la liste de courses copie.");
-      if (result === "sms") onStatus("Ouverture de l'app SMS.");
-      if (result === "manual") onStatus("Texte pret a copier.");
+      const result = await shareShoppingListText(formatShoppingListText(items, selectedRecipes, exportDate), `${exportFilename}.txt`);
+      if (result === "copied") onStatus(t("shopping.status.textCopied"));
+      if (result === "sms") onStatus(t("shopping.status.smsOpen"));
+      if (result === "downloaded") onStatus(t("shopping.status.textDownloaded"));
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      onStatus("Le partage texte n'a pas abouti.");
+      onStatus(t("shopping.status.textFailed"));
     }
   }
 
   async function handleShareImage() {
     if (!exportRef.current || !canExport) return;
     try {
-      const result = await shareElementAsPng(
-        exportRef.current,
-        `${exportFilename}.png`,
-        "Liste de courses",
-        "Liste de courses Toque",
-      );
-      if (result === "downloaded") {
-        onStatus("PNG telecharge. Le partage natif n'est pas disponible sur cet appareil.");
-      }
+      const result = await shareElementAsPng(exportRef.current, `${exportFilename}.png`, "Liste de courses", "Liste de courses Toque");
+      if (result === "downloaded") onStatus(t("shopping.status.pngDownloaded"));
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      onStatus("Le partage n'a pas abouti.");
+      onStatus(t("shopping.status.shareFailed"));
     }
   }
 
   async function handleSharePdf() {
     if (!exportRef.current || !canExport) return;
     try {
-      const result = await shareElementAsPdf(
-        exportRef.current,
-        `${exportFilename}.pdf`,
-        "Liste de courses",
-        "Liste de courses Toque",
-      );
-      if (result === "downloaded") {
-        onStatus("PDF telecharge. Le partage natif n'est pas disponible sur cet appareil.");
-      }
+      const result = await shareElementAsPdf(exportRef.current, `${exportFilename}.pdf`, "Liste de courses", "Liste de courses Toque");
+      if (result === "downloaded") onStatus(t("shopping.status.pdfDownloaded"));
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      onStatus("Le partage PDF n'a pas abouti.");
+      onStatus(t("shopping.status.pdfFailed"));
     }
   }
 
@@ -113,140 +76,78 @@ export function ShoppingScreen({
     <section className="panel workspace">
       <div className="section-heading">
         <div>
-          <span className="eyebrow">Liste de courses</span>
-          <h2>Sélectionne des recettes</h2>
+          <span className="eyebrow">{t("shopping.eyebrow")}</span>
+          <h2>{t("shopping.title")}</h2>
         </div>
         <div className="action-bar">
-          <button className="button" onClick={handleSharePdf} disabled={!canExport} title="Exporter en PDF">
-            <FileDown size={18} /> PDF
-          </button>
-          <button className="button" onClick={handleShareImage} disabled={!canExport} title="Partager ou telecharger le PNG">
-            <FileImage size={18} /> PNG
-          </button>
-          <button className="button button--primary" onClick={handleShareText} disabled={!canExport} title="Partager par SMS">
-            <MessageSquareText size={18} /> SMS
-          </button>
-          <button className="button" onClick={onGenerate}>
-            <ShoppingBasket size={18} /> Générer
-          </button>
+          <button className="button button--icon-mobile" onClick={handleSharePdf} disabled={!canExport} title={t("shopping.title.pdf")}><FileDown size={18} /> {t("shopping.action.pdf")}</button>
+          <button className="button button--icon-mobile" onClick={handleShareImage} disabled={!canExport} title={t("shopping.title.png")}><FileImage size={18} /> {t("shopping.action.png")}</button>
+          <button className="button button--primary button--icon-mobile" onClick={handleShareText} disabled={!canExport} title={t("shopping.title.sms")}><MessageSquareText size={18} /> {t("shopping.action.sms")}</button>
+          <button className="button button--icon-mobile" onClick={onGenerate}><ShoppingBasket size={18} /> {t("shopping.action.generate")}</button>
         </div>
       </div>
 
       <div className="layout layout--split">
         <div className="stack">
-          <label className="search-field">
-            <span className="label-with-icon">
-              <Search size={16} /> Rechercher une recette
-            </span>
-            <input
-              aria-label="Rechercher une recette pour la liste de courses"
-              placeholder="Nom, origine, tag..."
-              type="search"
-              value={recipeQuery}
-              onChange={(event) => setRecipeQuery(event.target.value)}
-            />
-          </label>
-          <span className="muted count-label">
-            {visibleRecipes.length} / {recipes.length} recettes
-          </span>
-
+          <label className="search-field"><span className="label-with-icon"><Search size={16} /> {t("shopping.search.recipe")}</span><input aria-label={t("shopping.search.recipeAria")} placeholder={t("shopping.search.recipePlaceholder")} type="search" value={recipeQuery} onChange={(event) => setRecipeQuery(event.target.value)} /></label>
+          <span className="muted count-label">{t("shopping.count.recipes", { visible: visibleRecipes.length, total: recipes.length })}</span>
           {visibleRecipes.map((recipe) => (
             <label key={recipe.id} className="check-control">
-              <input
-                checked={selectedRecipeIds.includes(recipe.id)}
-                onChange={(event) =>
-                  onSelectionChange((ids) =>
-                    event.target.checked ? [...ids, recipe.id] : ids.filter((id) => id !== recipe.id),
-                  )
-                }
-                type="checkbox"
-              />
+              <input checked={selectedRecipeIds.includes(recipe.id)} onChange={(event) => onSelectionChange((ids) => event.target.checked ? [...ids, recipe.id] : ids.filter((id) => id !== recipe.id))} type="checkbox" />
               {recipe.name}
             </label>
           ))}
-          {visibleRecipes.length === 0 && <p className="empty-inline">Aucune recette ne correspond.</p>}
+          {visibleRecipes.length === 0 && <p className="empty-inline">{t("shopping.empty.recipeMatch")}</p>}
         </div>
 
         <div className="stack">
-          <label className="search-field">
-            <span className="label-with-icon">
-              <Search size={16} /> Rechercher dans la liste
-            </span>
-            <input
-              aria-label="Rechercher une ligne de course"
-              placeholder="Ingrédient..."
-              type="search"
-              value={itemQuery}
-              onChange={(event) => setItemQuery(event.target.value)}
-            />
-          </label>
-          <span className="muted count-label">
-            {visibleItems.length} / {items.length} lignes
-          </span>
-
+          <label className="search-field"><span className="label-with-icon"><Search size={16} /> {t("shopping.search.list")}</span><input aria-label={t("shopping.search.listAria")} placeholder={t("shopping.search.listPlaceholder")} type="search" value={itemQuery} onChange={(event) => setItemQuery(event.target.value)} /></label>
+          <span className="muted count-label">{t("shopping.count.lines", { visible: visibleItems.length, total: items.length })}</span>
           {visibleItems.map((item) => (
-            <label key={item.id} className={item.checked ? "shopping-item shopping-item--done" : "shopping-item"}>
+            <div key={item.id} className={item.checked ? "shopping-item shopping-item--done" : "shopping-item"}>
               <input
+                aria-label={`Cocher ${item.label}`}
                 checked={item.checked}
                 onChange={(event) =>
                   onItemChange((current) =>
-                    current.map((candidate) =>
-                      candidate.id === item.id ? { ...candidate, checked: event.target.checked } : candidate,
-                    ),
+                    current.map((candidate) => (candidate.id === item.id ? { ...candidate, checked: event.target.checked } : candidate)),
                   )
                 }
                 type="checkbox"
               />
               <input
-                aria-label="Ligne de course"
+                aria-label={t("shopping.item.lineAria")}
                 value={item.label}
                 onChange={(event) =>
                   onItemChange((current) =>
-                    current.map((candidate) =>
-                      candidate.id === item.id ? { ...candidate, label: event.target.value } : candidate,
-                    ),
+                    current.map((candidate) => (candidate.id === item.id ? { ...candidate, label: event.target.value } : candidate)),
                   )
                 }
               />
-              {item.pantry && <span className="chip chip--pantry">Placard</span>}
-            </label>
+              {item.pantry && <span className="chip chip--pantry">{t("recipe.detail.pantry")}</span>}
+              <button
+                className="button button--icon button--danger shopping-item__delete"
+                type="button"
+                title={t("shopping.item.deleteTitle")}
+                aria-label={`Supprimer ${item.label}`}
+                onClick={() => onItemChange((current) => current.filter((candidate) => candidate.id !== item.id))}
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
           ))}
-          {items.length > 0 && visibleItems.length === 0 && <p className="empty-inline">Aucune ligne ne correspond.</p>}
-          <button className="button button--ghost button--full" onClick={onAddItem}>
-            <Plus size={18} /> Ajouter une ligne
-          </button>
+          {items.length > 0 && visibleItems.length === 0 && <p className="empty-inline">{t("shopping.empty.lineMatch")}</p>}
+          <button className="button button--ghost button--full button--icon-mobile" onClick={onAddItem}><Plus size={18} /> {t("shopping.action.addLine")}</button>
         </div>
       </div>
 
       <div className="shopping-export-canvas" aria-hidden="true">
         <div className="shopping-export-sheet" ref={exportRef}>
-          <div className="shopping-export-sheet__header">
-            <span className="eyebrow">{exportDate}</span>
-            <h2>Liste de courses</h2>
-          </div>
-          {selectedRecipes.length > 0 && (
-            <div className="shopping-export-sheet__recipes">
-              <h3>Recettes</h3>
-              <p>{selectedRecipes.map((recipe) => recipe.name).join(", ")}</p>
-            </div>
-          )}
-          <div className="shopping-export-sheet__items">
-            {items.map((item) => (
-              <div key={item.id} className="shopping-export-row">
-                <span className="shopping-export-row__check">{item.checked ? "x" : ""}</span>
-                <span
-                  className={
-                    item.checked
-                      ? "shopping-export-row__label shopping-export-row__label--done"
-                      : "shopping-export-row__label"
-                  }
-                >
-                  {item.label}
-                </span>
-                {item.pantry && <span className="chip chip--pantry">Placard</span>}
-              </div>
-            ))}
-          </div>
+          <div className="shopping-export-sheet__header"><span className="eyebrow">{exportDate}</span><h2>{t("shopping.eyebrow")}</h2></div>
+          {selectedRecipes.length > 0 && <div className="shopping-export-sheet__recipes"><h3>{t("app.nav.library")}</h3><p>{selectedRecipes.map((recipe) => recipe.name).join(", ")}</p></div>}
+          <div className="shopping-export-sheet__items">{items.map((item) => (
+            <div key={item.id} className="shopping-export-row"><span className="shopping-export-row__check">{item.checked ? "x" : ""}</span><span className={item.checked ? "shopping-export-row__label shopping-export-row__label--done" : "shopping-export-row__label"}>{item.label}</span>{item.pantry && <span className="chip chip--pantry">{t("recipe.detail.pantry")}</span>}</div>
+          ))}</div>
         </div>
       </div>
     </section>
@@ -254,54 +155,35 @@ export function ShoppingScreen({
 }
 
 function formatShoppingListText(items: ShoppingItem[], recipes: Recipe[], exportDate: string) {
-  const lines = ["Liste de courses", exportDate, ""];
-
-  if (recipes.length > 0) {
-    lines.push("Recettes:", ...recipes.map((recipe) => `- ${recipe.name}`), "");
-  }
-
-  lines.push("Courses:");
-  items.forEach((item) => {
-    lines.push(`${item.checked ? "[x]" : "[ ]"} ${item.label}${item.pantry ? " (Placard)" : ""}`);
-  });
-
+  const lines = [t("shopping.eyebrow"), exportDate, ""];
+  if (recipes.length > 0) lines.push(`${t("app.nav.library")}:`, ...recipes.map((recipe) => `- ${recipe.name}`), "");
+  lines.push(`${t("app.nav.shopping")}:`);
+  items.forEach((item) => lines.push(`${item.checked ? "[x]" : "[ ]"} ${item.label}${item.pantry ? ` (${t("recipe.detail.pantry")})` : ""}`));
   return `${lines.join("\n")}\n`;
 }
 
-async function shareShoppingListText(text: string) {
+async function shareShoppingListText(text: string, filename: string) {
   if (navigator.share) {
-    try {
-      await navigator.share({ title: "Liste de courses", text });
-      return "shared";
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") throw error;
-    }
+    try { await navigator.share({ title: t("shopping.eyebrow"), text }); return "shared"; } catch (error) { if (error instanceof DOMException && error.name === "AbortError") throw error; }
   }
-
   if (isLikelyMobile()) {
+    const maxSmsBodyLength = 1800;
+    if (text.length > maxSmsBodyLength) {
+      downloadTextFile(text, filename);
+      return "downloaded";
+    }
     window.location.href = `sms:?&body=${encodeURIComponent(text)}`;
     return "sms";
   }
-
-  try {
-    await copyText(text);
-    return "copied";
-  } catch {
-    window.prompt("Copie le texte de la liste de courses :", text);
-    return "manual";
-  }
+  try { await copyText(text); return "copied"; } catch {}
+  downloadTextFile(text, filename);
+  return "downloaded";
 }
 
 async function copyText(text: string) {
   if (navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return;
-    } catch {
-      // Fall through for browsers that expose the Clipboard API but block it.
-    }
+    try { await navigator.clipboard.writeText(text); return; } catch {}
   }
-
   const textarea = document.createElement("textarea");
   textarea.value = text;
   textarea.setAttribute("readonly", "");
@@ -309,14 +191,16 @@ async function copyText(text: string) {
   textarea.style.left = "-10000px";
   document.body.append(textarea);
   textarea.select();
-
-  try {
-    if (!document.execCommand("copy")) throw new Error("Copy failed");
-  } finally {
-    textarea.remove();
-  }
+  try { if (!document.execCommand("copy")) throw new Error("Copy failed"); } finally { textarea.remove(); }
 }
 
-function isLikelyMobile() {
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+function isLikelyMobile() { return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent); }
+
+function downloadTextFile(text: string, filename: string) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
 }
