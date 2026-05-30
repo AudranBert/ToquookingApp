@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { t } from "../i18n";
 import { importRecipeFromText, importRecipeFromUrl } from "../importer";
 import type { ParsedRecipe, Recipe, RecipeDraft, ReimportMode } from "../types";
+import { mergedRecipeImageUrls } from "../utils/images";
 import { createId } from "../utils/id";
 import { createEmptyDraft, recipeToDraft } from "../utils/recipes";
 import { normalizeText } from "../utils/text";
-import { mergedRecipeImageUrls } from "../utils/images";
 import type { StatusApi } from "./useStatus";
 
 export function useRecipeDraft(status: StatusApi, allTags: string[]) {
@@ -34,9 +35,9 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
 
     return runImport({
       url,
-      loadingStatus: "Analyse du lien en cours (nom, ingrédients, étapes, image)...",
-      successStatus: "Import termine. Verifie les champs puis enregistre la recette.",
-      errorStatus: "Import impossible pour ce lien. Le lien est conserve, complete la recette manuellement.",
+      loadingStatus: t("import.status.urlLoading"),
+      successStatus: t("import.status.urlSuccess"),
+      errorStatus: t("import.status.urlError"),
       apply: (imported) => {
         setDraft(imported);
         setEditingId(null);
@@ -47,15 +48,15 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
   async function reimport(mode: ReimportMode) {
     const url = draft.sourceUrl?.trim();
     if (!url) {
-      status.setStatus("Ajoute un lien source avant de réimporter.");
+      status.setStatus(t("import.status.reimportMissingSource"));
       return;
     }
 
     await runImport({
       url,
-      loadingStatus: "Reimport en cours depuis le lien source...",
-      successStatus: mode === "replace" ? "Reimport termine : champs remplaces depuis le lien." : "Reimport termine : champs vides completes depuis le lien.",
-      errorStatus: "Reimport impossible pour ce lien source.",
+      loadingStatus: t("import.status.reimportLoading"),
+      successStatus: mode === "replace" ? t("import.status.reimportReplaceSuccess") : t("import.status.reimportFillSuccess"),
+      errorStatus: t("import.status.reimportError"),
       apply: (imported) => setDraft((current) => (mode === "replace" ? imported : mergeBlanks(current, imported))),
     });
   }
@@ -63,7 +64,6 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
   function importFromText() {
     const text = importText.trim();
     if (!text) return false;
-
     return importFromRawText(text);
   }
 
@@ -71,17 +71,17 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
     const text = rawText.trim();
     if (!text) return false;
 
-    status.setStatus("Analyse du texte en cours (nom, ingrédients, étapes)...");
+    status.setStatus(t("import.status.textLoading"));
     try {
       const parsed = importRecipeFromText(text);
       const imported = parsedToDraft(parsed, parsed.sourceUrl ?? "", allTags);
       setDraft(imported);
       setEditingId(null);
       setImportWarnings(parsed.warnings ?? []);
-      status.setStatus("Import texte termine. Verifie les champs puis enregistre la recette.");
+      status.setStatus(t("import.status.textSuccess"));
       return true;
     } catch {
-      status.setStatus("Import texte impossible. Colle un texte plus complet.");
+      status.setStatus(t("import.status.textError"));
       return false;
     }
   }
@@ -91,7 +91,7 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
     setEditingId(null);
     setImportWarnings([]);
     setImportText("");
-    status.setStatus("Recette chargee depuis le fichier. Verifie les champs puis enregistre.");
+    status.setStatus(t("import.status.fileSuccess"));
     return true;
   }
 
@@ -117,8 +117,7 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
       status.setStatus(successStatus);
       return true;
     } catch (error) {
-      const details = classifyImportError(error);
-      status.setStatus(`${errorStatus} (${details})`);
+      status.setStatus(`${errorStatus} (${classifyImportError(error)})`);
       return false;
     }
   }
@@ -193,12 +192,10 @@ function mergeBlanks(current: RecipeDraft, imported: RecipeDraft): RecipeDraft {
 function matchKnownTags(importedTags: string[], allTags: string[]) {
   const known = new Map(allTags.map((tag) => [normalizeText(tag), tag]));
   const matched = new Map<string, string>();
-
   importedTags.forEach((tag) => {
     const exact = known.get(normalizeText(tag));
     if (exact) matched.set(normalizeText(exact), exact);
   });
-
   return [...matched.values()];
 }
 
@@ -210,8 +207,8 @@ function hasFilledIngredients(draft: RecipeDraft) {
 
 function classifyImportError(error: unknown) {
   const message = error instanceof Error ? error.message.toLowerCase() : String(error ?? "").toLowerCase();
-  if (/failed to fetch|network|cors|timeout|dns|internet/.test(message)) return "probleme reseau";
-  if (/unsupported|not supported|no recipe|introuvable|aucune recette/.test(message)) return "source non supportee";
-  if (/json|parse|syntax/.test(message)) return "erreur de parsing";
-  return "erreur inconnue";
+  if (/failed to fetch|network|cors|timeout|dns|internet/.test(message)) return t("import.error.network");
+  if (/unsupported|not supported|no recipe|introuvable|aucune recette/.test(message)) return t("import.error.unsupported");
+  if (/json|parse|syntax/.test(message)) return t("import.error.parse");
+  return t("import.error.unknown");
 }

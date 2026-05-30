@@ -96,12 +96,12 @@ export function RecipeForm({ draft, editing, warnings, allTags, categories, tagC
                 <div className="import-support" id="import-support-panel" role="status">
                   <p className="import-support__title">{t("recipe.form.importSupport")}</p>
                   <ul>
-                    <li>marmiton.org: bon</li>
-                    <li>cuisineaz.com: bon</li>
-                    <li>cuisineactuelle.fr: bon</li>
-                    <li>cuisine-libre.org: bon</li>
-                    <li>papillesetpupilles.fr: bon à partiel selon la page</li>
-                    <li>youtube.com/shorts: partiel (titre/description)</li>
+                    <li>{t("recipe.form.importSupport.marmiton")}</li>
+                    <li>{t("recipe.form.importSupport.cuisineaz")}</li>
+                    <li>{t("recipe.form.importSupport.cuisineactuelle")}</li>
+                    <li>{t("recipe.form.importSupport.cuisinelibre")}</li>
+                    <li>{t("recipe.form.importSupport.papilles")}</li>
+                    <li>{t("recipe.form.importSupport.youtube")}</li>
                   </ul>
                 </div>
               )}

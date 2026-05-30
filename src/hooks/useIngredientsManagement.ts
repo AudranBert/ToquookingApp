@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { db } from "../db";
+import { t } from "../i18n";
 import type { Recipe } from "../types";
 import { nowIso } from "../utils/recipes";
 import { normalizeText } from "../utils/text";
@@ -47,12 +48,12 @@ export function useIngredientsManagement(recipes: Recipe[], status: StatusApi, o
       })),
     );
     await onRecipesChanged();
-    status.setStatus("Ingrédient renommé.");
+    status.setStatus(t("manage.status.ingredientRenamed"));
   }
 
   async function mergeIngredients(sourceName: string, targetNameRaw: string) {
     await renameIngredient(sourceName, targetNameRaw);
-    status.setStatus("Ingrédients fusionnés.");
+    status.setStatus(t("manage.status.ingredientsMerged"));
   }
 
   async function deleteIngredient(name: string) {
@@ -67,7 +68,7 @@ export function useIngredientsManagement(recipes: Recipe[], status: StatusApi, o
       })),
     );
     await onRecipesChanged();
-    status.setStatus("Ingrédient supprimé des recettes.");
+    status.setStatus(t("manage.status.ingredientDeletedFromRecipes"));
   }
 
   return { allIngredients, renameIngredient, mergeIngredients, deleteIngredient };

@@ -1633,6 +1633,22 @@ function sanitizeMergedResult(recipe: ParsedRecipe, sourceUrl: string): ParsedRe
   if (hasKnownDomain(sourceUrl) && merged.ingredients && merged.ingredients.length > 60) {
     merged.ingredients = merged.ingredients.slice(0, 30);
   }
+  const validImageUrls = [...(merged.imageUrls ?? []), ...(merged.sourceImageUrls ?? [])]
+    .map((value) => absolutizeUrl(value, sourceUrl))
+    .filter((value): value is string => Boolean(value))
+    .filter((value) => isLikelyRecipeImage(value));
+  if (merged.imageUrl && !isLikelyRecipeImage(merged.imageUrl) && validImageUrls[0]) {
+    merged.imageUrl = validImageUrls[0];
+  }
+  if (merged.sourceImageUrl && !isLikelyRecipeImage(merged.sourceImageUrl) && validImageUrls[0]) {
+    merged.sourceImageUrl = validImageUrls[0];
+  }
+  if (merged.imageUrls?.length) {
+    merged.imageUrls = merged.imageUrls.filter((value) => isLikelyRecipeImage(absolutizeUrl(value, sourceUrl)));
+  }
+  if (merged.sourceImageUrls?.length) {
+    merged.sourceImageUrls = merged.sourceImageUrls.filter((value) => isLikelyRecipeImage(absolutizeUrl(value, sourceUrl)));
+  }
   if (hasKnownDomain(sourceUrl) && (merged.ingredients?.length ?? 0) >= 3 && (merged.instructions?.length ?? 0) >= 2 && merged.warnings?.length) {
     merged.warnings = merged.warnings.filter((warning) => !/Import partiel depuis contenu non structuré/i.test(warning));
     if (merged.warnings.length === 0) merged.warnings = undefined;

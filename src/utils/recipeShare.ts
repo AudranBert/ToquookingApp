@@ -1,4 +1,5 @@
-import type { Recipe, RecipeDraft } from "../types";
+﻿import type { Recipe, RecipeDraft } from "../types";
+import { t } from "../i18n";
 import { createId } from "./id";
 import { cleanRecipeDraft, ingredientLabel, nowIso, recipeToDraft } from "./recipes";
 import { mergedRecipeImageUrls, primaryRecipeImageUrl } from "./images";
@@ -49,22 +50,22 @@ export function recipeToShareText(recipe: Recipe) {
     recipe.name,
     "",
     formatMeta(recipe),
-    recipe.tags.length ? `Tags: ${recipe.tags.join(", ")}` : "",
-    recipe.origin ? `Origine: ${recipe.origin}` : "",
+    recipe.tags.length ? `${t("share.text.tagsLabel")}: ${recipe.tags.join(", ")}` : "",
+    recipe.origin ? `${t("share.text.originLabel")}: ${recipe.origin}` : "",
     "",
-    "Ingredients:",
+    `${t("share.text.ingredientsLabel")}:`,
     ...recipe.ingredients.map((ingredient) => `- ${ingredientLabel(ingredient)}`),
     "",
-    "Instructions:",
+    `${t("share.text.instructionsLabel")}:`,
     ...recipe.instructions.map((step, index) => `${index + 1}. ${step}`),
     recipe.notes ? "" : "",
-    recipe.notes ? "Notes:" : "",
+    recipe.notes ? `${t("share.text.notesLabel")}:` : "",
     recipe.notes ?? "",
     shareableImageUrl ? "" : "",
-    shareableImageUrl ? `Image: ${shareableImageUrl}` : "",
+    shareableImageUrl ? `${t("share.text.imageLabel")}: ${shareableImageUrl}` : "",
     recipe.sourceUrl ? "" : "",
-    recipe.sourceUrl ? `Source: ${recipe.sourceUrl}` : "",
-    recipe.videoUrl ? `Video: ${recipe.videoUrl}` : "",
+    recipe.sourceUrl ? `${t("share.text.sourceLabel")}: ${recipe.sourceUrl}` : "",
+    recipe.videoUrl ? `${t("share.text.videoLabel")}: ${recipe.videoUrl}` : "",
   ];
 
   return lines.filter((line, index, allLines) => line || allLines[index - 1]).join("\n").trim();
@@ -132,7 +133,7 @@ export async function shareRecipeLink(recipe: Recipe, options?: { dropLocalImage
   if (url.length > MAX_SHARE_URL_LENGTH) {
     return "too_long";
   }
-  const text = `Recette Toque: ${recipe.name}`;
+  const text = t("share.text.recipeTitle", { name: recipe.name });
 
   if (navigator.share) {
     try {
@@ -277,11 +278,11 @@ function recipeImportKey(recipe: Pick<Recipe, "name" | "sourceUrl">) {
 
 function formatMeta(recipe: Recipe) {
   const meta = [
-    recipe.servings ? `${recipe.servings} personne(s)` : "",
-    recipe.prepTime ? `Préparation ${recipe.prepTime} min` : "",
-    recipe.restTime ? `Repos ${recipe.restTime} min` : "",
-    recipe.cookTime ? `Cuisson ${recipe.cookTime} min` : "",
-    recipe.totalTime ? `Total ${recipe.totalTime} min` : "",
+    recipe.servings ? t("share.text.meta.servings", { count: recipe.servings }) : "",
+    recipe.prepTime ? t("share.text.meta.prep", { minutes: recipe.prepTime }) : "",
+    recipe.restTime ? t("share.text.meta.rest", { minutes: recipe.restTime }) : "",
+    recipe.cookTime ? t("share.text.meta.cook", { minutes: recipe.cookTime }) : "",
+    recipe.totalTime ? t("share.text.meta.total", { minutes: recipe.totalTime }) : "",
   ].filter(Boolean);
 
   return meta.length ? meta.join(" | ") : "";

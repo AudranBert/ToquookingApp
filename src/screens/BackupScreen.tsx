@@ -34,10 +34,7 @@ export function BackupScreen({ onExport, onImport, onDownloadExample, onDownload
           </label>
         </div>
 
-        <p className="muted">
-          Les fichiers de sauvegarde contiennent toutes les recettes au format ZIP (.zip) avec JSON + images. Ils peuvent être envoyés par mail,
-          messagerie ou câble USB entre téléphone et ordinateur.
-        </p>
+        <p className="muted">{t("backup.help.files")}</p>
       </div>
 
       <div className="backup-block">
@@ -50,8 +47,8 @@ export function BackupScreen({ onExport, onImport, onDownloadExample, onDownload
           </button>
         </div>
 
-        <p className="muted">L'exemple ZIP montre le format attendu pour créer des recettes en dehors de l'application puis les importer.</p>
-        <p className="muted">La base JSON liste les tags, ingrédients et noms de recettes actuellement disponibles.</p>
+        <p className="muted">{t("backup.help.example")}</p>
+        <p className="muted">{t("backup.help.database")}</p>
       </div>
 
       <SeasonalReference />

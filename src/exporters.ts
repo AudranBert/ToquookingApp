@@ -1,4 +1,5 @@
 import type { Recipe } from "./types";
+import { t } from "./i18n";
 
 async function elementToCanvas(element: HTMLElement) {
   const { default: html2canvas } = await import("html2canvas");
@@ -59,7 +60,7 @@ export async function exportElementAsPdf(element: HTMLElement, filename: string)
   downloadBlob(await elementToPdfBlob(element), filename);
 }
 
-export async function shareElementAsPdf(element: HTMLElement, filename: string, title: string, text = `Recette Toque: ${title}`) {
+export async function shareElementAsPdf(element: HTMLElement, filename: string, title: string, text = t("share.text.recipeTitle", { name: title })) {
   const blob = await elementToPdfBlob(element);
   const file = new File([blob], filename, { type: "application/pdf" });
   if (await tryShare({ files: [file] })) {

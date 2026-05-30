@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { db } from "../db";
+import { t } from "../i18n";
 import type { Recipe, RecipeTag } from "../types";
 import { createId } from "../utils/id";
 import { nowIso } from "../utils/recipes";
@@ -111,7 +112,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
   const categories = useMemo(() => {
     const groups = new Map<string, TagCategory>();
     for (const tag of tags) {
-      const categoryName = tag.category?.trim() || "Sans catégorie";
+      const categoryName = tag.category?.trim() || t("manage.tag.none");
       const key = normalizeText(categoryName);
       const group = groups.get(key) ?? { name: categoryName, color: undefined, tags: [] };
       group.tags.push(tag);
@@ -139,7 +140,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
         updatedAt: nowIso(),
       });
       await refresh();
-      status.setStatus("Tag ajouté.");
+      status.setStatus(t("manage.status.tagAdded"));
       return name;
     },
     [refresh, status, tags],
@@ -154,7 +155,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
       if (!source) return oldName;
       const target = tags.find((tag) => normalizeText(tag.name) === normalizeText(newName));
       if (target && target.id !== source.id) {
-        status.setStatus("Ce tag existe déjà.");
+        status.setStatus(t("manage.status.tagAlreadyExists"));
         return oldName;
       }
 
@@ -173,7 +174,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
       });
       await refresh();
       await onRecipesChanged();
-      status.setStatus("Tag renommé.");
+      status.setStatus(t("manage.status.tagRenamed"));
       return newName;
     },
     [onRecipesChanged, refresh, status, tags],
@@ -219,7 +220,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
 
       await refresh();
       await onRecipesChanged();
-      status.setStatus("Tags fusionnés.");
+      status.setStatus(t("manage.status.tagsMerged"));
     },
     [onRecipesChanged, refresh, status, tags],
   );
@@ -229,7 +230,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
       const source = tags.find((tag) => normalizeText(tag.name) === normalizeText(name));
       if (!source) return;
       if (isProtectedTag(source.name)) {
-        status.setStatus("Ce tag par défaut est protégé et ne peut pas être supprimé.");
+        status.setStatus(t("app.status.defaultTagProtected"));
         return;
       }
       await db.transaction("rw", db.tags, db.recipes, async () => {
@@ -247,7 +248,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
       });
       await refresh();
       await onRecipesChanged();
-      status.setStatus("Tag supprimé des recettes.");
+      status.setStatus(t("manage.status.tagDeletedFromRecipes"));
     },
     [isProtectedTag, onRecipesChanged, refresh, status, tags],
   );
@@ -263,7 +264,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
         updatedAt: nowIso(),
       });
       await refresh();
-      status.setStatus("Tag mis à jour.");
+      status.setStatus(t("manage.status.tagUpdated"));
     },
     [refresh, status, tags],
   );

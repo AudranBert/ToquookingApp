@@ -18,6 +18,11 @@ Follow this first, then implement changes.
 - `api/`: Local/serverless endpoints (not used on GitHub Pages runtime).
 - `scripts/check-importers.mjs`: Reusable importer verification script.
 
+## File Endings
+- Repository text files are stored with LF line endings.
+- On Windows, Git may warn that LF will be replaced by CRLF in the working tree; this is expected when `autocrlf` is enabled.
+- Before finishing a change, run `git diff --check` and fix whitespace/end-of-file issues (for example trailing spaces or extra blank lines at EOF).
+
 ## Importer Architecture (Frontend)
 `importRecipeFromUrl(url)` in `src/importer.ts`:
 1. Fetch source HTML via direct request + fallback proxies.
