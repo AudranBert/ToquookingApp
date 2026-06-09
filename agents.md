@@ -15,7 +15,7 @@ Follow this first, then implement changes.
 - `src/hooks/useRecipeDraft.ts`: Import UX status/loading text.
 - `src/utils/ingredients.ts` + `src/utils/ingredientParser.ts`: Ingredient parsing.
 - `src/origins.ts`: Origin mapping.
-- `api/`: Local/serverless endpoints (not used on GitHub Pages runtime).
+- `src/dev/`: Local dev-only helper modules used by Vite middleware (`/api/import`, `/api/image`).
 - `scripts/check-importers.mjs`: Reusable importer verification script.
 
 ## File Endings

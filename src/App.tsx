@@ -1,4 +1,4 @@
-﻿import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { X } from "lucide-react";
 import { recipeFileName, shareElementAsPdf, shareElementAsPng } from "./exporters";

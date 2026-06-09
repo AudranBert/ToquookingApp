@@ -7,3 +7,15 @@ export const SEASONAL_THRESHOLD_LABELS: Record<SeasonalThreshold, string> = {
   1: "Au moins 1",
   3: "Au moins 3",
 };
+
+export const DEFAULT_RECIPE_TOOLS = [
+  "oven",
+  "pan",
+  "fryer",
+  "mixer",
+  "pot",
+  "saucepan",
+  "grill",
+  "steamer",
+  "whisk",
+] as const;

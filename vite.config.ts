@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { fetchProxiedImage } from "./api/imageProxyCore";
-import { importRecipeFromSourceUrl } from "./api/recipeImportCore";
+import { fetchProxiedImage } from "./src/dev/imageProxyCore";
+import { importRecipeFromSourceUrl } from "./src/dev/recipeImportCore";
 
 export default defineConfig(() => {
   const configuredBase = process.env.BASE_PATH?.trim();

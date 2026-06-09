@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Dispatch, FormEvent, KeyboardEvent, SetStateAction } from "react";
 import { Check, ChefHat, Clock3, Flame, Hourglass, Image as ImageIcon, Info, Link, PenSquare, Plus, RefreshCcw, Replace, Text, Trash2, Upload, Users, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -9,6 +9,7 @@ import { createId } from "../utils/id";
 import { mergedRecipeImageUrls } from "../utils/images";
 import { getTagStyle } from "../utils/tagStyle";
 import { t } from "../i18n";
+import { DEFAULT_RECIPE_TOOLS } from "../constants";
 
 type Props = {
   draft: RecipeDraft;
@@ -256,6 +257,9 @@ function TextField({ label, value, required, placeholder, onChange }: { label: s
 
 function TagField({ tags, allTags, categories, tagColorByName, onCreateTag, onChange }: { tags: string[]; allTags: string[]; categories: TagCategory[]; tagColorByName: Map<string, string>; onCreateTag: (name: string) => Promise<string | undefined> | string | undefined; onChange: (tags: string[]) => void; }) {
   const [input, setInput] = useState("");
+  const toolKeys = new Set(DEFAULT_RECIPE_TOOLS.map((tool) => tool.toLowerCase()));
+  const formatTag = (value: string) => (toolKeys.has(value.toLowerCase()) ? t(`recipe.tools.${value}` as never) : value);
+  const formatCategory = (value: string) => (value.toLowerCase() === "tools" ? t("recipe.form.tools") : value);
   const suggestions = useMemo(() => {
     const selected = new Set(tags);
     const query = input.trim().toLowerCase();
@@ -275,7 +279,7 @@ function TagField({ tags, allTags, categories, tagColorByName, onCreateTag, onCh
       <div className="tag-field__box">
         {tags.map((tag) => (
           <span className="chip tag-field__chip" key={tag} style={getTagStyle(tag, tagColorByName)}>
-            {tag}
+            {formatTag(tag)}
             <button className="tag-field__remove" onClick={() => removeTag(tag)} type="button" aria-label={`${t("recipe.form.image.remove")} ${tag}`}><X size={12} /></button>
           </span>
         ))}
@@ -288,11 +292,11 @@ function TagField({ tags, allTags, categories, tagColorByName, onCreateTag, onCh
         <div className="tag-reference">
           {categories.map((category) => (
             <div className="tag-reference__group" key={category.name}>
-              <strong>{category.name}</strong>
+              <strong>{formatCategory(category.name)}</strong>
               <div className="chip-list">
                 {category.tags.map((tag) => {
                   const selected = hasTag(tag.name);
-                  return <button className={selected ? "chip tag-reference__chip tag-reference__chip--active" : "chip tag-reference__chip"} key={tag.id} style={selected ? undefined : getTagStyle(tag.name, undefined, tag.color)} onClick={() => { if (selected) { onChange(tags.filter((existing) => existing.toLowerCase() !== tag.name.toLowerCase())); return; } onChange([...tags, tag.name]); }} type="button">{tag.name}</button>;
+                  return <button className={selected ? "chip tag-reference__chip tag-reference__chip--active" : "chip tag-reference__chip"} key={tag.id} style={selected ? undefined : getTagStyle(tag.name, undefined, tag.color)} onClick={() => { if (selected) { onChange(tags.filter((existing) => existing.toLowerCase() !== tag.name.toLowerCase())); return; } onChange([...tags, tag.name]); }} type="button">{formatTag(tag.name)}</button>;
                 })}
               </div>
             </div>

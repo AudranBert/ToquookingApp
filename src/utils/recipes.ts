@@ -77,12 +77,12 @@ function stripWrappingQuotes(value: string | undefined) {
   const pairs: Array<[string, string]> = [
     ['"', '"'],
     ["'", "'"],
-    ["“", "”"],
-    ["‘", "’"],
-    ["«", "»"],
     ["â€œ", "â€"],
     ["â€˜", "â€™"],
     ["Â«", "Â»"],
+    ["Ã¢â‚¬Å“", "Ã¢â‚¬Â"],
+    ["Ã¢â‚¬Ëœ", "Ã¢â‚¬â„¢"],
+    ["Ã‚Â«", "Ã‚Â»"],
   ];
   for (const [start, end] of pairs) {
     if (trimmed.startsWith(start) && trimmed.endsWith(end) && trimmed.length >= start.length + end.length) {

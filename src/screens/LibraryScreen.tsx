@@ -1,4 +1,4 @@
-﻿import type { RefObject } from "react";
+import type { RefObject } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ChefHat, Clock, Filter, Flag, Flame, Hourglass, Search, Snowflake, Soup, Sprout, Tag, Timer, Vegan, X } from "lucide-react";
 import { POPULAR_RECIPE_ORIGINS, RECIPE_ORIGIN_GROUPS, RECIPE_ORIGINS } from "../origins";
@@ -159,6 +159,24 @@ function LibrarySidebar({ filters, handlers, filteredCount, seasonalRecipeCount,
                     <span className="label-with-icon"><Timer size={16} /> {t("library.filters.maxTotal")}</span>
                     <input type="number" min="1" inputMode="numeric" value={filters.maxTotalTime ?? ""} onChange={(event) => { const minutes = Number(event.target.value); handlers.onMaxTotalTimeChange(minutes > 0 ? minutes : undefined); }} placeholder={t("library.filters.minutes")} />
                   </label>
+                  <div>
+                    <div className="label-with-icon"><ChefHat size={16} /> {t("library.filters.tools")}</div>
+                    <div className="origin-filter__options">
+                      {toolTags(filters.tagCategories).length > 0 ? (
+                        toolTags(filters.tagCategories).map((tool) => {
+                          const selected = filters.tagFilters.includes(tool.name);
+                          return <button className={`origin-filter__option${selected ? " origin-filter__option--active" : ""}`} key={tool.id} type="button" onClick={() => handlers.onTagFiltersChange(selected ? filters.tagFilters.filter((value) => value !== tool.name) : [...filters.tagFilters, tool.name])} aria-pressed={selected}>{toolLabel(tool.name)}</button>;
+                        })
+                      ) : (
+                        <p className="empty-inline">{t("library.filters.tools.empty")}</p>
+                      )}
+                    </div>
+                    {filters.tagFilters.some((tag) => isToolTag(tag, filters.tagCategories)) && (
+                      <button className="origin-filter__clear" type="button" onClick={() => handlers.onTagFiltersChange(filters.tagFilters.filter((tag) => !isToolTag(tag, filters.tagCategories)))}>
+                        <X size={14} /> {t("library.filters.clear")}
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -198,6 +216,19 @@ function LibrarySidebar({ filters, handlers, filteredCount, seasonalRecipeCount,
       </div>
     </aside>
   );
+}
+
+function toolTags(categories: TagCategory[]) {
+  return categories.find((category) => normalizeText(category.name) === normalizeText(t("manage.category.tools")))?.tags ?? [];
+}
+
+function isToolTag(tagName: string, categories: TagCategory[]) {
+  const tools = toolTags(categories);
+  return tools.some((tag) => tag.name === tagName);
+}
+
+function toolLabel(name: string) {
+  return t(`recipe.tools.${name}` as never);
 }
 
 function OriginFilterPicker({ value, onChange, open, onToggle }: { value: string; onChange: (origin: string) => void; open: boolean; onToggle: () => void; }) {
