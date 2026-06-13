@@ -178,32 +178,29 @@ export function RecipeDetail({
             </span>
           )}
         </div>
-        {hasPositiveValue(recipe.servings) && (
-          <section className="form-section">
-            <h3>{t("recipe.detail.scale")}</h3>
-            <div className="inline-control">
-              <label>
-                {t("recipe.detail.targetServings")}
-                <input
-                  type="number"
-                  min="1"
-                  value={targetServings ?? ""}
-                  onChange={(event) => setTargetServings(Number(event.target.value) || undefined)}
-                />
-              </label>
-              <label>
-                {t("recipe.detail.unitSystem")}
-                <select value={unitSystem} onChange={(event) => setUnitSystem(event.target.value as "metric" | "imperial")}>
-                  <option value="metric">{t("recipe.detail.unitSystem.metric")}</option>
-                  <option value="imperial">{t("recipe.detail.unitSystem.imperial")}</option>
-                </select>
-              </label>
-            </div>
-          </section>
-        )}
         <div className="recipe-columns">
           <section>
-            <h3>{t("recipe.detail.ingredients")}</h3>
+            <div className="recipe-section-header">
+              <h3>{t("recipe.detail.ingredients")}</h3>
+              {hasPositiveValue(recipe.servings) && (
+                <div className="ingredient-scale-control">
+                  <label aria-label={t("recipe.detail.targetServings")}>
+                    <input
+                      type="number"
+                      min="1"
+                      value={targetServings ?? ""}
+                      onChange={(event) => setTargetServings(Number(event.target.value) || undefined)}
+                    />
+                  </label>
+                  <label aria-label={t("recipe.detail.unitSystem")}>
+                    <select value={unitSystem} onChange={(event) => setUnitSystem(event.target.value as "metric" | "imperial")}>
+                      <option value="metric">M</option>
+                      <option value="imperial">I</option>
+                    </select>
+                  </label>
+                </div>
+              )}
+            </div>
             <ul>
               {recipe.ingredients.map((ingredient) => (
                 <li className="ingredient-status-row" key={ingredient.id}>
