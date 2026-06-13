@@ -198,7 +198,7 @@ function LibrarySidebar({ filters, handlers, filteredCount, seasonalRecipeCount,
                 <div className="tag-filter__groups filter-group-content">
                   {filters.tagCategories.filter((category) => normalizeText(category.name) !== normalizeText("Régime alimentaire")).length > 0 ? (
                     filters.tagCategories.filter((category) => normalizeText(category.name) !== normalizeText("Régime alimentaire")).map((category) => (
-                      <section className="origin-filter__group" key={category.name}>
+                      isHiddenTagFilterCategory(category.name) ? null : <section className="origin-filter__group" key={category.name}>
                         <h3>{category.name}</h3>
                         <div className="tag-filter__options">
                           {category.tags.map((tag) => {
@@ -234,6 +234,11 @@ function isToolTag(tagName: string, categories: TagCategory[]) {
 
 function toolLabel(name: string) {
   return displayTagName(name);
+}
+
+function isHiddenTagFilterCategory(name: string) {
+  const normalized = normalizeText(name);
+  return normalized === normalizeText("Regime alimentaire") || normalized === normalizeText("RÃ©gime alimentaire") || normalized === normalizeText(t("manage.category.tools"));
 }
 
 function OriginFilterPicker({ value, onChange, open, onToggle }: { value: string; onChange: (origin: string) => void; open: boolean; onToggle: () => void; }) {
