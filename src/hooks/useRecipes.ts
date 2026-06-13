@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { db } from "../db";
 import type { Recipe, RecipeDraft } from "../types";
 import { createId } from "../utils/id";
-import { cleanRecipeDraft, nowIso } from "../utils/recipes";
+import { cleanRecipeDraft, cleanStoredRecipe, nowIso } from "../utils/recipes";
 import { parseBackupFile } from "../utils/backup";
 import type { StatusApi } from "./useStatus";
 
@@ -10,7 +10,12 @@ export function useRecipes(status: StatusApi) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
 
   const refresh = useCallback(async (nextSelectedId?: string) => {
-    const next = await db.recipes.orderBy("updatedAt").reverse().toArray();
+    const stored = await db.recipes.orderBy("updatedAt").reverse().toArray();
+    const next = stored.map(cleanStoredRecipe);
+    const normalized = next.filter((recipe, index) => JSON.stringify(recipe) !== JSON.stringify(stored[index]));
+    if (normalized.length > 0) {
+      await db.recipes.bulkPut(normalized);
+    }
     setRecipes(next);
     return nextSelectedId;
   }, []);
@@ -91,7 +96,7 @@ export function useRecipes(status: StatusApi) {
     async (file: File) => {
       try {
         const imported = await parseBackupFile(file, await db.recipes.toArray());
-        await db.recipes.bulkPut(imported.recipes);
+        await db.recipes.bulkPut(imported.recipes.map(cleanStoredRecipe));
         const existingTags = await db.tags.toArray();
         const existingByName = new Map(existingTags.map((tag) => [tag.name.toLowerCase(), tag]));
         await db.tags.bulkPut(

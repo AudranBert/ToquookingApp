@@ -56,6 +56,7 @@ export function App() {
   const tagColorByName = useMemo(() => buildTagColorMap(tagApi.tags), [tagApi.tags]);
   const dialogState = dialog.dialogState;
   const dialogPromptValue = dialogState.kind === "prompt" ? dialogState.promptValue : undefined;
+  const dialogPromptSuggestions = dialogState.kind === "prompt" ? dialogState.suggestions : undefined;
 
   useEffect(() => {
     status.clear();
@@ -443,6 +444,7 @@ export function App() {
         title={dialogState.title}
         message={"message" in dialogState ? dialogState.message : undefined}
         promptValue={dialogPromptValue}
+        promptSuggestions={dialogPromptSuggestions}
         danger={"danger" in dialogState ? dialogState.danger : undefined}
         confirmLabel={"confirmLabel" in dialogState ? dialogState.confirmLabel : undefined}
         cancelLabel={"cancelLabel" in dialogState ? dialogState.cancelLabel : undefined}

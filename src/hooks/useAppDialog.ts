@@ -17,6 +17,7 @@ type ConfirmDialogState = DialogBase & {
 type PromptDialogState = DialogBase & {
   kind: "prompt";
   promptValue: string;
+  suggestions?: string[];
   resolve?: (value: string | null) => void;
 };
 
@@ -35,7 +36,7 @@ export function useAppDialog() {
     });
   }, []);
 
-  const prompt = useCallback((title: string, defaultValue = "", message?: string) => {
+  const prompt = useCallback((title: string, defaultValue = "", message?: string, suggestions?: string[]) => {
     return new Promise<string | null>((resolve) => {
       setState({
         open: true,
@@ -43,6 +44,7 @@ export function useAppDialog() {
         title,
         message,
         promptValue: defaultValue,
+        suggestions,
         resolve,
         confirmLabel: "Valider",
         cancelLabel: "Annuler",

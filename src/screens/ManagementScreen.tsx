@@ -20,7 +20,7 @@ type Props = {
   onMergeIngredients: (sourceName: string, targetName: string) => Promise<unknown>;
   onDeleteIngredient: (name: string) => Promise<unknown>;
   onConfirm: (title: string, message?: string, danger?: boolean) => Promise<boolean>;
-  onPrompt: (title: string, defaultValue?: string, message?: string) => Promise<string | null>;
+  onPrompt: (title: string, defaultValue?: string, message?: string, suggestions?: string[]) => Promise<string | null>;
 };
 
 export function ManagementScreen({
@@ -114,12 +114,12 @@ export function ManagementScreen({
           <div className="stack">
             {ingredients.map((ingredient) => (
               <div className="panel management-line" key={ingredient.name}>
-                <span>{ingredient.name} <span className="muted">({ingredient.usageCount})</span></span>
-                <div className="action-bar">
+                <span className="management-line__label">{ingredient.name} <span className="muted">({ingredient.usageCount})</span></span>
+                <div className="action-bar management-line__actions">
                   <button className="button button--ghost management-action-button" type="button" onClick={async () => { const next = await onPrompt(t("manage.prompt.newName"), ingredient.name); if (next) await onRenameIngredient(ingredient.name, next); }}>
                     <Pencil size={16} /><span className="management-action-button__label">{t("manage.tag.rename")}</span>
                   </button>
-                  <button className="button button--ghost management-action-button" type="button" onClick={async () => { const target = await onPrompt(t("manage.prompt.mergeTo", { name: ingredient.name }), ""); if (target) await onMergeIngredients(ingredient.name, target); }}>
+                  <button className="button button--ghost management-action-button" type="button" onClick={async () => { const target = await onPrompt(t("manage.prompt.mergeTo", { name: ingredient.name }), "", undefined, ingredients.filter((item) => item.name !== ingredient.name).map((item) => item.name)); if (target) await onMergeIngredients(ingredient.name, target); }}>
                     <GitMerge size={16} /><span className="management-action-button__label">{t("manage.tag.merge")}</span>
                   </button>
                   <button className="button button--danger management-action-button" type="button" onClick={async () => { if (!await onConfirm(t("manage.confirm.deleteIngredientGlobal", { name: ingredient.name }), undefined, true)) return; await onDeleteIngredient(ingredient.name); }}>
@@ -145,7 +145,7 @@ function TagRow({ tag, allTags, protectedTag, onRenameTag, onMergeTags, onDelete
   onDeleteTag: (name: string) => Promise<unknown>;
   onUpdateTagMeta: (name: string, meta: { category?: string; color?: string }) => Promise<unknown>;
   onConfirm: (title: string, message?: string, danger?: boolean) => Promise<boolean>;
-  onPrompt: (title: string, defaultValue?: string, message?: string) => Promise<string | null>;
+  onPrompt: (title: string, defaultValue?: string, message?: string, suggestions?: string[]) => Promise<string | null>;
 }) {
   return (
     <div className="panel management-tag-card">
@@ -160,7 +160,7 @@ function TagRow({ tag, allTags, protectedTag, onRenameTag, onMergeTags, onDelete
         <button className="button button--ghost management-action-button" type="button" onClick={async () => { const next = await onPrompt(t("manage.prompt.newName"), tag.name); if (next) await onRenameTag(tag.name, next); }}>
           <Pencil size={16} /><span className="management-action-button__label">{t("manage.tag.rename")}</span>
         </button>
-        <button className="button button--ghost management-action-button" type="button" onClick={async () => { const target = await onPrompt(t("manage.prompt.mergeTo", { name: tag.name }), ""); if (target) await onMergeTags(tag.name, target); }}>
+        <button className="button button--ghost management-action-button" type="button" onClick={async () => { const target = await onPrompt(t("manage.prompt.mergeTo", { name: tag.name }), "", undefined, allTags.filter((item) => item.name !== tag.name).map((item) => item.name)); if (target) await onMergeTags(tag.name, target); }}>
           <GitMerge size={16} /><span className="management-action-button__label">{t("manage.tag.merge")}</span>
         </button>
         <button className="button button--danger management-action-button" type="button" disabled={protectedTag} onClick={async () => { if (!await onConfirm(t("manage.confirm.deleteTagGlobal", { name: tag.name }), undefined, true)) return; await onDeleteTag(tag.name); }}>

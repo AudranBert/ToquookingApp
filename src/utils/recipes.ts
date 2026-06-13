@@ -1,6 +1,7 @@
 import type { Ingredient, Recipe, RecipeDraft, ShoppingItem } from "../types";
 import { createId } from "./id";
-import { canonicalIngredientKey, ingredientSearchText, isPantryIngredient } from "./ingredients";
+import { canonicalIngredientKey, formatIngredientName, ingredientSearchText, isPantryIngredient } from "./ingredients";
+import { formatTagName } from "./tags";
 import { normalizeText } from "./text";
 
 export const emptyRecipeDraft: RecipeDraft = {
@@ -49,12 +50,12 @@ export function cleanRecipeDraft(draft: RecipeDraft): RecipeDraft {
   return {
     ...draft,
     name: stripWrappingQuotes(draft.name.trim()) ?? "",
-    tags: draft.tags.map((tag) => stripWrappingQuotes(tag.trim()) ?? "").filter(Boolean),
+    tags: draft.tags.map((tag) => formatTagName(stripWrappingQuotes(tag.trim()) ?? "")).filter(Boolean),
     origin: stripWrappingQuotes(draft.origin?.trim()),
     ingredients: draft.ingredients
       .map((ingredient) => ({
         ...ingredient,
-        name: stripWrappingQuotes(ingredient.name.trim()) ?? "",
+        name: formatIngredientName(stripWrappingQuotes(ingredient.name.trim()) ?? ""),
         quantity: stripWrappingQuotes(ingredient.quantity?.trim()),
         unit: stripWrappingQuotes(ingredient.unit?.trim()),
         note: stripWrappingQuotes(ingredient.note?.trim()),
@@ -68,6 +69,13 @@ export function cleanRecipeDraft(draft: RecipeDraft): RecipeDraft {
     imageUrls: (draft.imageUrls ?? []).map((url) => stripWrappingQuotes(url?.trim()) ?? "").filter(Boolean),
     sourceImageUrl: stripWrappingQuotes(draft.sourceImageUrl?.trim()),
     sourceImageUrls: (draft.sourceImageUrls ?? []).map((url) => stripWrappingQuotes(url?.trim()) ?? "").filter(Boolean),
+  };
+}
+
+export function cleanStoredRecipe(recipe: Recipe): Recipe {
+  return {
+    ...recipe,
+    ...cleanRecipeDraft(recipe),
   };
 }
 

@@ -5,6 +5,7 @@ import type { Recipe, RecipeTag } from "../types";
 import { DEFAULT_RECIPE_TOOLS } from "../constants";
 import { createId } from "../utils/id";
 import { nowIso } from "../utils/recipes";
+import { formatTagName } from "../utils/tags";
 import { normalizeText } from "../utils/text";
 import type { StatusApi } from "./useStatus";
 
@@ -26,7 +27,7 @@ function defaultProtectedTags() {
     { name: "chaud", category: mealTypeCategory },
     { name: "froid", category: mealTypeCategory },
     ...DEFAULT_RECIPE_TOOLS.map((name) => ({ name, category: toolsCategory })),
-  ];
+  ].map((tag) => ({ ...tag, name: formatTagName(tag.name) }));
 }
 
 const TAG_MOJIBAKE_FIXES: Record<string, string> = {
@@ -57,13 +58,13 @@ function uniqueByNormalized(values: string[]) {
     const key = normalizeText(trimmed);
     if (seen.has(key)) return;
     seen.add(key);
-    unique.push(trimmed);
+    unique.push(formatTagName(trimmed));
   });
   return unique;
 }
 
 function uniqueRecipeTags(recipes: Recipe[]) {
-  return uniqueByNormalized(recipes.flatMap((recipe) => recipe.tags.map(repairTagName)));
+  return uniqueByNormalized(recipes.flatMap((recipe) => recipe.tags.map(formatTagName)));
 }
 
 export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: () => Promise<unknown>) {
@@ -95,14 +96,14 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
         const recipesToFix = await db.recipes.toArray();
         const repairedTags = existing
           .map((tag) => {
-            const repaired = repairTagName(tag.name);
+            const repaired = formatTagName(tag.name);
             return repaired === tag.name ? null : { ...tag, name: repaired, updatedAt: now };
           })
           .filter((tag): tag is RecipeTag => Boolean(tag));
         if (repairedTags.length > 0) await db.tags.bulkPut(repairedTags);
         const repairedRecipes = recipesToFix
           .map((recipe) => {
-            const nextTags = recipe.tags.map(repairTagName);
+            const nextTags = recipe.tags.map(formatTagName);
             const changed = nextTags.some((value, index) => value !== recipe.tags[index]);
             return changed ? { ...recipe, tags: uniqueByNormalized(nextTags), updatedAt: now } : null;
           })
@@ -172,7 +173,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
 
   const createTag = useCallback(
     async (rawName: string, category?: string) => {
-      const name = rawName.trim();
+      const name = formatTagName(rawName);
       if (!name) return undefined;
       const existing = tags.find((tag) => normalizeText(tag.name) === normalizeText(name));
       if (existing) return existing.name;
@@ -192,7 +193,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
 
   const renameTag = useCallback(
     async (oldName: string, rawNewName: string) => {
-      const newName = rawNewName.trim();
+      const newName = formatTagName(rawNewName);
       if (!newName || normalizeText(newName) === normalizeText(oldName)) return oldName;
 
       const source = tags.find((tag) => normalizeText(tag.name) === normalizeText(oldName));
@@ -228,7 +229,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
     async (sourceName: string, targetName: string) => {
       const source = tags.find((tag) => normalizeText(tag.name) === normalizeText(sourceName));
       if (!source) return;
-      const nextTarget = targetName.trim();
+      const nextTarget = formatTagName(targetName);
       if (!nextTarget) return;
       const existingTarget = tags.find((tag) => normalizeText(tag.name) === normalizeText(nextTarget));
       const resolvedTargetName = existingTarget?.name ?? nextTarget;

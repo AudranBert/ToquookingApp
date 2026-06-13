@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Check, Trash2, X } from "lucide-react";
 
 type Props = {
@@ -5,6 +6,7 @@ type Props = {
   title: string;
   message?: string;
   promptValue?: string;
+  promptSuggestions?: string[];
   danger?: boolean;
   confirmLabel?: string;
   cancelLabel?: string;
@@ -18,6 +20,7 @@ export function AppDialog({
   title,
   message,
   promptValue,
+  promptSuggestions,
   danger,
   confirmLabel = "Confirmer",
   cancelLabel = "Annuler",
@@ -25,6 +28,7 @@ export function AppDialog({
   onConfirm,
   onCancel,
 }: Props) {
+  const datalistId = useId();
   if (!open) return null;
 
   return (
@@ -35,6 +39,7 @@ export function AppDialog({
         {typeof promptValue === "string" && (
           <input
             autoFocus
+            list={promptSuggestions?.length ? datalistId : undefined}
             value={promptValue}
             onChange={(event) => onPromptValueChange?.(event.target.value)}
             onKeyDown={(event) => {
@@ -43,7 +48,14 @@ export function AppDialog({
             }}
           />
         )}
-        <div className="action-bar">
+        {promptSuggestions?.length ? (
+          <datalist id={datalistId}>
+            {promptSuggestions.map((suggestion) => (
+              <option key={suggestion} value={suggestion} />
+            ))}
+          </datalist>
+        ) : null}
+        <div className="action-bar dialog-actions">
           <button className="button button--ghost button--icon-mobile" type="button" onClick={onCancel}>
             <X size={18} /> {cancelLabel}
           </button>

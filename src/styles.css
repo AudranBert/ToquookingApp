@@ -1175,11 +1175,26 @@ label {
 }
 
 .management-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: var(--space-3);
   padding: var(--space-2);
+}
+
+.management-line__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.action-bar.management-line__actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: flex-end;
+  width: max-content;
+  white-space: nowrap;
 }
 
 .management-tag-name {
@@ -1222,6 +1237,8 @@ label {
 
 .management-action-button {
   min-width: 40px;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .management-action-button__label {
@@ -1240,16 +1257,22 @@ label {
 
 .dialog-card {
   width: min(520px, 100%);
+  display: grid;
+  gap: var(--space-3);
   padding: var(--space-4);
   background: var(--color-surface);
 }
 
 .dialog-card h3 {
-  margin-bottom: var(--space-2);
+  margin: 0;
 }
 
 .dialog-card p {
-  margin-bottom: var(--space-3);
+  margin: 0;
+}
+
+.dialog-actions {
+  margin-top: var(--space-1);
 }
 
 @media (max-width: 860px) {
@@ -1331,6 +1354,19 @@ label {
   .management-action-button {
     width: 40px;
     padding: 9px;
+  }
+
+  .management-line {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .management-line .action-bar {
+    align-self: start;
+  }
+
+  .management-line__actions {
+    gap: var(--space-1);
   }
 
   .management-action-button__label {

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { db } from "../db";
 import { t } from "../i18n";
 import type { Recipe } from "../types";
+import { formatIngredientName } from "../utils/ingredients";
 import { nowIso } from "../utils/recipes";
 import { normalizeText } from "../utils/text";
 import type { StatusApi } from "./useStatus";
@@ -31,7 +32,7 @@ export function useIngredientsManagement(recipes: Recipe[], status: StatusApi, o
   }, [recipes]);
 
   async function renameIngredient(oldName: string, newNameRaw: string) {
-    const newName = newNameRaw.trim();
+    const newName = formatIngredientName(newNameRaw);
     if (!newName || normalizeText(oldName) === normalizeText(newName)) return;
     const oldKey = normalizeText(oldName);
 
