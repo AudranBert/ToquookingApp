@@ -90,7 +90,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
 
   useEffect(() => {
     void db
-      .transaction("rw", db.tags, async () => {
+      .transaction("rw", db.tags, db.recipes, async () => {
         const now = nowIso();
         const existing = await db.tags.toArray();
         const recipesToFix = await db.recipes.toArray();

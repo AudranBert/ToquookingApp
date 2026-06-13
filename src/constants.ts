@@ -10,6 +10,7 @@ export const SEASONAL_THRESHOLD_LABELS: Record<SeasonalThreshold, string> = {
 
 export const DEFAULT_RECIPE_TOOLS = [
   "oven",
+  "air fryer",
   "pan",
   "fryer",
   "mixer",

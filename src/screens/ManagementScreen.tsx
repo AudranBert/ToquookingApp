@@ -5,6 +5,7 @@ import { t } from "../i18n";
 import type { IngredientUsage } from "../hooks/useIngredientsManagement";
 import type { TagCategory } from "../hooks/useTags";
 import type { RecipeTag } from "../types";
+import { displayTagName } from "../utils/tags";
 
 type Props = {
   tags: RecipeTag[];
@@ -149,7 +150,7 @@ function TagRow({ tag, allTags, protectedTag, onRenameTag, onMergeTags, onDelete
 }) {
   return (
     <div className="panel management-tag-card">
-      <span className="management-tag-name">{tag.name}{tag.color && <span className="chip" style={{ background: tag.color, color: "#111", borderColor: tag.color }} />}</span>
+      <span className="management-tag-name">{displayTagName(tag.name)}{tag.color && <span className="chip" style={{ background: tag.color, color: "#111", borderColor: tag.color }} />}</span>
       <div className="action-bar">
         <select value={tag.category ?? ""} onChange={(event) => void onUpdateTagMeta(tag.name, { category: event.target.value, color: tag.color })}>
           <option value="">{t("manage.tag.none")}</option>

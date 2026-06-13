@@ -7,6 +7,7 @@ import { mergedRecipeImageUrls, proxiedImageUrl, shouldUseImageCrossOrigin } fro
 import { isPantryIngredient } from "../utils/ingredients";
 import { ingredientLabel } from "../utils/recipes";
 import { getTagStyle } from "../utils/tagStyle";
+import { displayTagName } from "../utils/tags";
 import { t } from "../i18n";
 
 type Props = {
@@ -136,7 +137,7 @@ export function RecipeDetail({
           {recipe.origin && <span className="chip chip--origin">{recipe.origin}</span>}
           {recipe.tags.map((tag) => (
             <span className="chip" key={tag} style={getTagStyle(tag, tagColorByName)}>
-              {tag}
+              {displayTagName(tag)}
             </span>
           ))}
         </div>

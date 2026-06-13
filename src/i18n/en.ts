@@ -64,6 +64,7 @@ export const en: Messages = {
   "recipe.form.tools": "Tools",
   "recipe.form.tools.placeholder": "oven, air fryer, blender...",
   "recipe.tools.oven": "oven",
+  "recipe.tools.air fryer": "air fryer",
   "recipe.tools.pan": "pan",
   "recipe.tools.fryer": "fryer",
   "recipe.tools.mixer": "mixer",

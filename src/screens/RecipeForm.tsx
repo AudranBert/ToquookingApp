@@ -8,6 +8,7 @@ import type { Ingredient, RecipeDraft, ReimportMode } from "../types";
 import { createId } from "../utils/id";
 import { mergedRecipeImageUrls } from "../utils/images";
 import { getTagStyle } from "../utils/tagStyle";
+import { displayTagName } from "../utils/tags";
 import { t } from "../i18n";
 import { DEFAULT_RECIPE_TOOLS } from "../constants";
 
@@ -258,7 +259,7 @@ function TextField({ label, value, required, placeholder, onChange }: { label: s
 function TagField({ tags, allTags, categories, tagColorByName, onCreateTag, onChange }: { tags: string[]; allTags: string[]; categories: TagCategory[]; tagColorByName: Map<string, string>; onCreateTag: (name: string) => Promise<string | undefined> | string | undefined; onChange: (tags: string[]) => void; }) {
   const [input, setInput] = useState("");
   const toolKeys = new Set(DEFAULT_RECIPE_TOOLS.map((tool) => tool.toLowerCase()));
-  const formatTag = (value: string) => (toolKeys.has(value.toLowerCase()) ? t(`recipe.tools.${value.toLowerCase()}` as never) : value);
+  const formatTag = (value: string) => (toolKeys.has(value.toLowerCase()) ? displayTagName(value) : value);
   const formatCategory = (value: string) => (value.toLowerCase() === "tools" ? t("recipe.form.tools") : value);
   const suggestions = useMemo(() => {
     const selected = new Set(tags);
