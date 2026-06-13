@@ -204,7 +204,7 @@ export function RecipeDetail({
             <ul>
               {recipe.ingredients.map((ingredient) => (
                 <li className="ingredient-status-row" key={ingredient.id}>
-                  <span>{scaledIngredientLabel(ingredient, recipe.servings, targetServings, unitSystem)}</span>
+                  <span>- {scaledIngredientLabel(ingredient, recipe.servings, targetServings, unitSystem)}</span>
                   <span className="ingredient-badges">
                     {recipeContainsSeasonalIngredient([ingredient.name], currentSeasonalIngredients()) && (
                       <span className="chip chip--seasonal">{t("recipe.detail.seasonal")}</span>

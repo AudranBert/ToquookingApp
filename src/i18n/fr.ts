@@ -56,6 +56,7 @@ export const fr = {
   "recipe.form.ingredient.unit": "Unité",
   "recipe.form.ingredient.name": "Ingrédient",
   "recipe.form.step": "Étape",
+  "recipe.form.reorder": "Réordonner",
   "recipe.form.tags.placeholder": "plat, chaud, dessert...",
   "recipe.form.tags.addToList": "Ajouter \"{name}\" à la liste",
   "recipe.form.tags.globalList": "Liste globale des tags",

@@ -1026,12 +1026,36 @@ label {
   display: grid;
   grid-template-columns: 110px 90px minmax(0, 1fr) auto;
   gap: var(--space-2);
+  align-items: start;
 }
 
 .step-line {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-2);
+  align-items: start;
+}
+
+.ingredient-line--dragging,
+.step-line--dragging {
+  z-index: 2;
+  opacity: 0.92;
+}
+
+.row-actions {
+  display: grid;
+  grid-auto-flow: row;
+  gap: var(--space-2);
+  align-items: start;
+}
+
+.row-actions__drag {
+  cursor: grab;
+  touch-action: none;
+}
+
+.row-actions__drag:active {
+  cursor: grabbing;
 }
 
 .shopping-item {
@@ -1367,7 +1391,7 @@ label {
   }
 
   .ingredient-scale-control {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) 72px;
     width: 100%;
   }
 
@@ -1458,10 +1482,25 @@ label {
     grid-row: 2;
   }
 
-  .ingredient-line__remove {
+  .row-actions {
     grid-column: 3;
     grid-row: 1 / 3;
     align-self: stretch;
+  }
+
+  .row-actions .button {
+    width: var(--button-icon-size);
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+
+  .step-line {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .step-line .row-actions {
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .sidebar {

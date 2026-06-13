@@ -58,6 +58,7 @@ export const en: Messages = {
   "recipe.form.ingredient.unit": "Unit",
   "recipe.form.ingredient.name": "Ingredient",
   "recipe.form.step": "Step",
+  "recipe.form.reorder": "Reorder",
   "recipe.form.tags.placeholder": "main, hot, dessert...",
   "recipe.form.tags.addToList": "Add \"{name}\" to list",
   "recipe.form.tags.globalList": "Global tag list",

@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import type { Dispatch, FormEvent, KeyboardEvent, SetStateAction } from "react";
-import { Check, ChefHat, Clock3, Flame, Hourglass, Image as ImageIcon, Info, Link, PenSquare, Plus, RefreshCcw, Replace, Text, Trash2, Upload, Users, X } from "lucide-react";
+import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Check, ChefHat, Clock3, Flame, GripVertical, Hourglass, Image as ImageIcon, Info, Link, PenSquare, Plus, RefreshCcw, Replace, Text, Trash2, Upload, Users, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { TagCategory } from "../hooks/useTags";
 import { RECIPE_ORIGINS } from "../origins";
@@ -37,14 +40,45 @@ type Props = {
 export function RecipeForm({ draft, editing, warnings, allTags, categories, tagColorByName, onCreateTag, importUrl, onImportUrlChange, onImport, importText, onImportTextChange, onImportText, onImportFile, onSubmit, onCancel, onReimport, setDraft, onStatus }: Props) {
   const [isImportSupportOpen, setIsImportSupportOpen] = useState(false);
   const [creationMode, setCreationMode] = useState<"manual" | "url" | "text" | "file">("manual");
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 140, tolerance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const ingredientIds = draft.ingredients.map((ingredient) => ingredient.id);
+  const instructionIds = draft.instructions.map((_, index) => `instruction-${index}`);
 
   function updateField<K extends keyof RecipeDraft>(field: K, value: RecipeDraft[K]) { setDraft((current) => ({ ...current, [field]: value })); }
   function updateIngredient(id: string, patch: Partial<Ingredient>) { setDraft((current) => ({ ...current, ingredients: current.ingredients.map((ingredient) => ingredient.id === id ? { ...ingredient, ...patch } : ingredient) })); }
   function removeIngredient(id: string) { setDraft((current) => ({ ...current, ingredients: current.ingredients.filter((ingredient) => ingredient.id !== id) })); }
   function addIngredient() { setDraft((current) => ({ ...current, ingredients: [...current.ingredients, { id: createId(), name: "" }] })); }
+  function reorderIngredients(activeId: string, overId: string) {
+    setDraft((current) => {
+      const oldIndex = current.ingredients.findIndex((ingredient) => ingredient.id === activeId);
+      const newIndex = current.ingredients.findIndex((ingredient) => ingredient.id === overId);
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return current;
+      return { ...current, ingredients: arrayMove(current.ingredients, oldIndex, newIndex) };
+    });
+  }
   function updateInstruction(index: number, value: string) { setDraft((current) => ({ ...current, instructions: current.instructions.map((step, i) => (i === index ? value : step)) })); }
   function removeInstruction(index: number) { setDraft((current) => ({ ...current, instructions: current.instructions.filter((_, i) => i !== index) })); }
   function addInstruction() { setDraft((current) => ({ ...current, instructions: [...current.instructions, ""] })); }
+  function reorderInstructions(activeId: string, overId: string) {
+    const oldIndex = instructionIds.indexOf(activeId);
+    const newIndex = instructionIds.indexOf(overId);
+    if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
+    setDraft((current) => ({ ...current, instructions: arrayMove(current.instructions, oldIndex, newIndex) }));
+  }
+  function handleIngredientDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    reorderIngredients(String(active.id), String(over.id));
+  }
+  function handleInstructionDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    reorderInstructions(String(active.id), String(over.id));
+  }
 
   function setImageOverride(imageUrls: string[]) {
     const next = mergedRecipeImageUrls({ imageUrls });
@@ -158,13 +192,21 @@ export function RecipeForm({ draft, editing, warnings, allTags, categories, tagC
 
       <section className="form-section">
         <h3>{t("recipe.detail.ingredients")}</h3>
-        <div className="stack">{draft.ingredients.map((ingredient) => <IngredientRow key={ingredient.id} ingredient={ingredient} onChange={(patch) => updateIngredient(ingredient.id, patch)} onRemove={() => removeIngredient(ingredient.id)} />)}</div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleIngredientDragEnd}>
+          <SortableContext items={ingredientIds} strategy={verticalListSortingStrategy}>
+            <div className="stack">{draft.ingredients.map((ingredient) => <IngredientRow key={ingredient.id} id={ingredient.id} ingredient={ingredient} onChange={(patch) => updateIngredient(ingredient.id, patch)} onRemove={() => removeIngredient(ingredient.id)} />)}</div>
+          </SortableContext>
+        </DndContext>
         <button className="button button--ghost" onClick={addIngredient} type="button"><Plus size={18} /> {t("recipe.form.addIngredient")}</button>
       </section>
 
       <section className="form-section">
         <h3>{t("recipe.detail.instructions")}</h3>
-        <div className="stack">{draft.instructions.map((step, index) => <InstructionRow key={index} step={step} index={index} onChange={(value) => updateInstruction(index, value)} onRemove={() => removeInstruction(index)} />)}</div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleInstructionDragEnd}>
+          <SortableContext items={instructionIds} strategy={verticalListSortingStrategy}>
+            <div className="stack">{draft.instructions.map((step, index) => <InstructionRow key={index} id={instructionIds[index]} step={step} index={index} onChange={(value) => updateInstruction(index, value)} onRemove={() => removeInstruction(index)} />)}</div>
+          </SortableContext>
+        </DndContext>
         <button className="button button--ghost" onClick={addInstruction} type="button"><Plus size={18} /> {t("recipe.form.addStep")}</button>
       </section>
 
@@ -244,12 +286,63 @@ function ReimportControls({ sourceUrl, onSourceUrlChange, onReimport }: { source
   );
 }
 
-function IngredientRow({ ingredient, onChange, onRemove }: { ingredient: Ingredient; onChange: (patch: Partial<Ingredient>) => void; onRemove: () => void; }) {
-  return <div className="ingredient-line"><input placeholder={t("recipe.form.ingredient.quantity")} value={ingredient.quantity ?? ""} onChange={(event) => onChange({ quantity: event.target.value })} /><input placeholder={t("recipe.form.ingredient.unit")} value={ingredient.unit ?? ""} onChange={(event) => onChange({ unit: event.target.value })} /><input placeholder={t("recipe.form.ingredient.name")} value={ingredient.name} onChange={(event) => onChange({ name: event.target.value })} /><button className="button button--icon ingredient-line__remove" onClick={onRemove} type="button" title={t("recipe.form.image.remove")}><Trash2 size={16} /></button></div>;
+function IngredientRow({
+  id,
+  ingredient,
+  onChange,
+  onRemove,
+}: {
+  id: string;
+  ingredient: Ingredient;
+  onChange: (patch: Partial<Ingredient>) => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return <div ref={setNodeRef} style={style} className={isDragging ? "ingredient-line ingredient-line--dragging" : "ingredient-line"}><input placeholder={t("recipe.form.ingredient.quantity")} value={ingredient.quantity ?? ""} onChange={(event) => onChange({ quantity: event.target.value })} /><input placeholder={t("recipe.form.ingredient.unit")} value={ingredient.unit ?? ""} onChange={(event) => onChange({ unit: event.target.value })} /><input placeholder={t("recipe.form.ingredient.name")} value={ingredient.name} onChange={(event) => onChange({ name: event.target.value })} /><RowActions attributes={attributes} listeners={listeners} onRemove={onRemove} /></div>;
 }
 
-function InstructionRow({ step, index, onChange, onRemove }: { step: string; index: number; onChange: (value: string) => void; onRemove: () => void; }) {
-  return <div className="step-line"><textarea value={step} onChange={(event) => onChange(event.target.value)} placeholder={`${t("recipe.form.step")} ${index + 1}`} /><button className="button button--icon" onClick={onRemove} type="button" title={t("recipe.form.image.remove")}><Trash2 size={16} /></button></div>;
+function InstructionRow({
+  id,
+  step,
+  index,
+  onChange,
+  onRemove,
+}: {
+  id: string;
+  step: string;
+  index: number;
+  onChange: (value: string) => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return <div ref={setNodeRef} style={style} className={isDragging ? "step-line step-line--dragging" : "step-line"}><textarea value={step} onChange={(event) => onChange(event.target.value)} placeholder={`${t("recipe.form.step")} ${index + 1}`} /><RowActions attributes={attributes} listeners={listeners} onRemove={onRemove} /></div>;
+}
+
+function RowActions({
+  attributes,
+  listeners,
+  onRemove,
+}: {
+  attributes: ReturnType<typeof useSortable>["attributes"];
+  listeners: ReturnType<typeof useSortable>["listeners"];
+  onRemove: () => void;
+}) {
+  return (
+    <div className="row-actions">
+      <button className="button button--icon row-actions__drag" type="button" title={t("recipe.form.reorder")} aria-label={t("recipe.form.reorder")} {...attributes} {...listeners}><GripVertical size={16} /></button>
+      <button className="button button--icon ingredient-line__remove" onClick={onRemove} type="button" title={t("recipe.form.image.remove")} aria-label={t("recipe.form.image.remove")}><Trash2 size={16} /></button>
+    </div>
+  );
 }
 
 function TextField({ label, value, required, placeholder, onChange }: { label: string; value: string; required?: boolean; placeholder?: string; onChange: (value: string) => void; }) {
