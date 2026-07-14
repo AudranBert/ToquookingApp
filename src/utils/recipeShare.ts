@@ -3,6 +3,7 @@ import { t } from "../i18n";
 import { createId } from "./id";
 import { cleanRecipeDraft, ingredientLabel, nowIso, recipeToDraft } from "./recipes";
 import { mergedRecipeImageUrls, primaryRecipeImageUrl } from "./images";
+import { displayTagName } from "./tags";
 
 const SHARE_HASH_KEY = "toqueRecipe";
 const MAX_SHARE_URL_LENGTH = 1000;
@@ -50,7 +51,7 @@ export function recipeToShareText(recipe: Recipe) {
     recipe.name,
     "",
     formatMeta(recipe),
-    recipe.tags.length ? `${t("share.text.tagsLabel")}: ${recipe.tags.join(", ")}` : "",
+    recipe.tags.length ? `${t("share.text.tagsLabel")}: ${recipe.tags.map(displayTagName).join(", ")}` : "",
     recipe.origin ? `${t("share.text.originLabel")}: ${recipe.origin}` : "",
     "",
     `${t("share.text.ingredientsLabel")}:`,
@@ -201,7 +202,7 @@ type CompactDraftV2 = {
   s?: string[];
   u?: string;
   vv?: string;
-  sv?: number;
+  sv?: number | string;
   pt?: number;
   rt?: number;
   ct?: number;
@@ -259,7 +260,7 @@ function expandSharedDraft(parsed: unknown): RecipeDraft {
     instructions: Array.isArray(compact.s) ? compact.s.map((x) => `${x}`) : [],
     sourceUrl: typeof compact.u === "string" ? compact.u : "",
     videoUrl: typeof compact.vv === "string" ? compact.vv : "",
-    servings: typeof compact.sv === "number" ? compact.sv : undefined,
+    servings: typeof compact.sv === "number" || typeof compact.sv === "string" ? compact.sv : undefined,
     prepTime: typeof compact.pt === "number" ? compact.pt : undefined,
     restTime: typeof compact.rt === "number" ? compact.rt : undefined,
     cookTime: typeof compact.ct === "number" ? compact.ct : undefined,

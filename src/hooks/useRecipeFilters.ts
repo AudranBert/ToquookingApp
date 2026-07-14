@@ -3,6 +3,28 @@ import type { Recipe, RegimeFilter, SeasonalThreshold } from "../types";
 import { countSeasonalIngredientMatches, currentSeasonalIngredients } from "../seasonal";
 import { originMatchesFilter } from "../origins";
 import { recipeMatchesQuery } from "../utils/recipes";
+import { normalizeText } from "../utils/text";
+
+const DRAFT_TAG_KEYS = new Set(["brouillon", "draft"]);
+
+function isDraftTag(tag: string) {
+  return DRAFT_TAG_KEYS.has(normalizeText(tag));
+}
+
+function isDraftRecipe(recipe: Recipe) {
+  return recipe.tags.some(isDraftTag);
+}
+
+function queryRequestsDraft(query: string) {
+  return normalizeText(query).split(/\s+/).some((word) => DRAFT_TAG_KEYS.has(word));
+}
+
+function queryWithoutDraftTerms(query: string) {
+  return normalizeText(query)
+    .split(/\s+/)
+    .filter((word) => word && !DRAFT_TAG_KEYS.has(word))
+    .join(" ");
+}
 
 export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
   const [query, setQuery] = useState("");
@@ -14,6 +36,10 @@ export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
   const [seasonalThreshold, setSeasonalThreshold] = useState<SeasonalThreshold>(0);
 
   const seasonalIngredients = currentSeasonalIngredients();
+  const draftRequestedByTag = tagFilters.some(isDraftTag);
+  const draftRequestedByQuery = queryRequestsDraft(query);
+  const draftRequested = draftRequestedByTag || draftRequestedByQuery;
+  const queryForMatching = draftRequestedByQuery ? queryWithoutDraftTerms(query) : query;
 
   const seasonalMatchCounts = useMemo(
     () =>
@@ -37,6 +63,8 @@ export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
   const filteredRecipes = useMemo(
     () =>
       recipes.filter((recipe) => {
+        const draftMatches = !isDraftRecipe(recipe) || draftRequested;
+        const queryMatches = recipeMatchesQuery(recipe, queryForMatching);
         const tagMatches = tagFilters.every((tag) => recipe.tags.includes(tag));
         const originMatches = originMatchesFilter(recipe.origin, originFilter);
         const regimeMatches = !regimeFilter || recipe.tags.includes(regimeFilter);
@@ -45,7 +73,8 @@ export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
         const seasonMatches =
           seasonalThreshold === 0 || (seasonalMatchCounts.get(recipe.id) ?? 0) >= seasonalThreshold;
         return (
-          recipeMatchesQuery(recipe, query) &&
+          draftMatches &&
+          queryMatches &&
           tagMatches &&
           originMatches &&
           regimeMatches &&
@@ -57,6 +86,8 @@ export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
     [
       recipes,
       query,
+      draftRequested,
+      queryForMatching,
       tagFilters,
       originFilter,
       regimeFilter,

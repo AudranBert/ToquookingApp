@@ -64,12 +64,18 @@ export function cleanRecipeDraft(draft: RecipeDraft): RecipeDraft {
     instructions: draft.instructions.map((step) => stripWrappingQuotes(step.trim()) ?? "").filter(Boolean),
     sourceUrl: stripWrappingQuotes(draft.sourceUrl?.trim()),
     videoUrl: stripWrappingQuotes(draft.videoUrl?.trim()),
+    servings: cleanServings(draft.servings),
     notes: stripWrappingQuotes(draft.notes?.trim()),
     imageUrl: stripWrappingQuotes(draft.imageUrl?.trim()),
     imageUrls: (draft.imageUrls ?? []).map((url) => stripWrappingQuotes(url?.trim()) ?? "").filter(Boolean),
     sourceImageUrl: stripWrappingQuotes(draft.sourceImageUrl?.trim()),
     sourceImageUrls: (draft.sourceImageUrls ?? []).map((url) => stripWrappingQuotes(url?.trim()) ?? "").filter(Boolean),
   };
+}
+
+function cleanServings(value: RecipeDraft["servings"]) {
+  if (typeof value === "number") return Number.isFinite(value) && value > 0 ? value : undefined;
+  return stripWrappingQuotes(value?.trim());
 }
 
 export function cleanStoredRecipe(recipe: Recipe): Recipe {

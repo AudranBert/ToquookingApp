@@ -12,6 +12,8 @@ const TAG_MOJIBAKE_FIXES: Record<string, string> = {
 
 const toolNameByKey = new Map(DEFAULT_RECIPE_TOOLS.map((tool) => [normalizeText(tool), tool]));
 
+const localizedTagKeys = new Set(["preparation", "brouillon"]);
+
 export function repairTagName(value: string) {
   const trimmed = value.trim();
   return TAG_MOJIBAKE_FIXES[trimmed] ?? trimmed;
@@ -32,7 +34,12 @@ export function displayTagName(value: string) {
   const canonical = formatTagName(value);
   if (!canonical) return "";
 
-  const canonicalToolName = toolNameByKey.get(normalizeText(canonical));
-  const label = canonicalToolName ? t(`recipe.tools.${canonicalToolName}` as never) : canonical;
+  const normalized = normalizeText(canonical);
+  const canonicalToolName = toolNameByKey.get(normalized);
+  const label = canonicalToolName
+    ? t(`recipe.tools.${canonicalToolName}` as never)
+    : localizedTagKeys.has(normalized)
+      ? t(`recipe.tags.${normalized}` as never)
+      : canonical;
   return `${label.charAt(0).toLocaleUpperCase("fr")}${label.slice(1)}`;
 }

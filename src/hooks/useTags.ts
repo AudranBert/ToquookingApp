@@ -12,6 +12,7 @@ import type { StatusApi } from "./useStatus";
 function defaultProtectedTags() {
   const dietCategory = t("manage.category.diet");
   const mealTypeCategory = t("manage.category.mealType");
+  const statusCategory = t("manage.category.status");
   const toolsCategory = t("manage.category.tools");
   return [
     { name: "omnivore", category: dietCategory },
@@ -26,6 +27,8 @@ function defaultProtectedTags() {
     { name: "dessert", category: mealTypeCategory },
     { name: "chaud", category: mealTypeCategory },
     { name: "froid", category: mealTypeCategory },
+    { name: "préparation", category: mealTypeCategory },
+    { name: "brouillon", category: statusCategory },
     ...DEFAULT_RECIPE_TOOLS.map((name) => ({ name, category: toolsCategory })),
   ].map((tag) => ({ ...tag, name: formatTagName(tag.name) }));
 }

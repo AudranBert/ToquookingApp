@@ -296,7 +296,7 @@ function normalizeImportedRecipe(input: unknown, now: string): Recipe {
     instructions: Array.isArray(record.instructions) ? record.instructions.map((step) => `${step}`.trim()).filter(Boolean) : [],
     sourceUrl: typeof record.sourceUrl === "string" && record.sourceUrl.trim() ? record.sourceUrl.trim() : undefined,
     videoUrl: typeof record.videoUrl === "string" && record.videoUrl.trim() ? record.videoUrl.trim() : undefined,
-    servings: typeof record.servings === "number" ? record.servings : undefined,
+    servings: typeof record.servings === "number" || typeof record.servings === "string" ? record.servings : undefined,
     prepTime: typeof record.prepTime === "number" ? record.prepTime : undefined,
     restTime: typeof record.restTime === "number" ? record.restTime : undefined,
     cookTime: typeof record.cookTime === "number" ? record.cookTime : undefined,

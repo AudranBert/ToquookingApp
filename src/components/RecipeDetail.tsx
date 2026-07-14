@@ -53,11 +53,12 @@ export function RecipeDetail({
 
   const hasSeveralImages = images.length > 1;
   const activeImage = images[Math.min(activeImageIndex, Math.max(0, images.length - 1))];
-  const [targetServings, setTargetServings] = useState<number | undefined>(recipe.servings);
+  const numericServings = numericServingValue(recipe.servings);
+  const [targetServings, setTargetServings] = useState<number | undefined>(numericServings);
   const [unitSystem, setUnitSystem] = useState<"metric" | "imperial">("metric");
 
   useEffect(() => {
-    setTargetServings(recipe.servings);
+    setTargetServings(numericServingValue(recipe.servings));
     setUnitSystem("metric");
   }, [recipe.id, recipe.servings]);
 
@@ -143,7 +144,7 @@ export function RecipeDetail({
         </div>
         <div className="meta-list" role="list" aria-label={t("recipe.detail.infoAria")}>
           {hasValue(recipe.servings) && (
-            <span className="meta-pill" role="listitem" title={t("recipe.detail.servings")} aria-label={`${recipe.servings} personne(s)`}>
+            <span className="meta-pill" role="listitem" title={t("recipe.detail.servings")} aria-label={`${recipe.servings} ${t("recipe.detail.parts")}`}>
               <Users size={15} />
               <strong>{recipe.servings}</strong>
               <span className="meta-pill__label">{t("recipe.detail.parts")}</span>
@@ -182,7 +183,7 @@ export function RecipeDetail({
           <section>
             <div className="recipe-section-header">
               <h3>{t("recipe.detail.ingredients")}</h3>
-              {hasPositiveValue(recipe.servings) && (
+              {hasPositiveValue(numericServings) && (
                 <div className="ingredient-scale-control">
                   <label aria-label={t("recipe.detail.targetServings")}>
                     <input
@@ -204,7 +205,7 @@ export function RecipeDetail({
             <ul>
               {recipe.ingredients.map((ingredient) => (
                 <li className="ingredient-status-row" key={ingredient.id}>
-                  <span>- {scaledIngredientLabel(ingredient, recipe.servings, targetServings, unitSystem)}</span>
+                  <span>- {scaledIngredientLabel(ingredient, numericServings, targetServings, unitSystem)}</span>
                   <span className="ingredient-badges">
                     {recipeContainsSeasonalIngredient([ingredient.name], currentSeasonalIngredients()) && (
                       <span className="chip chip--seasonal">{t("recipe.detail.seasonal")}</span>
@@ -335,7 +336,15 @@ function youtubeEmbedUrl(url: string) {
   return match ? `https://www.youtube.com/embed/${match[1]}` : null;
 }
 
-function hasValue(value: number | undefined) {
+function numericServingValue(value: Recipe["servings"]) {
+  if (typeof value === "number") return value;
+  if (typeof value !== "string") return undefined;
+  if (!/^\d+(?:[.,]\d+)?$/.test(value.trim())) return undefined;
+  const parsed = Number(value.replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function hasValue(value: Recipe["servings"] | undefined) {
   return value !== undefined && value !== null;
 }
 

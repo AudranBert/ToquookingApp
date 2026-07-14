@@ -15,7 +15,7 @@ export type Recipe = {
   instructions: string[];
   sourceUrl?: string;
   videoUrl?: string;
-  servings?: number;
+  servings?: number | string;
   prepTime?: number;
   restTime?: number;
   cookTime?: number;

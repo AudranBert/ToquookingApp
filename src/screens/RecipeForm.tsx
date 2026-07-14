@@ -13,7 +13,6 @@ import { mergedRecipeImageUrls } from "../utils/images";
 import { getTagStyle } from "../utils/tagStyle";
 import { displayTagName } from "../utils/tags";
 import { t } from "../i18n";
-import { DEFAULT_RECIPE_TOOLS } from "../constants";
 
 type Props = {
   draft: RecipeDraft;
@@ -180,7 +179,7 @@ export function RecipeForm({ draft, editing, warnings, allTags, categories, tagC
         <datalist id="recipe-origins">{RECIPE_ORIGINS.map((origin) => <option key={origin} value={origin} />)}</datalist>
         <TextField label={t("recipe.form.video")} value={draft.videoUrl ?? ""} onChange={(videoUrl) => updateField("videoUrl", videoUrl)} />
         <div className="timing-grid form-grid__full" aria-label={t("recipe.form.timingAria")}>
-          <NumberField label={t("recipe.detail.parts")} icon={Users} value={draft.servings} onChange={(servings) => updateField("servings", servings)} />
+          <TextIconField label={t("recipe.detail.parts")} icon={Users} value={draft.servings ?? ""} onChange={(servings) => updateField("servings", servings)} />
           <NumberField label={t("recipe.detail.prepShort")} icon={ChefHat} value={draft.prepTime} onChange={(prepTime) => updateField("prepTime", prepTime)} />
           <NumberField label={t("recipe.detail.rest")} icon={Hourglass} value={draft.restTime} onChange={(restTime) => updateField("restTime", restTime)} />
           <NumberField label={t("recipe.detail.cook")} icon={Flame} value={draft.cookTime} onChange={(cookTime) => updateField("cookTime", cookTime)} />
@@ -351,8 +350,7 @@ function TextField({ label, value, required, placeholder, onChange }: { label: s
 
 function TagField({ tags, allTags, categories, tagColorByName, onCreateTag, onChange }: { tags: string[]; allTags: string[]; categories: TagCategory[]; tagColorByName: Map<string, string>; onCreateTag: (name: string) => Promise<string | undefined> | string | undefined; onChange: (tags: string[]) => void; }) {
   const [input, setInput] = useState("");
-  const toolKeys = new Set(DEFAULT_RECIPE_TOOLS.map((tool) => tool.toLowerCase()));
-  const formatTag = (value: string) => (toolKeys.has(value.toLowerCase()) ? displayTagName(value) : value);
+  const formatTag = (value: string) => displayTagName(value);
   const formatCategory = (value: string) => (value.toLowerCase() === "tools" ? t("recipe.form.tools") : value);
   const suggestions = useMemo(() => {
     const selected = new Set(tags);
@@ -404,4 +402,8 @@ function TagField({ tags, allTags, categories, tagColorByName, onCreateTag, onCh
 
 function NumberField({ label, icon: Icon, value, onChange }: { label: string; icon: LucideIcon; value?: number; onChange: (value: number | undefined) => void; }) {
   return <label className="number-field" aria-label={label}><span className="number-field__label"><Icon size={16} /><span className="number-field__label-text">{label}</span></span><input min="0" type="number" value={value ?? ""} onChange={(event) => onChange(Number(event.target.value) || undefined)} /></label>;
+}
+
+function TextIconField({ label, icon: Icon, value, onChange }: { label: string; icon: LucideIcon; value: string | number; onChange: (value: string | undefined) => void; }) {
+  return <label className="number-field" aria-label={label}><span className="number-field__label"><Icon size={16} /><span className="number-field__label-text">{label}</span></span><input value={String(value)} inputMode="text" placeholder="4, 4kg, 2L" onChange={(event) => onChange(event.target.value || undefined)} /></label>;
 }
