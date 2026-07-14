@@ -63,7 +63,8 @@ export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
   const filteredRecipes = useMemo(
     () =>
       recipes.filter((recipe) => {
-        const draftMatches = !isDraftRecipe(recipe) || draftRequested;
+        const draftRecipe = isDraftRecipe(recipe);
+        const draftMatches = draftRequestedByQuery ? draftRecipe : !draftRecipe || draftRequested;
         const queryMatches = recipeMatchesQuery(recipe, queryForMatching);
         const tagMatches = tagFilters.every((tag) => recipe.tags.includes(tag));
         const originMatches = originMatchesFilter(recipe.origin, originFilter);
@@ -87,6 +88,7 @@ export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
       recipes,
       query,
       draftRequested,
+      draftRequestedByQuery,
       queryForMatching,
       tagFilters,
       originFilter,
