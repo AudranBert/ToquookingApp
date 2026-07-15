@@ -28,7 +28,11 @@ export function BackupScreen({ onExport, onImport, onDownloadExample, onDownload
             <Upload size={18} /> {t("backup.action.import")}
             <input
               accept=".zip,.txt,.json,application/zip,text/plain,application/json"
-              onChange={(event) => event.target.files?.[0] && onImport(event.target.files[0])}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) onImport(file);
+                event.currentTarget.value = "";
+              }}
               type="file"
             />
           </label>

@@ -35,7 +35,7 @@ export function AppDialog({
     <div className="dialog-backdrop" role="dialog" aria-modal="true" aria-label={title}>
       <div className="panel dialog-card">
         <h3>{title}</h3>
-        {message && <p>{message}</p>}
+        {message && <p className="dialog-card__message">{message}</p>}
         {typeof promptValue === "string" && (
           <input
             autoFocus

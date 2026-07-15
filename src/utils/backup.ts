@@ -138,6 +138,35 @@ export async function parseBackupFile(file: File, existingRecipes: Recipe[]) {
   };
 }
 
+export async function summarizeBackupImport(file: File, existingRecipes: Recipe[]) {
+  const imported = await parseBackupFile(file, []);
+  const existingNames = new Set(existingRecipes.map((recipe) => normalizeText(recipe.name)));
+  const seenImportedNames = new Set<string>();
+  const duplicateNames = new Set<string>();
+
+  for (const recipe of imported.recipes) {
+    const key = normalizeText(recipe.name);
+    if (!key) continue;
+    if (existingNames.has(key) || seenImportedNames.has(key)) duplicateNames.add(recipe.name);
+    seenImportedNames.add(key);
+  }
+
+  return {
+    recipeCount: imported.recipes.length,
+    imageCount: countBackupImages(imported.recipes),
+    duplicateNames: [...duplicateNames].sort((a, b) => a.localeCompare(b, "fr")),
+  };
+}
+
+function countBackupImages(recipes: Recipe[]) {
+  const images = new Set<string>();
+  recipes.forEach((recipe) => {
+    mergedRecipeImageUrls({ imageUrl: recipe.imageUrl, imageUrls: recipe.imageUrls }).forEach((url) => images.add(url));
+    mergedRecipeImageUrls({ imageUrl: recipe.sourceImageUrl, imageUrls: recipe.sourceImageUrls }).forEach((url) => images.add(url));
+  });
+  return images.size;
+}
+
 function recipeBackupFileName(recipe: Recipe) {
   const slug = recipe.name
     .toLowerCase()

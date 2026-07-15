@@ -8,7 +8,7 @@ import { AppHeader } from "./components/AppHeader";
 import { LibraryScreen } from "./screens/LibraryScreen";
 import { RecipeForm } from "./screens/RecipeForm";
 import { ShoppingScreen } from "./screens/ShoppingScreen";
-import { downloadRecipeDatabaseJson, downloadRecipeImportExample, parseBackupFile, shareRecipesBackup, shareSingleRecipeBackup } from "./utils/backup";
+import { downloadRecipeDatabaseJson, downloadRecipeImportExample, parseBackupFile, shareRecipesBackup, shareSingleRecipeBackup, summarizeBackupImport } from "./utils/backup";
 import {
   clearRecipeShareFromLocation,
   createRecipeShareUrl,
@@ -188,6 +188,31 @@ export function App() {
   }
 
   async function handleBackupImport(file: File) {
+    try {
+      const summary = await summarizeBackupImport(file, recipes);
+      const duplicateSummary = summary.duplicateNames.length > 0
+        ? summary.duplicateNames.slice(0, 6).join(", ")
+        : t("backup.importSummary.duplicates.none");
+      const overflow = summary.duplicateNames.length > 6
+        ? `\n${t("backup.importSummary.duplicates.more", { count: summary.duplicateNames.length - 6 })}`
+        : "";
+      const accepted = await dialog.confirm(
+        t("backup.importSummary.title"),
+        [
+          t("backup.importSummary.recipes", { count: summary.recipeCount }),
+          t("backup.importSummary.images", { count: summary.imageCount }),
+          t("backup.importSummary.duplicates", { names: duplicateSummary }),
+          overflow,
+        ].filter(Boolean).join("\n"),
+        false,
+        t("backup.action.import"),
+      );
+      if (!accepted) return;
+    } catch {
+      status.setStatus(t("import.status.fileUnreadable"));
+      return;
+    }
+
     const firstId = await importBackup(file);
     if (firstId) setSelectedId(firstId);
   }
