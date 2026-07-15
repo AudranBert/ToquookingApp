@@ -11,6 +11,7 @@ import { displayTagName } from "../utils/tags";
 import { normalizeText } from "../utils/text";
 import { getTagStyle } from "../utils/tagStyle";
 import type { TagCategory } from "../hooks/useTags";
+import type { LibraryFilterPreset } from "../hooks/useRecipeFilters";
 import { t } from "../i18n";
 
 const REGIME_FILTER_OPTIONS: { value: RegimeFilter; label: string }[] = [
@@ -32,6 +33,9 @@ export type LibraryFilters = {
   allTags: string[];
   tagColorByName: Map<string, string>;
   tagCategories: TagCategory[];
+  excludedTagFilters: string[];
+  filterPresets: LibraryFilterPreset[];
+  activePresetId: LibraryFilterPreset["id"] | "";
 };
 
 export type LibraryFilterHandlers = {
@@ -42,6 +46,8 @@ export type LibraryFilterHandlers = {
   onNoHeatingOnlyChange: (enabled: boolean) => void;
   onMaxTotalTimeChange: (minutes?: number) => void;
   onSeasonalThresholdChange: (threshold: SeasonalThreshold) => void;
+  onApplyPreset: (preset: LibraryFilterPreset) => void;
+  onClearFilters: () => void;
 };
 
 export type LibraryRecipeActions = {
@@ -128,6 +134,15 @@ function LibrarySidebar({ filters, handlers, filteredCount, seasonalRecipeCount,
   const [ingredientsOpen, setIngredientsOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
   const [originsOpen, setOriginsOpen] = useState(false);
+  const hasActiveFilters =
+    Boolean(filters.query) ||
+    filters.tagFilters.length > 0 ||
+    filters.excludedTagFilters.length > 0 ||
+    Boolean(filters.originFilter) ||
+    Boolean(filters.regimeFilter) ||
+    filters.noHeatingOnly ||
+    Boolean(filters.maxTotalTime) ||
+    filters.seasonalThreshold > 0;
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(min-width: 861px)");
@@ -148,6 +163,27 @@ function LibrarySidebar({ filters, handlers, filteredCount, seasonalRecipeCount,
           {t("library.filters.count", { count: filteredCount })}
           {filters.seasonalThreshold > 0 ? ` ${t("library.filters.seasonalCount", { threshold: filters.seasonalThreshold, month: seasonMonthName })}` : ""}
         </p>
+        <div className="filter-presets" aria-label={t("library.presets.title")}>
+          <span className="filter-presets__title">{t("library.presets.title")}</span>
+          <div className="origin-filter__options">
+            {filters.filterPresets.map((preset) => (
+              <button
+                className={`origin-filter__option${preset.id === filters.activePresetId ? " origin-filter__option--active" : ""}`}
+                key={preset.id}
+                type="button"
+                onClick={() => handlers.onApplyPreset(preset)}
+                aria-pressed={preset.id === filters.activePresetId}
+              >
+                {t(preset.labelKey)}
+              </button>
+            ))}
+          </div>
+          {hasActiveFilters && (
+            <button className="origin-filter__clear" type="button" onClick={handlers.onClearFilters}>
+              <X size={14} /> {t("library.filters.clear")}
+            </button>
+          )}
+        </div>
         <details className="advanced-filters" open={advancedOpen} onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}>
           <summary><span className="label-with-icon"><Filter size={16} /> {t("library.filters.title")}</span></summary>
           <div className="advanced-filters__body">

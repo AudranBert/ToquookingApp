@@ -335,6 +335,9 @@ export function App() {
             allTags: filters.allTags,
             tagColorByName,
             tagCategories: tagApi.categories,
+            excludedTagFilters: filters.excludedTagFilters,
+            filterPresets: filters.filterPresets,
+            activePresetId: filters.activePresetId,
           }}
           filterHandlers={{
             onQueryChange: filters.setQuery,
@@ -344,6 +347,8 @@ export function App() {
             onNoHeatingOnlyChange: filters.setNoHeatingOnly,
             onMaxTotalTimeChange: filters.setMaxTotalTime,
             onSeasonalThresholdChange: filters.setSeasonalThreshold,
+            onApplyPreset: filters.applyPreset,
+            onClearFilters: filters.clearFilters,
           }}
           actions={{
             onEdit: startEdit,
