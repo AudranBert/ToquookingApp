@@ -75,6 +75,7 @@ export const fr = {
   "recipe.tools.knife": "couteau",
   "recipe.tags.preparation": "préparation",
   "recipe.tags.brouillon": "brouillon",
+  "recipe.tags.needs review": "à vérifier",
   "recipe.form.photos": "Photos",
   "recipe.form.photosHint": "Ajoute plusieurs images. La première est utilisée en aperçu.",
   "recipe.form.image.urlLabel": "URL de l'image à ajouter",

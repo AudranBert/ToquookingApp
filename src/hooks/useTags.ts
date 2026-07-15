@@ -29,6 +29,7 @@ function defaultProtectedTags() {
     { name: "froid", category: mealTypeCategory },
     { name: "préparation", category: mealTypeCategory },
     { name: "brouillon", category: statusCategory },
+    { name: "needs review", category: statusCategory },
     ...DEFAULT_RECIPE_TOOLS.map((name) => ({ name, category: toolsCategory })),
   ].map((tag) => ({ ...tag, name: formatTagName(tag.name) }));
 }

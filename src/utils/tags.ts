@@ -12,7 +12,7 @@ const TAG_MOJIBAKE_FIXES: Record<string, string> = {
 
 const toolNameByKey = new Map(DEFAULT_RECIPE_TOOLS.map((tool) => [normalizeText(tool), tool]));
 
-const localizedTagKeys = new Set(["preparation", "brouillon"]);
+const localizedTagKeys = new Set(["preparation", "brouillon", "needs review"]);
 
 export function repairTagName(value: string) {
   const trimmed = value.trim();

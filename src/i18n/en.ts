@@ -77,6 +77,7 @@ export const en: Messages = {
   "recipe.tools.knife": "knife",
   "recipe.tags.preparation": "preparation",
   "recipe.tags.brouillon": "draft",
+  "recipe.tags.needs review": "needs review",
   "recipe.form.photos": "Photos",
   "recipe.form.photosHint": "Add multiple images. The first one is used as preview.",
   "recipe.form.image.urlLabel": "Image URL to add",
