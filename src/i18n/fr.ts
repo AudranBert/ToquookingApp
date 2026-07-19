@@ -189,6 +189,7 @@ export const fr = {
   "backup.action.exportAll": "Exporter toutes les recettes",
   "backup.action.import": "Importer une sauvegarde",
   "backup.action.downloadExample": "Télécharger un exemple ZIP",
+  "backup.action.copyAiPrompt": "Copier le prompt IA",
   "backup.action.downloadDatabase": "Télécharger la base JSON",
   "backup.importSummary.title": "Importer cette sauvegarde ?",
   "backup.importSummary.recipes": "Recettes : {count}",
@@ -202,6 +203,8 @@ export const fr = {
   "backup.status.shareFailed": "Le partage de la sauvegarde n'a pas abouti.",
   "backup.status.downloadedNoNativeShare": "Sauvegarde téléchargée. Le partage natif n'est pas disponible sur cet appareil.",
   "backup.status.exampleDownloaded": "Exemple ZIP téléchargé.",
+  "backup.status.aiPromptCopied": "Prompt IA copié.",
+  "backup.status.aiPromptCopyFailed": "Impossible de copier le prompt IA.",
   "backup.status.databaseDownloaded": "Base JSON téléchargée.",
 
   "share.error.generic": "Le partage n'a pas abouti.",

@@ -191,6 +191,7 @@ export const en: Messages = {
   "backup.action.exportAll": "Export all recipes",
   "backup.action.import": "Import backup",
   "backup.action.downloadExample": "Download ZIP example",
+  "backup.action.copyAiPrompt": "Copy AI prompt",
   "backup.action.downloadDatabase": "Download database JSON",
   "backup.importSummary.title": "Import this backup?",
   "backup.importSummary.recipes": "Recipes: {count}",
@@ -204,6 +205,8 @@ export const en: Messages = {
   "backup.status.shareFailed": "Backup sharing failed.",
   "backup.status.downloadedNoNativeShare": "Backup downloaded. Native sharing is unavailable on this device.",
   "backup.status.exampleDownloaded": "ZIP example downloaded.",
+  "backup.status.aiPromptCopied": "AI prompt copied.",
+  "backup.status.aiPromptCopyFailed": "Could not copy the AI prompt.",
   "backup.status.databaseDownloaded": "JSON database downloaded.",
 
   "share.error.generic": "Sharing failed.",

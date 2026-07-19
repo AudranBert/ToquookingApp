@@ -444,6 +444,7 @@ export function App() {
             onImport={handleBackupImport}
             onDownloadExample={downloadImportExampleFile}
             onDownloadDatabase={downloadDatabaseJsonFile}
+            onStatus={status.setStatus}
           />
         </Suspense>
       )}

@@ -1,5 +1,5 @@
 import { normalizeText } from "../seasonal";
-import type { BackupFile, Recipe, RecipeTag } from "../types";
+import type { BackupFile, Ingredient, Recipe, RecipeTag } from "../types";
 import { createId } from "./id";
 import JSZip from "jszip";
 import { mergedRecipeImageUrls } from "./images";
@@ -10,6 +10,17 @@ type RecipeDatabaseJson = {
   tags: string[];
   ingredients: string[];
   recipeNames: string[];
+};
+
+type RecipeImportExampleFile = Omit<Partial<BackupFile>, "recipes"> & {
+  version: 1;
+  exportedAt: string;
+  recipes: Array<Omit<Partial<Recipe>, "ingredients"> & {
+    name: string;
+    tags: string[];
+    ingredients: Array<Partial<Ingredient> & { name: string }>;
+    instructions: string[];
+  }>;
 };
 
 export function downloadRecipesBackup(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
@@ -246,49 +257,49 @@ function recipeDatabaseBlob(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name
 }
 
 function recipeImportExampleBlob() {
-  const example: BackupFile = {
+  const example = {
     version: 1,
-    exportedAt: "2026-05-23T12:00:00.000Z",
-    tags: [{ name: "TagExample1" }, { name: "TagExample2" }],
+    exportedAt: "2026-07-19T00:00:00.000Z",
+    tags: [
+      { name: "Plat principal", category: "Type", color: "#f97316" },
+      { name: "Rapide", category: "Temps", color: "#22c55e" },
+      { name: "Poulet", category: "Ingrédient", color: "#eab308" },
+    ],
     recipes: [
       {
-        id: "recipe-example-1",
-        name: "RecipeNameExample",
-        tags: ["TagExample1", "TagExample2"],
-        origin: "OriginExample",
+        name: "Poulet au citron",
+        tags: ["Plat principal", "Rapide", "Poulet"],
+        origin: "France",
         ingredients: [
-          { id: "ingredient-example-1", name: "IngredientExample1", quantity: "200", unit: "g" },
-          { id: "ingredient-example-2", name: "IngredientExample2", quantity: "2", unit: "pieces" },
-          { id: "ingredient-example-3", name: "IngredientExample3", note: "optional note example" },
+          { name: "Blancs de poulet", quantity: "600", unit: "g" },
+          { name: "Citron", quantity: "1", unit: "" },
+          { name: "Huile d'olive", quantity: "2", unit: "c. à soupe" },
+          { name: "Thym", quantity: "1", unit: "c. à café", note: "facultatif" },
+          { name: "Sel", quantity: "", unit: "", note: "selon le goût" },
+          { name: "Poivre", quantity: "", unit: "", note: "selon le goût" },
         ],
         instructions: [
-          "StepExample1",
-          "StepExample2",
-          "StepExample3",
+          "Couper les blancs de poulet en morceaux réguliers.",
+          "Presser le citron puis mélanger le jus avec l'huile d'olive, le thym, le sel et le poivre.",
+          "Faire dorer le poulet dans une poêle chaude pendant 5 minutes.",
+          "Verser la sauce au citron, baisser le feu et laisser cuire jusqu'à ce que le poulet soit cuit à cœur.",
+          "Servir chaud avec du riz, des pâtes ou des légumes.",
         ],
-        sourceUrl: "https://example.com/recipe-example",
-        videoUrl: "https://example.com/video-example",
+        sourceUrl: "",
+        videoUrl: "",
         servings: 4,
-        prepTime: 10,
+        prepTime: 15,
         restTime: 0,
-        cookTime: 20,
-        totalTime: 30,
-        notes: "NotesExample",
-        imageUrl: "https://example.com/image-example.jpg",
-        imageUrls: [
-          "https://example.com/image-example.jpg",
-          "https://example.com/image-example-2.jpg",
-        ],
-        sourceImageUrl: "https://example.com/image-source-example.jpg",
-        sourceImageUrls: [
-          "https://example.com/image-source-example.jpg",
-          "https://example.com/image-source-example-2.jpg",
-        ],
-        createdAt: "2026-05-23T12:00:00.000Z",
-        updatedAt: "2026-05-23T12:00:00.000Z",
+        cookTime: 25,
+        totalTime: 40,
+        notes: "Exemple adapté à une génération par IA depuis une photo ou une capture. L'application ajoute automatiquement les identifiants et dates manquants à l'import.",
+        imageUrl: "",
+        imageUrls: [],
+        sourceImageUrl: "",
+        sourceImageUrls: [],
       },
     ],
-  };
+  } satisfies RecipeImportExampleFile;
   return new Blob([JSON.stringify(example, null, 2)], { type: "application/json" });
 }
 
@@ -296,10 +307,10 @@ async function recipeImportExampleZipBlob() {
   const zip = new JSZip();
   const recipeFolder = zip.folder("recipes");
   zip.folder("images");
-  const backup = JSON.parse(await recipeImportExampleBlob().text()) as BackupFile;
+  const backup = JSON.parse(await recipeImportExampleBlob().text()) as RecipeImportExampleFile;
   zip.file("backup.json", JSON.stringify(backup, null, 2));
-  for (const recipe of backup.recipes) {
-    recipeFolder?.file(`${safeSlug(recipe.name)}-${recipe.id}.json`, JSON.stringify(recipe, null, 2));
+  for (const recipe of backup.recipes ?? []) {
+    recipeFolder?.file(`${safeSlug(recipe.name)}.json`, JSON.stringify(recipe, null, 2));
   }
   return zip.generateAsync({ type: "blob" });
 }
