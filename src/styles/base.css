@@ -14,6 +14,9 @@
   --color-success-border: #a9c7b5;
   --color-warning-bg: #fff2d8;
   --color-warning-border: #e5ba70;
+  --color-chip-bg: #f6ead8;
+  --color-success-text: #247745;
+  --color-danger-bg: #fbefec;
 
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -621,7 +624,7 @@ label {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  background: #f6ead8;
+  background: var(--color-chip-bg);
   border-radius: var(--radius-sm);
 }
 
@@ -735,7 +738,7 @@ label {
 .chip,
 .meta-list span {
   padding: 6px 10px;
-  background: #f6ead8;
+  background: var(--color-chip-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
 }
@@ -933,6 +936,7 @@ label {
 
 .recipe-section-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
@@ -945,13 +949,16 @@ label {
 
 .ingredient-scale-control {
   display: grid;
-  grid-template-columns: 90px 56px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  width: 100%;
+  max-width: 320px;
   gap: var(--space-2);
   align-items: center;
 }
 
 .ingredient-scale-control label {
-  gap: 0;
+  font-size: 0.75rem;
+  gap: var(--space-1);
 }
 
 .ingredient-scale-control select {
@@ -996,14 +1003,14 @@ label {
 
 .image-field__preview {
   object-fit: cover;
-  background: #f6ead8;
+  background: var(--color-chip-bg);
 }
 
 .image-field__empty {
   display: grid;
   place-items: center;
   color: var(--color-muted);
-  background: #f6ead8;
+  background: var(--color-chip-bg);
   border: 1px dashed var(--color-border-strong);
 }
 
@@ -1352,4 +1359,16 @@ label {
 
 .dialog-actions {
   margin-top: var(--space-1);
+}
+
+.recipe-form__footer {
+  justify-content: flex-end;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.button:focus-visible,
+.file-button:focus-within {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }

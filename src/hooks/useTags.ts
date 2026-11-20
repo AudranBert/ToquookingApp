@@ -35,19 +35,6 @@ function defaultProtectedTags() {
   ].map((tag) => ({ ...tag, name: formatTagName(tag.name) }));
 }
 
-const TAG_MOJIBAKE_FIXES: Record<string, string> = {
-  "entrÃ©e": "entrée",
-  "apÃ©ritif": "apéritif",
-  "pescÃ©tarien": "pescétarien",
-  "vÃ©gÃ©tarien": "végétarien",
-  "vÃ©gÃ©talien": "végétalien",
-};
-
-function repairTagName(value: string) {
-  const trimmed = value.trim();
-  return TAG_MOJIBAKE_FIXES[trimmed] ?? trimmed;
-}
-
 export type TagCategory = {
   name: string;
   color?: string;

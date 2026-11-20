@@ -60,25 +60,20 @@
   }
 
   .ingredient-scale-control {
-    grid-template-columns: minmax(0, 1fr) 72px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     width: 100%;
   }
 
+  .creation-mode-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .creation-mode-tabs .button {
-    width: var(--button-icon-size);
-    min-width: var(--button-icon-size);
-    padding: 9px;
-    font-size: 0;
-    gap: 0;
-  }
-
-  .creation-mode-tabs .button svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  .creation-mode-tabs__label {
-    display: none;
+    flex: 1 1 auto;
+    padding: var(--space-2);
+    font-size: 0.85rem;
+    justify-content: center;
   }
 
   .management-tags-grid {
@@ -86,12 +81,13 @@
   }
 
   .management-action-button {
-    width: 40px;
-    padding: 9px;
+    width: auto;
+    padding: var(--space-2);
+    font-size: 0.8rem;
   }
 
   .management-line {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
   }
 
@@ -99,12 +95,15 @@
     align-self: start;
   }
 
-  .management-line__actions {
+  .action-bar.management-line__actions {
+    flex-wrap: wrap;
+    width: auto;
+    justify-content: flex-start;
     gap: var(--space-1);
   }
 
   .management-action-button__label {
-    display: none;
+    display: inline;
   }
 
   .button--icon-mobile,
@@ -180,9 +179,7 @@
   }
 
   .sidebar {
-    position: sticky;
-    top: 0;
-    z-index: 5;
+    position: static;
     padding: var(--space-3);
   }
 

@@ -35,6 +35,24 @@ export function RecipeDetail({
   onShareText,
   onShareLink,
 }: Props) {
+  const images = mergedRecipeImageUrls(recipe ?? {});
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [recipe?.id]);
+
+  const hasSeveralImages = images.length > 1;
+  const activeImage = images[Math.min(activeImageIndex, Math.max(0, images.length - 1))];
+  const numericServings = numericServingValue(recipe?.servings);
+  const [targetServings, setTargetServings] = useState<number | undefined>(numericServings);
+  const [unitSystem, setUnitSystem] = useState<"metric" | "imperial">("metric");
+
+  useEffect(() => {
+    setTargetServings(numericServingValue(recipe?.servings));
+    setUnitSystem("metric");
+  }, [recipe?.id, recipe?.servings]);
+
   if (!recipe) {
     return (
       <section className="empty-state panel">
@@ -44,23 +62,6 @@ export function RecipeDetail({
       </section>
     );
   }
-  const images = mergedRecipeImageUrls(recipe);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-
-  useEffect(() => {
-    setActiveImageIndex(0);
-  }, [recipe.id]);
-
-  const hasSeveralImages = images.length > 1;
-  const activeImage = images[Math.min(activeImageIndex, Math.max(0, images.length - 1))];
-  const numericServings = numericServingValue(recipe.servings);
-  const [targetServings, setTargetServings] = useState<number | undefined>(numericServings);
-  const [unitSystem, setUnitSystem] = useState<"metric" | "imperial">("metric");
-
-  useEffect(() => {
-    setTargetServings(numericServingValue(recipe.servings));
-    setUnitSystem("metric");
-  }, [recipe.id, recipe.servings]);
 
   return (
     <article className="recipe-detail">
@@ -185,7 +186,7 @@ export function RecipeDetail({
               <h3>{t("recipe.detail.ingredients")}</h3>
               {hasPositiveValue(numericServings) && (
                 <div className="ingredient-scale-control">
-                  <label aria-label={t("recipe.detail.targetServings")}>
+                  <label>{t("recipe.detail.targetServings")}
                     <input
                       type="number"
                       min="1"
@@ -193,10 +194,10 @@ export function RecipeDetail({
                       onChange={(event) => setTargetServings(Number(event.target.value) || undefined)}
                     />
                   </label>
-                  <label aria-label={t("recipe.detail.unitSystem")}>
+                  <label>{t("recipe.detail.unitSystem")}
                     <select value={unitSystem} onChange={(event) => setUnitSystem(event.target.value as "metric" | "imperial")}>
-                      <option value="metric">M</option>
-                      <option value="imperial">I</option>
+                      <option value="metric">{t("recipe.detail.unitSystem.metric")}</option>
+                      <option value="imperial">{t("recipe.detail.unitSystem.imperial")}</option>
                     </select>
                   </label>
                 </div>

@@ -17,6 +17,7 @@ import { compressImageFile } from "../utils/imageCompression";
 
 type Props = {
   draft: RecipeDraft;
+  importing: boolean;
   editing: boolean;
   warnings: string[];
   allTags: string[];
@@ -37,7 +38,7 @@ type Props = {
   onStatus: (message: string) => void;
 };
 
-export function RecipeForm({ draft, editing, warnings, allTags, categories, tagColorByName, onCreateTag, importUrl, onImportUrlChange, onImport, importText, onImportTextChange, onImportText, onImportFile, onSubmit, onCancel, onReimport, setDraft, onStatus }: Props) {
+export function RecipeForm({ draft, importing, editing, warnings, allTags, categories, tagColorByName, onCreateTag, importUrl, onImportUrlChange, onImport, importText, onImportTextChange, onImportText, onImportFile, onSubmit, onCancel, onReimport, setDraft, onStatus }: Props) {
   const [isImportSupportOpen, setIsImportSupportOpen] = useState(false);
   const [imageProcessing, setImageProcessing] = useState(false);
   const [creationMode, setCreationMode] = useState<"manual" | "url" | "text" | "file">("manual");
@@ -108,17 +109,17 @@ export function RecipeForm({ draft, editing, warnings, allTags, categories, tagC
         </div>
         <div className="action-bar recipe-form__actions">
           <button className="button button--ghost button--icon-mobile" onClick={onCancel} type="button" aria-label={t("recipe.form.cancel")}><X size={18} /></button>
-          <button className="button button--primary button--icon-mobile" type="submit" disabled={imageProcessing}><Check size={18} /> {t("recipe.form.save")}</button>
+          <button className="button button--primary button--icon-mobile" type="submit" disabled={imageProcessing || importing}><Check size={18} /> {t("recipe.form.save")}</button>
         </div>
       </div>
 
       {!editing && (
         <section className="form-section form-section--import">
-          <div className="creation-mode-tabs" role="tablist" aria-label={t("recipe.form.creationMode")}>
-            <button className={creationMode === "manual" ? "button button--primary" : "button"} type="button" onClick={() => setCreationMode("manual")}><PenSquare size={16} /> <span className="creation-mode-tabs__label">{t("recipe.form.mode.manual")}</span></button>
-            <button className={creationMode === "url" ? "button button--primary" : "button"} type="button" onClick={() => setCreationMode("url")}><Link size={16} /> <span className="creation-mode-tabs__label">{t("recipe.form.mode.url")}</span></button>
-            <button className={creationMode === "text" ? "button button--primary" : "button"} type="button" onClick={() => setCreationMode("text")}><Text size={16} /> <span className="creation-mode-tabs__label">{t("recipe.form.mode.text")}</span></button>
-            <button className={creationMode === "file" ? "button button--primary" : "button"} type="button" onClick={() => setCreationMode("file")}><Upload size={16} /> <span className="creation-mode-tabs__label">{t("recipe.form.mode.file")}</span></button>
+          <div className="creation-mode-tabs" role="group" aria-label={t("recipe.form.creationMode")}>
+            <button className={creationMode === "manual" ? "button button--primary" : "button"} type="button" aria-pressed={creationMode === "manual"} onClick={() => setCreationMode("manual")}><PenSquare size={16} /> <span className="creation-mode-tabs__label">{t("recipe.form.mode.manual")}</span></button>
+            <button className={creationMode === "url" ? "button button--primary" : "button"} type="button" aria-pressed={creationMode === "url"} onClick={() => setCreationMode("url")}><Link size={16} /> <span className="creation-mode-tabs__label">{t("recipe.form.mode.url")}</span></button>
+            <button className={creationMode === "text" ? "button button--primary" : "button"} type="button" aria-pressed={creationMode === "text"} onClick={() => setCreationMode("text")}><Text size={16} /> <span className="creation-mode-tabs__label">{t("recipe.form.mode.text")}</span></button>
+            <button className={creationMode === "file" ? "button button--primary" : "button"} type="button" aria-pressed={creationMode === "file"} onClick={() => setCreationMode("file")}><Upload size={16} /> <span className="creation-mode-tabs__label">{t("recipe.form.mode.file")}</span></button>
           </div>
 
           {creationMode === "url" && (
@@ -126,7 +127,7 @@ export function RecipeForm({ draft, editing, warnings, allTags, categories, tagC
               <label htmlFor="new-recipe-import-url">{t("recipe.form.importFromUrl")}</label>
               <div className="inline-control">
                 <input id="new-recipe-import-url" value={importUrl} onChange={(event) => onImportUrlChange(event.target.value)} placeholder={t("recipe.form.importUrlPlaceholder")} />
-                <button className="button button--primary button--icon-mobile" onClick={onImport} type="button"><Link size={18} /> {t("recipe.form.import")}</button>
+                <button className="button button--primary button--icon-mobile" onClick={onImport} disabled={importing || !importUrl.trim()} type="button"><Link size={18} /> {t("recipe.form.import")}</button>
                 <button aria-label={t("recipe.form.importSupport")} aria-expanded={isImportSupportOpen} aria-controls="import-support-panel" className="button button--ghost button--icon-mobile" onClick={() => setIsImportSupportOpen((current) => !current)} type="button"><Info size={18} /></button>
               </div>
               {isImportSupportOpen && (
@@ -150,7 +151,7 @@ export function RecipeForm({ draft, editing, warnings, allTags, categories, tagC
               <label htmlFor="new-recipe-import-text">{t("recipe.form.importFromText")}</label>
               <div className="text-import-control">
                 <textarea id="new-recipe-import-text" value={importText} onChange={(event) => onImportTextChange(event.target.value)} placeholder={t("recipe.form.importTextPlaceholder")} />
-                <button className="button button--primary" onClick={onImportText} type="button">{t("recipe.form.importTextAction")}</button>
+                <button className="button button--primary" onClick={onImportText} disabled={importing || !importText.trim()} type="button">{t("recipe.form.importTextAction")}</button>
               </div>
             </>
           )}
@@ -167,7 +168,9 @@ export function RecipeForm({ draft, editing, warnings, allTags, categories, tagC
         </section>
       )}
 
-      {creationMode === "url" && <ReimportControls sourceUrl={draft.sourceUrl ?? ""} onSourceUrlChange={(sourceUrl) => updateField("sourceUrl", sourceUrl)} onReimport={onReimport} />}
+      {(editing || creationMode === "url") && <ReimportControls importing={importing} sourceUrl={draft.sourceUrl ?? ""} onSourceUrlChange={(sourceUrl) => updateField("sourceUrl", sourceUrl)} onReimport={onReimport} />}
+
+      {importing && <p className="muted" role="status">{t("import.status.urlLoading")}</p>}
 
       {warnings.length > 0 && <div className="notice notice--warning">{warnings.map((warning) => <p key={warning}>{warning}</p>)}</div>}
 
@@ -215,6 +218,10 @@ export function RecipeForm({ draft, editing, warnings, allTags, categories, tagC
         {t("recipe.detail.notes")}
         <textarea value={draft.notes ?? ""} onChange={(event) => updateField("notes", event.target.value)} />
       </label>
+      <div className="action-bar recipe-form__footer">
+        <button className="button button--ghost" type="button" onClick={onCancel}>{t("recipe.form.cancel")}</button>
+        <button className="button button--primary" type="submit" disabled={imageProcessing || importing}><Check size={18} /> {t("recipe.form.save")}</button>
+      </div>
     </form>
   );
 }
@@ -225,6 +232,13 @@ function ImageField({ values, sourceValues, onChange, onReset, onStatus, process
   useEffect(() => () => { uploadVersion.current++; }, []);
   const hasImage = values.length > 0;
   const hasCustomImage = values.join("|") !== sourceValues.join("|");
+
+  function addImageUrl() {
+    const next = newImageUrl.trim();
+    if (!next) return;
+    onChange([...values, next]);
+    setNewImageUrl("");
+  }
 
   async function handleUpload(file: File | undefined) {
     if (!file || processing) return;
@@ -253,8 +267,9 @@ function ImageField({ values, sourceValues, onChange, onReset, onStatus, process
         <div className="image-field__controls">
           <label>
             {t("recipe.form.image.urlLabel")}
-            <input value={newImageUrl} placeholder="https://..." onChange={(event) => setNewImageUrl(event.target.value)} onKeyDown={(event) => { if (event.key !== "Enter") return; event.preventDefault(); const next = newImageUrl.trim(); if (!next) return; onChange([...values, next]); setNewImageUrl(""); }} />
+            <input value={newImageUrl} placeholder="https://..." onChange={(event) => setNewImageUrl(event.target.value)} onKeyDown={(event) => { if (event.key !== "Enter") return; event.preventDefault(); addImageUrl(); }} />
           </label>
+          <button className="button" type="button" disabled={!newImageUrl.trim()} onClick={addImageUrl}><Plus size={18} /> {t("recipe.form.image.addUrl")}</button>
           <label className="image-field__file-label">
             {t("recipe.form.image.device")}
             <input className="image-field__file-input" accept="image/*" type="file" onChange={(event) => { void handleUpload(event.target.files?.[0]); event.currentTarget.value = ""; }} />
@@ -267,12 +282,12 @@ function ImageField({ values, sourceValues, onChange, onReset, onStatus, process
   );
 }
 
-function ReimportControls({ sourceUrl, onSourceUrlChange, onReimport }: { sourceUrl: string; onSourceUrlChange: (value: string) => void; onReimport: (mode: ReimportMode) => void; }) {
+function ReimportControls({ importing, sourceUrl, onSourceUrlChange, onReimport }: { importing: boolean; sourceUrl: string; onSourceUrlChange: (value: string) => void; onReimport: (mode: ReimportMode) => void; }) {
   return (
     <div className="reimport-bar">
       <TextField label={t("recipe.form.sourceUrl")} value={sourceUrl} onChange={onSourceUrlChange} />
-      <button className="button button--icon-mobile" onClick={() => onReimport("fill-blanks")} type="button"><RefreshCcw size={18} /> {t("recipe.form.reimport.fillBlanks")}</button>
-      <button className="button button--ghost button--icon-mobile" onClick={() => onReimport("replace")} type="button"><Replace size={18} /> {t("recipe.form.reimport.replace")}</button>
+      <button className="button button--icon-mobile" onClick={() => onReimport("fill-blanks")} disabled={importing || !sourceUrl.trim()} type="button"><RefreshCcw size={18} /> {t("recipe.form.reimport.fillBlanks")}</button>
+      <button className="button button--ghost button--icon-mobile" onClick={() => onReimport("replace")} disabled={importing || !sourceUrl.trim()} type="button"><Replace size={18} /> {t("recipe.form.reimport.replace")}</button>
     </div>
   );
 }
@@ -294,7 +309,7 @@ function IngredientRow({
     transition,
   };
 
-  return <div ref={setNodeRef} style={style} className={isDragging ? "ingredient-line ingredient-line--dragging" : "ingredient-line"}><input placeholder={t("recipe.form.ingredient.quantity")} value={ingredient.quantity ?? ""} onChange={(event) => onChange({ quantity: event.target.value })} /><input placeholder={t("recipe.form.ingredient.unit")} value={ingredient.unit ?? ""} onChange={(event) => onChange({ unit: event.target.value })} /><input placeholder={t("recipe.form.ingredient.name")} value={ingredient.name} onChange={(event) => onChange({ name: event.target.value })} /><RowActions attributes={attributes} listeners={listeners} onRemove={onRemove} /></div>;
+  return <div ref={setNodeRef} style={style} className={isDragging ? "ingredient-line ingredient-line--dragging" : "ingredient-line"}><input aria-label={t("recipe.form.ingredient.quantity")} placeholder={t("recipe.form.ingredient.quantity")} value={ingredient.quantity ?? ""} onChange={(event) => onChange({ quantity: event.target.value })} /><input aria-label={t("recipe.form.ingredient.unit")} placeholder={t("recipe.form.ingredient.unit")} value={ingredient.unit ?? ""} onChange={(event) => onChange({ unit: event.target.value })} /><input aria-label={t("recipe.form.ingredient.name")} placeholder={t("recipe.form.ingredient.name")} value={ingredient.name} onChange={(event) => onChange({ name: event.target.value })} /><RowActions attributes={attributes} listeners={listeners} onRemove={onRemove} /></div>;
 }
 
 function InstructionRow({
@@ -316,7 +331,7 @@ function InstructionRow({
     transition,
   };
 
-  return <div ref={setNodeRef} style={style} className={isDragging ? "step-line step-line--dragging" : "step-line"}><textarea value={step} onChange={(event) => onChange(event.target.value)} placeholder={`${t("recipe.form.step")} ${index + 1}`} /><RowActions attributes={attributes} listeners={listeners} onRemove={onRemove} /></div>;
+  return <div ref={setNodeRef} style={style} className={isDragging ? "step-line step-line--dragging" : "step-line"}><textarea aria-label={`${t("recipe.form.step")} ${index + 1}`} value={step} onChange={(event) => onChange(event.target.value)} placeholder={`${t("recipe.form.step")} ${index + 1}`} /><RowActions attributes={attributes} listeners={listeners} onRemove={onRemove} /></div>;
 }
 
 function RowActions({

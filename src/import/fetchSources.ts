@@ -29,46 +29,34 @@ function decodeResponseBody(buffer: ArrayBuffer) {
 }
 
 export async function fetchRecipeHtmls(url: string): Promise<string[]> {
-  const sources: string[] = [];
-
-  try {
-    const response = await fetch(url, {
-      headers: {
-        Accept: "text/html,application/xhtml+xml,text/markdown,text/plain;q=0.9,*/*;q=0.8",
-      },
+  const candidates = [
+    url,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    `https://r.jina.ai/http://${url.replace(/^https?:\/\//i, "")}`,
+    `https://r.jina.ai/https://${url.replace(/^https?:\/\//i, "")}`,
+  ];
+  const results = await Promise.allSettled(candidates.map(async (source) => {
+    const response = await fetch(source, {
+      signal: AbortSignal.timeout(15000),
+      headers: { Accept: "text/html,application/xhtml+xml,text/markdown,text/plain;q=0.9,*/*;q=0.8" },
     });
-    if (response.ok) sources.push(decodeResponseBody(await response.arrayBuffer()));
-  } catch {
-    // Continue with fallback proxies below.
-  }
-
-  const allOriginsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-  try {
-    const response = await fetch(allOriginsUrl);
-    if (response.ok) sources.push(decodeResponseBody(await response.arrayBuffer()));
-  } catch {
-    // Continue with last fallback.
-  }
-
-  const jinaUrl = `https://r.jina.ai/http://${url.replace(/^https?:\/\//i, "")}`;
-  try {
-    const response = await fetch(jinaUrl);
-    if (response.ok) sources.push(decodeResponseBody(await response.arrayBuffer()));
-  } catch {
-    // Keep existing behavior: caller handles no-source case.
-  }
-
-  const jinaHttpsUrl = `https://r.jina.ai/https://${url.replace(/^https?:\/\//i, "")}`;
-  try {
-    const response = await fetch(jinaHttpsUrl);
-    if (response.ok) sources.push(decodeResponseBody(await response.arrayBuffer()));
-  } catch {
-    // Keep existing behavior: caller handles no-source case.
-  }
+    if (!response.ok) return "";
+    const content = decodeResponseBody(await response.arrayBuffer());
+    return isUnavailableRecipePage(content) ? "" : content;
+  }));
+  const sources = results.flatMap((result) => result.status === "fulfilled" && result.value ? [result.value] : []);
 
   if (sources.length === 0) throw new Error("Unable to fetch source HTML");
   const nonBlocked = sources.filter((source) => !isLikelyAntiBotPage(source));
   return nonBlocked.length > 0 ? nonBlocked : sources;
+}
+
+// A proxy may return HTTP 200 while its body is the source site's error page.
+export function isUnavailableRecipePage(content: string) {
+  const title = cleanText(content.match(/^\s*Title:\s*(.+)$/im)?.[1] ?? content.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "");
+  return /^(?:404\b|403\b|page (?:non trouvée|introuvable)|not found|access denied|just a moment\b)/i.test(title) ||
+    /(?:\/Home\/error\/404|Warning: Target URL returned error (?:404|403)|Cuisine Actuelle\s*:\s*toutes vos recettes de cuisine)/i.test(title) ||
+    /(?:\/Home\/error\/404|Warning: Target URL returned error (?:404|403))/i.test(content);
 }
 
 function isLikelyAntiBotPage(content: string) {

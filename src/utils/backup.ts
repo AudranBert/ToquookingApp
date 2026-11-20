@@ -104,16 +104,6 @@ export async function shareSingleRecipeBackup(recipe: Recipe) {
   return "downloaded";
 }
 
-function singleRecipeBackupTextBlob(recipe: Recipe) {
-  const backup: BackupFile = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    tags: normalizeTagRecords(recipe.tags.map((name) => ({ name }))),
-    recipes: [recipe],
-  };
-  return new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
-}
-
 async function singleRecipeBackupZipBlob(recipe: Recipe) {
   return recipesBackupZipBlob([recipe], normalizeTagRecords(recipe.tags.map((name) => ({ name }))));
 }
@@ -385,7 +375,7 @@ async function parseZipBackup(file: File) {
   const recipeFiles = Object.values(zip.files).filter((entry) => /^recipes\/.+\.json$/i.test(entry.name));
 
   const base = backupFile ? parseJsonBackup(await backupFile.async("string")) : ({ version: 1 } as Partial<BackupFile>);
-  let recipes: unknown[] = [];
+  let recipes: unknown[];
 
   if (recipeFiles.length > 0) {
     recipes = await Promise.all(recipeFiles.map(async (entry) => JSON.parse(await entry.async("string")) as unknown));

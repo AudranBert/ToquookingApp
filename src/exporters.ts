@@ -48,7 +48,7 @@ export async function exportElementAsPng(element: HTMLElement, filename: string)
 export async function shareElementAsPng(element: HTMLElement, filename: string, title: string, text: string) {
   const blob = await elementToPngBlob(element);
   const file = new File([blob], filename, { type: "image/png" });
-  if (await tryShare({ files: [file] })) {
+  if (await tryShare({ files: [file], title, text })) {
     return "shared";
   }
 
@@ -63,7 +63,7 @@ export async function exportElementAsPdf(element: HTMLElement, filename: string)
 export async function shareElementAsPdf(element: HTMLElement, filename: string, title: string, text = t("share.text.recipeTitle", { name: title })) {
   const blob = await elementToPdfBlob(element);
   const file = new File([blob], filename, { type: "application/pdf" });
-  if (await tryShare({ files: [file] })) {
+  if (await tryShare({ files: [file], title, text })) {
     return "shared";
   }
 

@@ -376,4 +376,12 @@ export const fr = {
   "manage.status.ingredientRenamed": "Ingrédient renommé.",
   "manage.status.ingredientsMerged": "Ingrédients fusionnés.",
   "manage.status.ingredientDeletedFromRecipes": "Ingrédient supprimé des recettes.",
+  "dialog.confirm": "Confirmer",
+  "dialog.cancel": "Annuler",
+  "recipe.form.discardTitle": "Abandonner les modifications ?",
+  "recipe.form.discardBody": "La recette en cours n’est pas enregistrée. Ses modifications seront perdues.",
+  "recipe.form.image.addUrl": "Ajouter la photo",
+  "shopping.status.storageFailed": "La liste reste disponible ici, mais ce navigateur ne permet pas de la conserver après fermeture.",
+  "shopping.status.generated": "Liste de courses générée.",
+  "shopping.item.new": "Nouvel ingrédient",
 } as const;

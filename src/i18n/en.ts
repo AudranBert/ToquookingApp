@@ -378,4 +378,12 @@ export const en: Messages = {
   "manage.status.ingredientRenamed": "Ingredient renamed.",
   "manage.status.ingredientsMerged": "Ingredients merged.",
   "manage.status.ingredientDeletedFromRecipes": "Ingredient removed from recipes.",
+  "dialog.confirm": "Confirm",
+  "dialog.cancel": "Cancel",
+  "recipe.form.discardTitle": "Discard changes?",
+  "recipe.form.discardBody": "The current recipe has not been saved. Its changes will be lost.",
+  "recipe.form.image.addUrl": "Add photo",
+  "shopping.status.storageFailed": "The list is available here, but this browser cannot keep it after closing.",
+  "shopping.status.generated": "Shopping list generated.",
+  "shopping.item.new": "New ingredient",
 };

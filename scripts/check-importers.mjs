@@ -34,13 +34,13 @@ function parseArgs(argv) {
 }
 
 function hasPartialWarning(warnings) {
-  return warnings.some((warning) => /import partiel/i.test(warning));
+  return warnings.some((warning) => /import.*partiel/i.test(warning));
 }
 
 function hasInvalidTitle(name, url) {
   const title = String(name ?? "").trim();
   if (!title) return true;
-  if (/^noname$/i.test(title)) return true;
+  if (/^(?:noname|404\b|403\b|not found\b|page introuvable\b|Cuisine Actuelle\s*:\s*toutes vos recettes)/i.test(title)) return true;
   if (/^just a moment\b/i.test(title)) return true;
   if (/attention required|cloudflare|checking your browser/i.test(title)) return true;
   if (/youtube\.com|youtu\.be/i.test(url) && /^(subscribe|s['’]abonner)$/i.test(title)) return true;
@@ -77,10 +77,12 @@ async function run() {
         const recipe = await importRecipeFromUrl(url);
         const warnings = recipe.warnings ?? [];
         const invalidTitle = hasInvalidTitle(recipe.name, url);
+        const suspicious = (recipe.ingredients?.length ?? 0) > 40 || (recipe.instructions?.length ?? 0) > 40;
         results.push({
           url,
+          suspicious,
           ok:
-            !invalidTitle &&
+            !invalidTitle && !suspicious &&
             ((recipe.ingredients?.length ?? 0) > 0 || (recipe.instructions?.length ?? 0) > 0 || /youtube\.com|youtu\.be/i.test(url)),
           name: recipe.name ?? "",
           ingredients: recipe.ingredients?.length ?? 0,
@@ -91,13 +93,18 @@ async function run() {
           warnings,
         });
       } catch (error) {
+        const suspicious = (recipe.ingredients?.length ?? 0) > 40 || (recipe.instructions?.length ?? 0) > 40;
         results.push({
           url,
+          suspicious,
           ok: false,
           error: String(error),
         });
       }
     }
+
+    const hasFailure = results.some((result) => "error" in result || !result.ok);
+    if (hasFailure) process.exitCode = 1;
 
     if (args.json) {
       process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
@@ -116,13 +123,12 @@ async function run() {
       lines.push(`- ${status} ${result.url}`);
       lines.push(`  name: ${result.name || "(none)"}`);
       lines.push(`  ingredients: ${result.ingredients}, instructions: ${result.instructions}, image: ${result.hasImage ? "yes" : "no"}`);
+      if (result.suspicious) lines.push("  suspicious-counts: yes");
       if (result.invalidTitle) lines.push("  invalid-title: yes");
       if (result.warnings.length > 0) lines.push(`  warnings: ${result.warnings.join(" | ")}`);
     }
     process.stdout.write(`${lines.join("\n")}\n`);
 
-    const hasFailure = results.some((result) => "error" in result || !result.ok);
-    if (hasFailure) process.exitCode = 1;
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

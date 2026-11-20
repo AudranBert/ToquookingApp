@@ -61,10 +61,6 @@ export function App() {
   const dialogPromptSuggestions = dialogState.kind === "prompt" ? dialogState.suggestions : undefined;
 
   useEffect(() => {
-    status.clear();
-  }, [activePanel]);
-
-  useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL })
@@ -110,16 +106,18 @@ export function App() {
   }
 
   function startNewRecipe() {
-    draftApi.startNew();
+    status.clear();
     setActivePanel("form");
   }
 
   function showRecipesList() {
+    status.clear();
     setSelectedId(null);
     setActivePanel("library");
   }
 
-  function startEdit(recipe: Recipe) {
+  async function startEdit(recipe: Recipe) {
+    if (draftApi.hasChanges && !await dialog.confirm(t("recipe.form.discardTitle"), t("recipe.form.discardBody"))) return;
     draftApi.startEdit(recipe);
     setActivePanel("form");
   }
@@ -128,6 +126,7 @@ export function App() {
     event.preventDefault();
     const saved = await save(draftApi.draft, draftApi.editingId);
     if (!saved) return;
+    draftApi.startNew();
     setSelectedId(null);
     setActivePanel("library");
   }
@@ -278,7 +277,7 @@ export function App() {
     <main className="app-shell">
       <AppHeader
         activePanel={activePanel}
-        onPanelChange={setActivePanel}
+        onPanelChange={(panel) => { status.clear(); setActivePanel(panel); }}
         onShowRecipes={showRecipesList}
         onNewRecipe={startNewRecipe}
       />
@@ -344,6 +343,7 @@ export function App() {
       {activePanel === "form" && (
         <RecipeForm
           draft={draftApi.draft}
+          importing={draftApi.isImporting}
           editing={Boolean(draftApi.editingId)}
           warnings={draftApi.importWarnings}
           allTags={tagApi.allTags}
@@ -361,7 +361,12 @@ export function App() {
           onImportTextChange={draftApi.setImportText}
           onImportText={handleTextImport}
           onImportFile={handleRecipeFileImport}
-          onCancel={() => setActivePanel("library")}
+          onCancel={async () => {
+            if (draftApi.hasChanges && !await dialog.confirm(t("recipe.form.discardTitle"), t("recipe.form.discardBody"))) return;
+            draftApi.startNew();
+            status.clear();
+            setActivePanel("library");
+          }}
           onReimport={draftApi.reimport}
           onSubmit={handleSubmit}
           setDraft={draftApi.setDraft}

@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { t } from "../i18n";
 
 type DialogBase = {
   open: boolean;
@@ -30,7 +31,7 @@ const CLOSED: ClosedDialogState = { open: false, title: "" };
 export function useAppDialog() {
   const [state, setState] = useState<DialogState>(CLOSED);
 
-  const confirm = useCallback((title: string, message?: string, danger = false, confirmLabel = "Confirmer", cancelLabel = "Annuler") => {
+  const confirm = useCallback((title: string, message?: string, danger = false, confirmLabel = t("dialog.confirm"), cancelLabel = t("dialog.cancel")) => {
     return new Promise<boolean>((resolve) => {
       setState({ open: true, kind: "confirm", title, message, danger, resolve, confirmLabel, cancelLabel });
     });
@@ -46,8 +47,8 @@ export function useAppDialog() {
         promptValue: defaultValue,
         suggestions,
         resolve,
-        confirmLabel: "Valider",
-        cancelLabel: "Annuler",
+        confirmLabel: t("dialog.confirm"),
+        cancelLabel: t("dialog.cancel"),
       });
     });
   }, []);

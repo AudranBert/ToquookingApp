@@ -48,6 +48,7 @@ function fallbackNameFromUrl(sourceUrl: string) {
 function isInvalidImportedTitle(value: string | undefined, sourceUrl: string) {
   const title = cleanText(value ?? "");
   if (!title) return true;
+  if (/^(?:404\b|403\b|not found\b|page introuvable\b|Cuisine Actuelle\s*:\s*toutes vos recettes)/i.test(title)) return true;
   if (/^noname$/i.test(title)) return true;
   if (/^just a moment\b/i.test(title)) return true;
   if (/attention required|cloudflare|checking your browser/i.test(title)) return true;
@@ -139,13 +140,13 @@ function parseWithDomainPriority(content: string, sourceUrl: string): ParsedReci
     )
   );
 
-  const mergedStructured = mergeRecipes(
-    structuredResult,
-    domainResult ?? {
-      sourceUrl,
-      warnings: undefined,
-    }
-  );
+  // Structured recipe fields take priority over navigation and suggested recipes.
+  const mergedStructured = hasUsefulRecipeData(structuredResult) ? {
+    ...domainResult,
+    ...structuredResult,
+    ingredients: structuredResult?.ingredients?.length ? structuredResult.ingredients : domainResult?.ingredients,
+    instructions: structuredResult?.instructions?.length ? structuredResult.instructions : domainResult?.instructions,
+  } : domainResult;
   const enrichedDomain: ParsedRecipe = {
     ...(mergedStructured ?? domainResult ?? {}),
     sourceUrl,
@@ -433,17 +434,6 @@ function sanitizeMergedResult(recipe: ParsedRecipe, sourceUrl: string): ParsedRe
       isLikelyRecipeImage(absolutizeUrl(value, sourceUrl))
     );
   }
-  if (
-    hasKnownDomain(sourceUrl) &&
-    (merged.ingredients?.length ?? 0) >= 3 &&
-    (merged.instructions?.length ?? 0) >= 2 &&
-    merged.warnings?.length
-  ) {
-    merged.warnings = merged.warnings.filter(
-      (warning) => !/Import partiel depuis contenu non structuré/i.test(warning)
-    );
-    if (merged.warnings.length === 0) merged.warnings = undefined;
-  }
   return merged;
 }
 
@@ -553,7 +543,7 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
       merged = mergeRecipes(merged, finalized);
     }
 
-    if (merged) {
+    if (merged && hasUsefulRecipeData(merged) && !isInvalidImportedTitle(merged.name ?? fallbackNameFromUrl(url), url)) {
       return sanitizeMergedResult(merged, url);
     }
   } catch {
@@ -644,7 +634,7 @@ export function importRecipeFromText(text: string): ParsedRecipe {
   return {
     sourceUrl: recipeSourceUrl,
     warnings: [
-      "Import partiel depuis texte non structure. Verifie les champs avant de sauvegarder.",
+      "Import partiel depuis texte non structuré. Vérifie les champs avant de sauvegarder.",
     ],
   };
 }

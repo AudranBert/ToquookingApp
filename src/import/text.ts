@@ -69,7 +69,8 @@ function repairMojibake(value: string) {
     const repaired = new TextDecoder("utf-8").decode(bytes);
     const originalNoise = (value.match(/[ÃÂâï¿\u0019]/g) ?? []).length;
     const repairedNoise = (repaired.match(/[ÃÂâï¿\u0019]/g) ?? []).length;
-    return repairedNoise < originalNoise ? repaired : value;
+    const addsReplacementCharacters = (repaired.match(/\uFFFD/g) ?? []).length > (value.match(/\uFFFD/g) ?? []).length;
+    return repairedNoise < originalNoise && !addsReplacementCharacters ? repaired : value;
   } catch {
     return value;
   }

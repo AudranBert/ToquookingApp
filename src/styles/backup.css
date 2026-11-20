@@ -52,12 +52,12 @@
   border-radius: var(--radius-pill);
 }
 .cloud-connection--online {
-  color: #247745;
+  color: var(--color-success-text);
   background: var(--color-success-bg);
 }
 .cloud-connection--offline {
   color: var(--color-danger);
-  background: #fbefec;
+  background: var(--color-danger-bg);
 }
 .cloud-section {
   padding: var(--space-4) 0;

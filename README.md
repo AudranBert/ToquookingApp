@@ -104,6 +104,17 @@ npm run check:importers -- --json
 npm run check:importers -- --url "https://www.cuisineaz.com/recettes/poulet-teriyaki-79496.aspx"
 ```
 
+### Import validation notes
+
+The historical Cuisine Libre osso-bucco and Cuisine Actuelle pizza URLs can return 404 pages. The frontend now rejects these pages and keeps the source link with a manual-entry warning. They remain in the regression list; `check:importers` reports their unavailability as a failure, including with `--json`.
+
+A live Cuisine Actuelle check can also use:
+```powershell
+npm run check:importers -- --url "https://www.cuisineactuelle.fr/recettes/la-vraie-soupe-a-l-oignon-super-simple-106587"
+```
+
+Plain text section boundaries, proxy error pages and structured-data priority are covered by `npm run test:features`. Network results can still vary with source/proxy availability; partial warnings remain visible even when several fields were extracted.
+
 ## What is next
 
 TO DO:

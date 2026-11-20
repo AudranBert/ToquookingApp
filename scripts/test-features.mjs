@@ -131,6 +131,67 @@ async function run() {
       assert(parsed.prepTime === 10 && parsed.cookTime === 20 && parsed.totalTime === 30, "timings not parsed");
     });
 
+    await test("plain French text keeps ingredients and instructions separate", async () => {
+      const parsed = importer.importRecipeFromText("Soupe aux carottes\nPour 2 personnes\nIngrédients\n400 g de carottes\n1 oignon\nInstructions\nÉplucher les légumes.\nFaire cuire 20 minutes.");
+      assert(parsed.servings === 2, "servings not detected");
+      assert(parsed.ingredients?.length === 2, "steps leaked into ingredients");
+      assert(parsed.instructions?.length === 2, "instructions not detected");
+      assert(!parsed.ingredients.some((item) => /instructions|cuire|éplucher/i.test(item.name)), "section contamination");
+    });
+
+    await test("frontend URL importer rejects proxy error and home pages", async () => {
+      const originalFetch = globalThis.fetch;
+      try {
+        for (const content of [
+          "Title: 404 Not Found\nIngrédients\n2 tomates\nInstructions\nCouper.",
+          '<html><title>Cuisine Actuelle : toutes vos recettes de cuisine</title><meta property="og:url" content="https://www.cuisineactuelle.fr/Home/error/404"></html>',
+        ]) {
+          globalThis.fetch = async () => new Response(content);
+          const parsed = await importer.importRecipeFromUrl("https://www.cuisineactuelle.fr/recettes/pizza-facile-106483.aspx");
+          assert(!parsed.name && !parsed.ingredients?.length && !parsed.instructions?.length, "error page imported as a recipe");
+          assert(parsed.warnings?.length > 0, "missing unavailable-page warning");
+        }
+      } finally { globalThis.fetch = originalFetch; }
+    });
+
+    await test("frontend URL importer scopes Cuisine Actuelle markdown to the recipe", async () => {
+      const originalFetch = globalThis.fetch;
+      try {
+        globalThis.fetch = async () => new Response("Title: Soupe à l’oignon\n![Image: publicité](https://example.com/banner.jpg)\n# Soupe à l’oignon\n![Image: Soupe](https://example.com/soupe.jpg)\nPréparation\n15 min\nCuisson\n40 min\nTotal\n55 min\n4 pers.\n## Ingrédients\n4 pers.\n* Ingrédients\n* ![Image: Oignons](https://example.com/oignon.jpg)Gros oignons 4\n* ![Image: Gruyère](https://example.com/gruyere.jpg)Gruyère râpé 100 g\n## Préparation\n* 1 :\n### Préparation des oignons\nÉpluchez les [oignons](https://example.com/oignon).\n* 2 :\n### Cuisson\nCuisez et ajoutez le gruyère râpé.\n## Donnez-nous votre avis !\nTrès bon !");
+        const parsed = await importer.importRecipeFromUrl("https://www.cuisineactuelle.fr/recettes/soupe-123");
+        assert(parsed.ingredients?.length === 2 && parsed.instructions?.length === 2, "metadata, headings or reviews leaked into recipe");
+        assert(parsed.ingredients[0].quantity === "4" && parsed.ingredients[1].quantity === "100" && parsed.ingredients[1].unit === "g", "trailing quantities lost");
+        assert(parsed.ingredients[1].name.includes("râpé"), "valid French accents damaged");
+        assert(parsed.name === "Soupe à l’oignon", "markdown heading marker leaked into title");
+        assert(parsed.imageUrl === "https://example.com/soupe.jpg", "advertisement chosen as recipe image");
+        assert(parsed.servings === 4 && parsed.prepTime === 15 && parsed.cookTime === 40 && parsed.totalTime === 55, "metadata missing");
+      } finally { globalThis.fetch = originalFetch; }
+    });
+
+    await test("frontend URL importer reads Papilles markdown headings", async () => {
+      const originalFetch = globalThis.fetch;
+      try {
+        globalThis.fetch = async () => new Response("Title: Côtes de porc au citron\n## Ingrédients\nTemps de préparation : 10 minutes - Temps de cuisson : 25 minutes\nPour 2 personnes :\n* 2 côtes de porc\n* 1 citron\n## Préparation\nPréchauffez le four à 160 °C.\nFaites cuire pendant 25 minutes.\n## Conseils\nCe texte ne fait pas partie des étapes.");
+        const parsed = await importer.importRecipeFromUrl("https://www.papillesetpupilles.fr/2026/05/cotes-de-porc-au-citron-et-au-thym-cuisson-douce-au-four.html/");
+        assert(parsed.ingredients?.length === 2, "timings leaked into ingredients");
+        assert(parsed.instructions?.length === 2, "markdown steps missing or polluted by the next section");
+        assert(parsed.servings === 2 && parsed.prepTime === 10 && parsed.cookTime === 25, "metadata missing");
+      } finally { globalThis.fetch = originalFetch; }
+    });
+
+    await test("frontend URL importer prefers structured recipe over page noise", async () => {
+      const originalFetch = globalThis.fetch;
+      try {
+        const recipe = { "@type": "Recipe", name: "Pizza facile", recipeIngredient: ["200 g farine", "2 tomates"], recipeInstructions: ["Mélanger.", "Cuire."] };
+        const page = `<html><title>Pizza facile</title><script type="application/ld+json">${JSON.stringify(recipe)}</script></html>\nIngrédients\n1 publicité\nPréparation\nLire les suggestions.\nNewsletter`;
+        globalThis.fetch = async () => new Response(page);
+        const parsed = await importer.importRecipeFromUrl("https://www.cuisineactuelle.fr/recettes/pizza-facile-106483.aspx");
+        assert(parsed.name === "Pizza facile", "structured title lost");
+        assert(parsed.ingredients?.length === 2 && parsed.ingredients.every((item) => !/publicité/i.test(item.name)), "structured ingredients polluted");
+        assert(parsed.instructions?.length === 2 && parsed.instructions[0] === "Mélanger.", "structured instructions polluted");
+      } finally { globalThis.fetch = originalFetch; }
+    });
+
     await test("importRecipeFromText parses JSON recipe payload", async () => {
       const text = JSON.stringify({
         name: "JSON Recipe",

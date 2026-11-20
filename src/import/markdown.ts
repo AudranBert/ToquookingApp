@@ -17,9 +17,9 @@ export function defaultMarkdownFallback(content: string, sourceUrl: string): Par
   });
   const title = cleanText(explicitTitle ?? headingTitle ?? firstContentLine ?? "");
 
-  const ingredientHeader = /(ingredients?|ingr\S*dients?)(?:\s+.+)?\s*:?\s*$/i;
+  const ingredientHeader = /^(?:#{1,6}\s*)?(?:les\s+)?(?:ingredients?|ingr\S*dients?)(?:\s+(?:pour|for)\s+.+)?\s*:?\s*$/i;
   const instructionHeader =
-    /(instructions?|steps?|directions?|pr\S*paration|method)(?:\s+.+)?\s*:?\s*$/i;
+    /^(?:#{1,6}\s*)?(?:(?:les\s+)?[eé]tapes?\s+de\s+)?(?:instructions?|steps?|directions?|pr\S*paration|method)(?:\s+(?:de la recette|of the recipe))?\s*:?\s*$/i;
   const nextSectionHeader = /^\s{0,3}#{1,6}\s+\S+/;
   const bulletLine = /^\s*(?:[-*+]|(?:\d+[.)]))\s+(.+)$/;
   const stopSection =
@@ -58,6 +58,7 @@ export function defaultMarkdownFallback(content: string, sourceUrl: string): Par
       const line = lines[i];
       const trimmed = line.trim();
       if (stopSection.test(trimmed)) break;
+      if (ingredientHeader.test(trimmed) || instructionHeader.test(trimmed) || /^(?:#{1,6}\s*)?(?:notes?|source|vid[eé]o|nutrition)\s*:/i.test(trimmed)) break;
       if (nextSectionHeader.test(trimmed) && values.length > 0) break;
       const bullet = line.match(bulletLine);
       const raw = bullet ? bullet[1] : trimmed;
@@ -92,6 +93,7 @@ export function defaultMarkdownFallback(content: string, sourceUrl: string): Par
   return {
     sourceUrl,
     name: title || undefined,
+    servings: Number(normalized.match(/(?:pour\s+)?(\d+)\s*(?:personnes?|portions?|servings?)\b/i)?.[1]) || undefined,
     imageUrl,
     ingredients: ingredientLines.map(parseIngredientLine),
     instructions: instructionLines,
@@ -121,7 +123,9 @@ export function markdownSectionExtractor(
   );
 
   const ingStart = lines.findIndex((line) => sectionLabels.ingredients.test(line));
-  const prepStart = lines.findIndex((line) => sectionLabels.instructions.test(line));
+  // The preparation-time label above the recipe is not the instructions section.
+  const prepStart = lines.findIndex((line, index) => index > ingStart && sectionLabels.instructions.test(line));
+  const prepHeadingLevel = prepStart >= 0 ? lines[prepStart].match(/^(#+)\s/)?.[1].length : undefined;
   const stop =
     sectionLabels.stop ??
     /(vous aimerez aussi|commentaires?|newsletter|partage|a lire aussi|publicit[eé]|ustensiles)/i;
@@ -132,7 +136,9 @@ export function markdownSectionExtractor(
     for (let i = ingStart + 1; i < end; i += 1) {
       const line = lines[i];
       if (!line || stop.test(line)) break;
+      if (/^#{1,6}\s+/.test(line)) break;
       if (/^!?\[.*image|^https?:\/\//i.test(line)) continue;
+      if (/^(?:\d+\s*pers\.?|[*•-]\s*ingr\S*dients?)\s*$/i.test(line)) continue;
       if (/^(temps|pr[eé]paration|cuisson|repos)\s*:/i.test(line)) continue;
       if (/^[*•\-]$|^\d+\/\d+$/.test(line)) continue;
       if (!/[a-zA-ZÀ-ÿ]/.test(line)) continue;
@@ -146,10 +152,13 @@ export function markdownSectionExtractor(
       const line = lines[i];
       if (!line) continue;
       if (stop.test(line)) break;
+      const headingLevel = line.match(/^(#+)\s/)?.[1].length;
+      if (headingLevel && prepHeadingLevel && headingLevel <= prepHeadingLevel) break;
+      if (headingLevel) continue;
       if (/^!?\[.*image|^https?:\/\//i.test(line)) continue;
       if (/^(temps total|pr[eé]paration\s*:|repos\s*:|cuisson\s*:)/i.test(line)) continue;
       if (/^[eé]tape\s*\d+/i.test(line)) continue;
-      if (/^\*+$|^\|$/.test(line)) continue;
+      if (/^\*+$|^\|$|^[*•-]?\s*\d+\s*:\s*$/.test(line)) continue;
       instructions.push(line.replace(/^\d+[.)]\s*/, ""));
     }
   }
