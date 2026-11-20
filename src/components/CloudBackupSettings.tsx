@@ -263,14 +263,8 @@ export function CloudBackupSettings({ cloud }: { cloud: CloudBackupApi }) {
             <button className="button" type="submit" disabled={cloud.busy}>
               {t("cloud.configure")}
             </button>
-            <span className="muted cloud-poll-note">{t("cloud.pollHelp")}</span>
           </div>
         </form>
-        <ul className="cloud-help-list">
-          <li>{t("cloud.mergeShortHelp")}</li>
-          <li>{t("cloud.keySecurityHelp")}</li>
-          <li>{t("cloud.trashRestoreHelp")}</li>
-        </ul>
       </details>
     </section>
   );
