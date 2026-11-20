@@ -120,17 +120,94 @@ test("cloud API: isolation, persistent storage, public links, retries and trash"
     [owner, recipe.id]
   );
   assert.equal(+trashBefore.rows[0].deleted_at, +trashAfter.rows[0].deleted_at);
+  const trashList = (await (await request("/trash")).json()).recipes;
+  assert.equal(trashList.length, 1);
+  assert.equal(trashList[0].id, recipe.id);
+  assert.equal(trashList[0].name, edited.name);
+  assert.equal(
+    Date.parse(trashList[0].expiresAt) - Date.parse(trashList[0].deletedAt),
+    7 * 86400000
+  );
+  assert.equal(trashList[0].payload, undefined);
+  assert.equal((await request("/trash", { token: null })).status, 401);
+  assert.deepEqual((await (await request("/trash", { token: "b".repeat(64) })).json()).recipes, []);
+  assert.equal(
+    (await request(`/trash/${recipe.id}/restore`, { method: "POST", token: "b".repeat(64) }))
+      .status,
+    410
+  );
+  const restored = await (await request(`/trash/${recipe.id}/restore`, { method: "POST" })).json();
+  assert.equal(restored.recipe.name, edited.name);
+  assert.notEqual(restored.recipe.updatedAt, edited.updatedAt);
+  assert.equal(
+    (await (await request(`/trash/${recipe.id}/restore`, { method: "POST" })).json()).recipe
+      .updatedAt,
+    restored.recipe.updatedAt
+  );
+  assert.deepEqual((await (await request("/trash")).json()).recipes, []);
+  assert.equal((await request(`/shares/${link.shareId}`, { token: null })).status, 200);
+  assert.equal((await request(`/trash/${recipe.id}/purge`, { method: "POST" })).status, 404);
+  assert.equal((await (await request("/trash/empty", { method: "POST" })).json()).count, 0);
+  await sync([deletion]); // a retry from before restoration must not delete it again
+  assert.equal((await freshStore.recipes(owner)).length, 1);
+  await sync([{ ...deletion, revision: revision() }]);
   await pool.query("UPDATE toque_recipes SET deleted_at = $1 WHERE owner = $2 AND id = $3", [
     new Date(Date.now() - 8 * 86400000),
     owner,
     recipe.id,
   ]);
+  assert.deepEqual((await (await request("/trash")).json()).recipes, []);
+  assert.equal((await request(`/trash/${recipe.id}/restore`, { method: "POST" })).status, 410);
   await store.cleanup();
   const purged = await pool.query(
     "SELECT payload FROM toque_recipes WHERE owner = $1 AND id = $2",
     [owner, recipe.id]
   );
   assert.equal(purged.rows[0].payload, null);
+
+  const active = sampleRecipe(`${recipe.id}-active`);
+  const removedA = sampleRecipe(`${recipe.id}-trash-a`);
+  const removedB = sampleRecipe(`${recipe.id}-trash-b`);
+  for (const item of [active, removedA, removedB]) {
+    await sync([{ operation: "put", recipeId: item.id, revision: revision(), recipe: item }]);
+  }
+  const otherKey = "b".repeat(64);
+  const other = sampleRecipe(`${recipe.id}-other`);
+  await request("/sync", {
+    method: "POST",
+    token: otherKey,
+    body: {
+      mutations: [
+        { operation: "put", recipeId: other.id, revision: revision(), recipe: other },
+        { operation: "delete", recipeId: other.id, revision: revision() },
+      ],
+    },
+  });
+  const removedLink = await (
+    await request("/shares", { method: "POST", body: { recipe: removedA } })
+  ).json();
+  await sync(
+    [removedA, removedB].map((item) => ({
+      operation: "delete",
+      recipeId: item.id,
+      revision: revision(),
+    }))
+  );
+  assert.equal(
+    (await request(`/trash/${removedA.id}/purge`, { method: "POST", token: otherKey })).status,
+    404
+  );
+  assert.equal((await request(`/trash/${removedA.id}/purge`, { method: "POST" })).status, 200);
+  assert.equal((await request(`/shares/${removedLink.shareId}`, { token: null })).status, 404);
+  assert.equal((await request(`/trash/${removedA.id}/restore`, { method: "POST" })).status, 410);
+  await sync([{ operation: "put", recipeId: removedA.id, revision: revision(), recipe: removedA }]);
+  assert.equal((await freshStore.recipes(owner)).length, 1); // permanent tombstone blocks stale uploads
+  assert.equal((await (await request("/trash/empty", { method: "POST" })).json()).count, 1);
+  assert.deepEqual((await (await request("/trash")).json()).recipes, []);
+  assert.equal((await freshStore.recipes(owner))[0].id, active.id); // active recipes remain intact
+  assert.equal((await (await request("/trash", { token: otherKey })).json()).recipes.length, 1);
+  assert.equal((await request(`/trash/${removedB.id}/restore`, { method: "POST" })).status, 410);
+  assert.equal((await (await request("/trash/empty", { method: "POST" })).json()).count, 0);
 });
 
 test("optional database: server is available while cloud operations are disabled", async (t) => {

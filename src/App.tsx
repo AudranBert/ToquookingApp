@@ -387,6 +387,7 @@ export function App() {
         <Suspense fallback={<section className="panel workspace"><p>{t("app.loading")}</p></section>}>
           <BackupScreen
             cloud={cloud}
+            onConfirm={dialog.confirm}
             onExport={exportRecipesFile}
             onImport={handleBackupImport}
             onDownloadExample={downloadImportExampleFile}

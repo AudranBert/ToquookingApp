@@ -72,3 +72,5 @@ export function useAppDialog() {
     closeWith,
   };
 }
+
+export type ConfirmAction = ReturnType<typeof useAppDialog>["confirm"];

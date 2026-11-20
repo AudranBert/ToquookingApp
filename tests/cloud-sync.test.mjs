@@ -21,7 +21,7 @@ test("frontend: durable queue, offline replay, edit during upload, scope isolati
   const outfile = path.join(folder, "client.mjs");
   await build({
     stdin: {
-      contents: `export { db } from './src/db'; export * from './src/cloud/settings'; export * from './src/cloud/recipeRepository'; export * from './src/cloud/sync'; export * from './src/cloud/sharing'; export * from './src/cloud/validation'; export * from './src/cloud/healthMonitor'; export * from './src/cloud/recipePayload';`,
+      contents: `export { db } from './src/db'; export * from './src/cloud/settings'; export * from './src/cloud/recipeRepository'; export * from './src/cloud/sync'; export * from './src/cloud/sharing'; export * from './src/cloud/validation'; export * from './src/cloud/healthMonitor'; export * from './src/cloud/recipePayload'; export * from './src/cloud/trash';`,
       resolveDir: process.cwd(),
     },
     bundle: true,
@@ -211,6 +211,69 @@ test("frontend: durable queue, offline replay, edit during upload, scope isolati
   assert(batches.every((batch) => batch.length <= 25));
   assert.equal(batches.flat().length, 27);
   assert.equal(await client.db.cloudQueue.count(), 0);
+
+  const recovered = {
+    ...client.toCloudRecipe(recipe),
+    id: "recovered-recipe",
+    name: "Restaurée",
+    updatedAt: "2026-11-22T12:00:00Z",
+  };
+  const localRecovery = { ...recipe, id: recovered.id };
+  await client.db.recipes.put(localRecovery);
+  globalThis.fetch = async () => Response.json({ recipe: recovered });
+  assert.equal(await client.restoreCloudRecipe(recovered.id, settings), true);
+  assert.equal((await client.db.recipes.get(recovered.id)).name, recovered.name);
+  assert((await client.db.recipes.get(recovered.id)).imageUrls.includes(recipe.imageUrls[1]));
+  assert.equal(await client.db.cloudQueue.count(), 0); // restoration never queues a redundant upload
+
+  globalThis.fetch = async () => {
+    await client.putRecipe({
+      ...localRecovery,
+      name: "Modification locale pendant la restauration",
+    });
+    return Response.json({ recipe: recovered });
+  };
+  assert.equal(await client.restoreCloudRecipe(recovered.id, settings), false);
+  assert.equal(
+    (await client.db.recipes.get(recovered.id)).name,
+    "Modification locale pendant la restauration"
+  );
+  globalThis.fetch = async () => Response.json({ ok: true });
+  await client.flushCloudQueue();
+
+  globalThis.fetch = async () => {
+    await client.deleteRecipe(recovered.id);
+    return Response.json({ recipe: recovered });
+  };
+  assert.equal(await client.restoreCloudRecipe(recovered.id, settings), false);
+  assert.equal(await client.db.recipes.get(recovered.id), undefined);
+  assert.equal((await client.db.cloudQueue.toArray())[0].operation, "delete");
+  globalThis.fetch = async () => Response.json({ ok: true });
+  await client.flushCloudQueue();
+
+  globalThis.fetch = async () => {
+    client.writeCloudSettings({ ...settings, key: "b".repeat(64) });
+    return Response.json({ recipe: recovered });
+  };
+  await assert.rejects(client.restoreCloudRecipe(recovered.id, settings));
+  assert.equal(await client.db.recipes.get(recovered.id), undefined);
+  client.writeCloudSettings(settings);
+  globalThis.fetch = async () => {
+    throw Error("offline");
+  };
+  await assert.rejects(client.restoreCloudRecipe(recovered.id, settings));
+  assert.equal(await client.db.recipes.get(recovered.id), undefined);
+
+  globalThis.fetch = async () =>
+    Response.json({
+      recipes: [{ id: "bad", name: "Bad", deletedAt: "invalid", expiresAt: "invalid" }],
+    });
+  await assert.rejects(client.listCloudTrash(settings));
+  const localCount = await client.db.recipes.count();
+  globalThis.fetch = async () => Response.json({ ok: true });
+  await client.purgeCloudRecipe(recovered.id, settings);
+  await client.emptyCloudTrash(settings);
+  assert.equal(await client.db.recipes.count(), localCount); // purging cloud trash cannot erase local recipes
 
   client.writeCloudSettings({ apiUrl: "", key: settings.key, autoBackup: false });
   let defaultsRequests = 0;

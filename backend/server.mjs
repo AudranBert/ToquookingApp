@@ -66,6 +66,17 @@ export function createServer({ store, origins = [], rateLimit = 120 } = {}) {
       const owner = createHash("sha256").update(token).digest("hex");
       if (req.method === "GET" && url.pathname === "/recipes")
         return reply(200, { recipes: await store.recipes(owner) });
+      if (req.method === "GET" && url.pathname === "/trash")
+        return reply(200, { recipes: await store.trash(owner) });
+      if (req.method === "POST" && url.pathname === "/trash/empty")
+        return reply(200, { count: await store.emptyTrash(owner) });
+      const trashAction = url.pathname.match(/^\/trash\/([a-zA-Z0-9_-]{1,128})\/(restore|purge)$/);
+      if (req.method === "POST" && trashAction) {
+        const [, id, action] = trashAction;
+        if (action === "restore") return reply(200, { recipe: await store.restore(owner, id) });
+        await store.purge(owner, id);
+        return reply(200, { ok: true });
+      }
       if (req.method === "POST" && url.pathname === "/sync") {
         const mutations = validateMutations(await readJson(req));
         await store.sync(owner, mutations);

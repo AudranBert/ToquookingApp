@@ -15,6 +15,7 @@ import {
 import { downloadCloudRecipes, flushCloudQueue, uploadLocalRecipes } from "../cloud/sync";
 import type { CloudHealth } from "../cloud/types";
 import { t } from "../i18n";
+import { useCloudTrash } from "./useCloudTrash";
 
 export function useCloudBackup(
   refresh: () => Promise<unknown>,
@@ -27,6 +28,7 @@ export function useCloudBackup(
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(false);
   const [defaultApiUrl, setDefaultApiUrl] = useState(getDefaultCloudServer);
+  const trash = useCloudTrash(settings, refresh, onStatus);
 
   const check = useCallback(async () => {
     setChecking(true);
@@ -139,7 +141,8 @@ export function useCloudBackup(
     settings,
     health,
     pending,
-    busy,
+    busy: busy || trash.busy,
+    trash,
     checking,
     defaultApiUrl,
     configure,

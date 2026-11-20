@@ -10,3 +10,10 @@ export type CloudMutation = {
 };
 
 export type CloudHealth = { server: boolean; database: boolean };
+
+export type CloudTrashEntry = {
+  id: string;
+  name: string;
+  deletedAt: string;
+  expiresAt: string;
+};

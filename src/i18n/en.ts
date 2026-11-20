@@ -1,6 +1,28 @@
 import type { Messages } from "./types";
 
 export const en: Messages = {
+  "cloud.trashRestoredLocalPreserved": "Recipe restored in the cloud. Your local changes were preserved.",
+  "cloud.trashTitle": "Cloud trash",
+  "cloud.trashRetention": "7 days",
+  "cloud.trashConfigure": "Choose a cloud service to access trash.",
+  "cloud.trashRefresh": "Refresh",
+  "cloud.trashEmptyAction": "Empty trash",
+  "cloud.trashEmpty": "Trash is empty.",
+  "cloud.trashLoadFailed": "Trash unavailable. Try again in a moment.",
+  "cloud.trashExpires": "Expires: {date}",
+  "cloud.trashRestore": "Restore",
+  "cloud.trashRestoring": "Restoring…",
+  "cloud.trashRestoreTitle": "Restore this recipe in the cloud and on this device, and reactivate its shared link",
+  "cloud.trashPurge": "Delete permanently",
+  "cloud.trashPurgeTitle": "Permanently delete “{name}”?",
+  "cloud.trashPurgeMessage": "The recipe will be erased from the cloud. This cannot be undone.",
+  "cloud.trashEmptyTitle": "Empty cloud trash?",
+  "cloud.trashEmptyMessage": "All recipes currently in cloud trash will be permanently erased. This cannot be undone.",
+  "cloud.trashRestored": "Recipe restored in the cloud and on this device.",
+  "cloud.trashPurged": "Recipe permanently deleted from the cloud.",
+  "cloud.trashEmptied": "Cloud trash emptied.",
+  "cloud.trashActionFailed": "Action failed: the recipe may have expired or the cloud is unavailable.",
+
   "recipe.form.image.processing": "Preparing photo…",
   "cloud.storageUnavailable": "Your browser is blocking cloud settings storage.",
   "cloud.autoHelp": "Whenever you save a recipe.",

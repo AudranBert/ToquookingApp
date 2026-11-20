@@ -81,6 +81,97 @@ export class PostgresStore {
     return rows.map((row) => row.payload);
   }
 
+  async transaction(action) {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await action(client);
+      await client.query("COMMIT");
+      return result;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async trash(owner) {
+    const { rows } = await this.pool.query(
+      `SELECT id, payload->>'name' AS name, deleted_at
+      FROM toque_recipes WHERE owner = $1 AND payload IS NOT NULL
+      AND deleted_at > now() - interval '7 days' ORDER BY deleted_at DESC, id`,
+      [owner]
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      deletedAt: new Date(row.deleted_at).toISOString(),
+      expiresAt: new Date(new Date(row.deleted_at).getTime() + 7 * 86400000).toISOString(),
+    }));
+  }
+
+  async restore(owner, id) {
+    return this.transaction(async (client) => {
+      const { rows } = await client.query(
+        `SELECT payload, deleted_at,
+        deleted_at > now() - interval '7 days' AS restorable
+        FROM toque_recipes WHERE owner = $1 AND id = $2 FOR UPDATE`,
+        [owner, id]
+      );
+      const row = rows[0];
+      if (!row?.payload || (row.deleted_at && !row.restorable))
+        throw new HttpError(410, "Recipe expired or permanently deleted");
+      // Retrying after a lost response is safe and keeps the same restored version.
+      if (!row.deleted_at) return row.payload;
+      const recipe = { ...row.payload, updatedAt: new Date().toISOString() };
+      await client.query(
+        "UPDATE toque_recipes SET payload = $3, deleted_at = NULL WHERE owner = $1 AND id = $2",
+        [owner, id, JSON.stringify(recipe)]
+      );
+      return recipe;
+    });
+  }
+
+  async purge(owner, id) {
+    return this.transaction(async (client) => {
+      const { rows } = await client.query(
+        "SELECT deleted_at FROM toque_recipes WHERE owner = $1 AND id = $2 FOR UPDATE",
+        [owner, id]
+      );
+      if (!rows[0]?.deleted_at) throw new HttpError(404, "Recipe not in trash");
+      await client.query("DELETE FROM toque_shares WHERE owner = $1 AND recipe_id = $2", [
+        owner,
+        id,
+      ]);
+      // Retain the tombstone and mutation receipts to block stale-device uploads.
+      await client.query("UPDATE toque_recipes SET payload = NULL WHERE owner = $1 AND id = $2", [
+        owner,
+        id,
+      ]);
+    });
+  }
+
+  async emptyTrash(owner) {
+    return this.transaction(async (client) => {
+      const { rows } = await client.query(
+        "SELECT id FROM toque_recipes WHERE owner = $1 AND deleted_at IS NOT NULL AND payload IS NOT NULL ORDER BY id FOR UPDATE",
+        [owner]
+      );
+      if (!rows.length) return 0;
+      const ids = rows.map((row) => row.id);
+      await client.query(
+        "DELETE FROM toque_shares WHERE owner = $1 AND recipe_id = ANY($2::text[])",
+        [owner, ids]
+      );
+      await client.query(
+        "UPDATE toque_recipes SET payload = NULL WHERE owner = $1 AND id = ANY($2::text[])",
+        [owner, ids]
+      );
+      return rows.length;
+    });
+  }
+
   async share(owner, recipe) {
     const client = await this.pool.connect();
     try {

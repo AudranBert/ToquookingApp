@@ -130,9 +130,32 @@ Une tentative répétée ne prolonge pas ce délai. La purge s'exécute au déma
 et toutes les minutes lorsque le serveur tourne ; s'il dort, elle s'exécute à son
 réveil. Après sept jours le contenu est supprimé définitivement ; une trace
 minimale (espace, identifiant, date) reste pour empêcher un appareil ancien de
-réintroduire une recette supprimée. Aucun bouton ou endpoint de restauration
-n'est exposé pour l'instant. La corbeille est donc préparée pour une évolution
-future ; une restauration éventuelle devra aussi traiter cette trace.
+réintroduire une recette supprimée.
+
+Dans **Sauvegarde → Corbeille cloud**, l'utilisateur peut :
+
+- consulter les recettes supprimées et leur date d'expiration ;
+- restaurer une recette dans le cloud et sur l'appareil, sous son identifiant
+  d'origine (les anciennes images supplémentaires locales sont conservées) ;
+- supprimer définitivement une recette ou vider la corbeille, après confirmation.
+
+La restauration réactive aussi les liens publics de la recette. Elle ne modifie
+pas les changements locaux en attente ou effectués pendant la requête. Les
+suppressions précédentes sont terminées avant la restauration ; leurs anciennes
+requêtes répétées ne suppriment pas à nouveau la recette restaurée. La version
+restaurée porte une nouvelle date de modification pour les autres appareils.
+Un nouvel enregistrement utilisateur peut ensuite modifier la recette normalement.
+
+Les recettes expirées ne sont ni listées ni restaurables, même avant le passage
+de la purge périodique. Une suppression définitive retire les données et les
+liens, en conservant seulement la trace qui bloque les anciens envois. Vider la
+corbeille ne supprime aucune recette active ni aucun autre espace privé.
+Ces actions nécessitent une connexion et ne sont pas mises en attente hors ligne.
+
+API authentifiée avec la même clé privée : `GET /trash`,
+`POST /trash/:id/restore`, `POST /trash/:id/purge`, `POST /trash/empty`.
+Les réponses de liste ne contiennent que les noms, identifiants et dates ; les
+photos et le contenu complet sont récupérés uniquement à la restauration.
 
 ## Structure et vérification
 
@@ -142,6 +165,7 @@ future ; une restauration éventuelle devra aussi traiter cette trace.
 - `src/cloud/client.ts`, `sharing.ts` : appels réseau et liens publics.
 - `src/cloud/validation.ts` : validation des réponses et filtrage des URL publiques.
 - `src/hooks/useCloudBackup.ts` : cycle de vie React, état et tentatives.
+- `src/cloud/trash.ts`, `src/hooks/useCloudTrash.ts` et `src/components/CloudTrash.tsx` : corbeille cloud, restauration et confirmations.
 - `src/components/CloudBackupSettings.tsx` : interface de configuration.
 - `backend/server.mjs` : HTTP, contrôle d'origine, clé et limite de requêtes.
 - `backend/validation.mjs` : validation et liste explicite des champs acceptés.

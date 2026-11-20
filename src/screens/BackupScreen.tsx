@@ -4,9 +4,11 @@ import { t } from "../i18n";
 import { copyText } from "../utils/clipboard";
 import { CloudBackupSettings } from "../components/CloudBackupSettings";
 import type { CloudBackupApi } from "../hooks/useCloudBackup";
+import type { ConfirmAction } from "../hooks/useAppDialog";
 
 type Props = {
   cloud: CloudBackupApi;
+  onConfirm: ConfirmAction;
   onExport: () => void;
   onImport: (file: File) => void;
   onDownloadExample: () => void;
@@ -60,7 +62,7 @@ Rules:
 - Leave image fields empty unless you have a real web image URL.
 - Do not add id, createdAt, or updatedAt fields.`;
 
-export function BackupScreen({ cloud, onExport, onImport, onDownloadExample, onDownloadDatabase, onStatus }: Props) {
+export function BackupScreen({ cloud, onConfirm, onExport, onImport, onDownloadExample, onDownloadDatabase, onStatus }: Props) {
   async function copyAiPrompt() {
     try {
       await copyText(AI_RECIPE_IMPORT_PROMPT);
@@ -79,7 +81,7 @@ export function BackupScreen({ cloud, onExport, onImport, onDownloadExample, onD
         </div>
       </div>
 
-      <CloudBackupSettings cloud={cloud} />
+      <CloudBackupSettings cloud={cloud} onConfirm={onConfirm} />
 
       <section className="backup-card" aria-labelledby="local-backup-title">
         <div className="backup-card-heading">

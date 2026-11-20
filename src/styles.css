@@ -1811,3 +1811,70 @@ fieldset.image-field__body {
   padding: 0;
   border: 0;
 }
+
+.cloud-trash {
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-4) 0;
+}
+.cloud-trash > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  list-style: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.cloud-trash > summary::-webkit-details-marker {
+  display: none;
+}
+.cloud-trash[open] > summary .cloud-chevron {
+  transform: rotate(180deg);
+}
+.cloud-trash-count {
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  font-size: 0.75rem;
+}
+.cloud-trash-retention {
+  margin-left: auto;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+.cloud-trash > summary .cloud-chevron {
+  margin-left: 0;
+}
+.cloud-trash-content {
+  margin-top: var(--space-4);
+}
+.cloud-trash-list {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+  padding: 0;
+  margin: var(--space-4) 0 0;
+}
+.cloud-trash-entry {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.cloud-trash-info {
+  display: grid;
+  gap: var(--space-1);
+  overflow-wrap: anywhere;
+}
+.cloud-trash-info strong {
+  font-size: 0.9rem;
+}
+.cloud-trash-info time {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+.cloud-trash-content .button {
+  font-size: 0.8rem;
+}

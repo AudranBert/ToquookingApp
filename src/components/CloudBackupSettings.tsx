@@ -16,6 +16,9 @@ import type { CloudBackupApi } from "../hooks/useCloudBackup";
 import type { CloudServerMode } from "../cloud/settings";
 import { copyText } from "../utils/clipboard";
 import { t } from "../i18n";
+import { CloudTrash } from "./CloudTrash";
+import { cloudTarget } from "../cloud/settings";
+import type { ConfirmAction } from "../hooks/useAppDialog";
 
 function ConnectionBadge({
   label,
@@ -56,7 +59,13 @@ function ConnectionBadge({
   );
 }
 
-export function CloudBackupSettings({ cloud }: { cloud: CloudBackupApi }) {
+export function CloudBackupSettings({
+  cloud,
+  onConfirm,
+}: {
+  cloud: CloudBackupApi;
+  onConfirm: ConfirmAction;
+}) {
   const [apiUrl, setApiUrl] = useState(cloud.settings.apiUrl);
   const [key, setKey] = useState(cloud.settings.key);
   const [mode, setMode] = useState<CloudServerMode>(cloud.settings.serverMode ?? "custom");
@@ -217,6 +226,8 @@ export function CloudBackupSettings({ cloud }: { cloud: CloudBackupApi }) {
           )}
         </form>
       </div>
+
+      <CloudTrash key={cloudTarget(cloud.settings)} cloud={cloud} onConfirm={onConfirm} />
 
       <details className="cloud-advanced">
         <summary>
