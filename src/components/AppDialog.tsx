@@ -6,6 +6,7 @@ type Props = {
   title: string;
   message?: string;
   promptValue?: string;
+  promptReadOnly?: boolean;
   promptSuggestions?: string[];
   danger?: boolean;
   confirmLabel?: string;
@@ -20,6 +21,7 @@ export function AppDialog({
   title,
   message,
   promptValue,
+  promptReadOnly,
   promptSuggestions,
   danger,
   confirmLabel = "Confirmer",
@@ -41,6 +43,8 @@ export function AppDialog({
             autoFocus
             list={promptSuggestions?.length ? datalistId : undefined}
             value={promptValue}
+            readOnly={promptReadOnly}
+            onFocus={promptReadOnly ? (event) => event.currentTarget.select() : undefined}
             onChange={(event) => onPromptValueChange?.(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") onConfirm();

@@ -93,6 +93,9 @@ git checkout -
 
 ## Useful Commands
 
+Le cloud optionnel (Render + PostgreSQL), la sauvegarde automatique et le partage
+par lien sont décrits dans [le guide de configuration cloud](docs/cloud.md).
+
 ```powershell
 npm run build
 npm run preview

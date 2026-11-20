@@ -1,8 +1,12 @@
-import { ClipboardCopy, Download, FileJson, Upload } from "lucide-react";
+import { ClipboardCopy, Download, FileJson, FolderArchive, Upload } from "lucide-react";
 import { SeasonalReference } from "../components/SeasonalReference";
 import { t } from "../i18n";
+import { copyText } from "../utils/clipboard";
+import { CloudBackupSettings } from "../components/CloudBackupSettings";
+import type { CloudBackupApi } from "../hooks/useCloudBackup";
 
 type Props = {
+  cloud: CloudBackupApi;
   onExport: () => void;
   onImport: (file: File) => void;
   onDownloadExample: () => void;
@@ -56,7 +60,7 @@ Rules:
 - Leave image fields empty unless you have a real web image URL.
 - Do not add id, createdAt, or updatedAt fields.`;
 
-export function BackupScreen({ onExport, onImport, onDownloadExample, onDownloadDatabase, onStatus }: Props) {
+export function BackupScreen({ cloud, onExport, onImport, onDownloadExample, onDownloadDatabase, onStatus }: Props) {
   async function copyAiPrompt() {
     try {
       await copyText(AI_RECIPE_IMPORT_PROMPT);
@@ -67,7 +71,7 @@ export function BackupScreen({ onExport, onImport, onDownloadExample, onDownload
   }
 
   return (
-    <section className="panel workspace workspace--narrow">
+    <section className="panel workspace workspace--narrow backup-workspace">
       <div className="section-heading">
         <div>
           <span className="eyebrow">{t("backup.eyebrow")}</span>
@@ -75,12 +79,18 @@ export function BackupScreen({ onExport, onImport, onDownloadExample, onDownload
         </div>
       </div>
 
-      <div className="backup-block">
+      <CloudBackupSettings cloud={cloud} />
+
+      <section className="backup-card" aria-labelledby="local-backup-title">
+        <div className="backup-card-heading">
+          <span className="backup-card-icon"><FolderArchive size={21} aria-hidden="true" /></span>
+          <div><h3 id="local-backup-title">{t("backup.localTitle")}</h3><span className="muted cloud-provider">{t("backup.localSubtitle")}</span></div>
+        </div>
         <div className="action-bar">
-          <button className="button button--primary button--icon-mobile" onClick={onExport}>
+          <button className="button button--primary" onClick={onExport}>
             <Download size={18} /> {t("backup.action.exportAll")}
           </button>
-          <label className="button file-button backup-import-button button--icon-mobile">
+          <label className="button file-button backup-import-button">
             <Upload size={18} /> {t("backup.action.import")}
             <input
               accept=".zip,.txt,.json,application/zip,text/plain,application/json"
@@ -94,49 +104,25 @@ export function BackupScreen({ onExport, onImport, onDownloadExample, onDownload
           </label>
         </div>
 
-        <p className="muted">{t("backup.help.files")}</p>
-      </div>
+      </section>
 
-      <div className="backup-block">
+      <details className="backup-card backup-tools">
+        <summary><FileJson size={19} aria-hidden="true" />{t("backup.toolsTitle")}</summary>
         <div className="action-bar">
-          <button className="button button--icon-mobile" onClick={onDownloadExample}>
+          <button className="button" onClick={onDownloadExample}>
             <FileJson size={18} /> {t("backup.action.downloadExample")}
           </button>
-          <button className="button button--icon-mobile" onClick={copyAiPrompt}>
+          <button className="button" onClick={copyAiPrompt}>
             <ClipboardCopy size={18} /> {t("backup.action.copyAiPrompt")}
           </button>
-          <button className="button button--icon-mobile" onClick={onDownloadDatabase}>
+          <button className="button" onClick={onDownloadDatabase}>
             <FileJson size={18} /> {t("backup.action.downloadDatabase")}
           </button>
         </div>
 
-        <p className="muted">{t("backup.help.example")}</p>
-        <p className="muted">{t("backup.help.database")}</p>
-      </div>
+      </details>
 
       <SeasonalReference />
     </section>
   );
-}
-
-async function copyText(text: string) {
-  if (navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return;
-    } catch {}
-  }
-
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.setAttribute("readonly", "");
-  textarea.style.position = "fixed";
-  textarea.style.left = "-10000px";
-  document.body.append(textarea);
-  textarea.select();
-  try {
-    if (!document.execCommand("copy")) throw new Error("Copy failed");
-  } finally {
-    textarea.remove();
-  }
 }

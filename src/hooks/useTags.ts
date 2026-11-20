@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { db } from "../db";
+import { putRecipes } from "../cloud/recipeRepository";
 import { t } from "../i18n";
 import type { Recipe, RecipeTag } from "../types";
 import { DEFAULT_RECIPE_TOOLS } from "../constants";
@@ -94,7 +95,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
 
   useEffect(() => {
     void db
-      .transaction("rw", db.tags, db.recipes, async () => {
+      .transaction("rw", db.tags, db.recipes, db.cloudQueue, async () => {
         const now = nowIso();
         const existing = await db.tags.toArray();
         const recipesToFix = await db.recipes.toArray();
@@ -112,7 +113,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
             return changed ? { ...recipe, tags: uniqueByNormalized(nextTags), updatedAt: now } : null;
           })
           .filter((recipe): recipe is Recipe => Boolean(recipe));
-        if (repairedRecipes.length > 0) await db.recipes.bulkPut(repairedRecipes);
+        if (repairedRecipes.length > 0) await putRecipes(repairedRecipes);
 
         const refreshedTags = repairedTags.length > 0 ? await db.tags.toArray() : existing;
         const byKey = new Map(refreshedTags.map((tag) => [normalizeText(tag.name), tag]));
@@ -208,11 +209,11 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
         return oldName;
       }
 
-      await db.transaction("rw", db.tags, db.recipes, async () => {
+      await db.transaction("rw", db.tags, db.recipes, db.cloudQueue, async () => {
         await db.tags.put({ ...source, name: newName, updatedAt: nowIso() });
         const affected = await db.recipes.filter((recipe) => recipe.tags.includes(oldName)).toArray();
         if (affected.length > 0) {
-          await db.recipes.bulkPut(
+          await putRecipes(
             affected.map((recipe) => ({
               ...recipe,
               tags: recipe.tags.map((tag) => (tag === oldName ? newName : tag)),
@@ -239,7 +240,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
       const resolvedTargetName = existingTarget?.name ?? nextTarget;
       if (normalizeText(source.name) === normalizeText(resolvedTargetName)) return;
 
-      await db.transaction("rw", db.tags, db.recipes, async () => {
+      await db.transaction("rw", db.tags, db.recipes, db.cloudQueue, async () => {
         if (!existingTarget) {
           await db.tags.put({
             id: createId(),
@@ -253,7 +254,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
 
         const affected = await db.recipes.filter((recipe) => recipe.tags.includes(source.name)).toArray();
         if (affected.length > 0) {
-          await db.recipes.bulkPut(
+          await putRecipes(
             affected.map((recipe) => {
               const replaced = recipe.tags.map((tag) => (tag === source.name ? resolvedTargetName : tag));
               return {
@@ -282,11 +283,11 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
         status.setStatus(t("app.status.defaultTagProtected"));
         return;
       }
-      await db.transaction("rw", db.tags, db.recipes, async () => {
+      await db.transaction("rw", db.tags, db.recipes, db.cloudQueue, async () => {
         await db.tags.delete(source.id);
         const affected = await db.recipes.filter((recipe) => recipe.tags.includes(source.name)).toArray();
         if (affected.length > 0) {
-          await db.recipes.bulkPut(
+          await putRecipes(
             affected.map((recipe) => ({
               ...recipe,
               tags: recipe.tags.filter((tag) => tag !== source.name),

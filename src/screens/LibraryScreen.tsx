@@ -57,7 +57,7 @@ export type LibraryRecipeActions = {
   onExportPdf: () => void;
   onShareImage: () => void;
   onShareText: () => void;
-  onExportRecipeFile: () => void;
+  onShareLink: () => void;
   onSelectRecipe: (id: string) => void;
   onShowList: () => void;
 };
@@ -112,7 +112,7 @@ export function LibraryScreen({
             onExportPdf={actions.onExportPdf}
             onShareImage={actions.onShareImage}
             onShareText={actions.onShareText}
-            onExportRecipeFile={actions.onExportRecipeFile}
+            onShareLink={actions.onShareLink}
           />
         </div>
       ) : (

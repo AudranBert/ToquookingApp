@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: toquooking-cloud
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm run start:cloud
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: ALLOWED_ORIGINS
+        value: https://audranbert.github.io
+      - key: DATABASE_URL
+        sync: false

@@ -8,14 +8,11 @@ import { AppHeader } from "./components/AppHeader";
 import { LibraryScreen } from "./screens/LibraryScreen";
 import { RecipeForm } from "./screens/RecipeForm";
 import { ShoppingScreen } from "./screens/ShoppingScreen";
-import { downloadRecipeDatabaseJson, downloadRecipeImportExample, parseBackupFile, shareRecipesBackup, shareSingleRecipeBackup, summarizeBackupImport } from "./utils/backup";
+import { downloadRecipeDatabaseJson, downloadRecipeImportExample, parseBackupFile, shareRecipesBackup, summarizeBackupImport } from "./utils/backup";
 import {
   clearRecipeShareFromLocation,
-  createRecipeShareUrl,
-  hasLocalRecipeImage,
-  isRecipeShareUrlTooLong,
   readRecipeShareFromLocation,
-  shareRecipeLink,
+  copyRecipeShareLink,
   shareRecipeText,
   sharedRecipeToImport,
 } from "./utils/recipeShare";
@@ -30,6 +27,9 @@ import { t } from "./i18n";
 import type { Panel, Recipe } from "./types";
 import { buildTagColorMap } from "./utils/tagStyle";
 import { useAppDialog } from "./hooks/useAppDialog";
+import { putRecipe } from "./cloud/recipeRepository";
+import { useCloudBackup } from "./hooks/useCloudBackup";
+import { createCloudShare, readCloudShareFromLocation } from "./cloud/sharing";
 import { AppDialog } from "./components/AppDialog";
 
 const BackupScreen = lazy(async () => import("./screens/BackupScreen").then((module) => ({ default: module.BackupScreen })));
@@ -51,7 +51,10 @@ export function App() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<Panel>("library");
-  const [handledSharedRecipe, setHandledSharedRecipe] = useState(false);
+  const cloud = useCloudBackup(refresh, status.setStatus, activePanel === "backup");
+  const handledSharedRecipe = useRef(false);
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [creatingShare, setCreatingShare] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const tagColorByName = useMemo(() => buildTagColorMap(tagApi.tags), [tagApi.tags]);
   const dialogState = dialog.dialogState;
@@ -71,35 +74,27 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (handledSharedRecipe) return;
-    const sharedRecipe = readRecipeShareFromLocation();
-    if (!sharedRecipe) {
-      setHandledSharedRecipe(true);
-      return;
-    }
-
-    setHandledSharedRecipe(true);
-    clearRecipeShareFromLocation();
-
+    if (handledSharedRecipe.current) return;
+    handledSharedRecipe.current = true;
     void (async () => {
-      const accepted = await dialog.confirm(t("app.confirm.importShared", { name: sharedRecipe.name }));
-      if (!accepted) return;
-
-      db.recipes
-        .toArray()
-        .then((existingRecipes) => {
-          const importedRecipe = sharedRecipeToImport(sharedRecipe, existingRecipes);
-          return db.recipes.put(importedRecipe).then(() => importedRecipe);
-        })
-        .then(async (importedRecipe) => {
-          await refresh();
-          setSelectedId(importedRecipe.id);
-          setActivePanel("library");
-          status.setStatus(t("app.status.importedRecipe"));
-        })
-        .catch(() => status.setStatus(t("app.status.importFailed")));
+      try {
+        const sharedRecipe = readRecipeShareFromLocation() ?? await readCloudShareFromLocation();
+        if (!sharedRecipe) return;
+        const accepted = await dialog.confirm(t("app.confirm.importShared", { name: sharedRecipe.name }));
+        if (!accepted) return;
+        const importedRecipe = sharedRecipeToImport(sharedRecipe, await db.recipes.toArray());
+        await putRecipe(importedRecipe);
+        clearRecipeShareFromLocation();
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        await refresh();
+        setSelectedId(importedRecipe.id);
+        setActivePanel("library");
+        status.setStatus(t("app.status.importedRecipe"));
+      } catch {
+        status.setStatus(t("cloud.shareLoadFailed"));
+      }
     })();
-  }, [dialog, handledSharedRecipe, refresh, status]);
+  }, [dialog, refresh, status]);
 
   const selectedRecipe = selectedId ? recipes.find((recipe) => recipe.id === selectedId) : undefined;
   const seasonMonthName = MONTH_NAMES[new Date().getMonth()];
@@ -229,11 +224,10 @@ export function App() {
   async function shareSelectedImage() {
     if (!selectedRecipe || !printRef.current) return;
     const target = printRef.current;
-    const shareUrl = createRecipeShareUrl(selectedRecipe);
 
     const result = await withShareStatus(
       () =>
-        shareElementAsPng(target, recipeFileName(selectedRecipe, "png"), selectedRecipe.name, `${t("share.text.recipeTitle", { name: selectedRecipe.name })}\n${shareUrl}`),
+        shareElementAsPng(target, recipeFileName(selectedRecipe, "png"), selectedRecipe.name, t("share.text.recipeTitle", { name: selectedRecipe.name })),
       t("share.error.generic"),
     );
     if (result === "downloaded") status.setStatus(t("share.status.pngDownloaded"));
@@ -248,67 +242,19 @@ export function App() {
     if (result === "sms") status.setStatus(t("share.status.smsOpen"));
   }
 
-  async function exportSelectedRecipeFile() {
-    if (!selectedRecipe) return;
-    const hasLocalImage = hasLocalRecipeImage(selectedRecipe);
-    const tooLongWithFullPayload = isRecipeShareUrlTooLong(selectedRecipe);
-    const tooLongWithoutLocalImage = hasLocalImage ? isRecipeShareUrlTooLong(selectedRecipe, { dropLocalImage: true }) : false;
-    const shouldAskLocalImageChoice = hasLocalImage && !tooLongWithoutLocalImage;
-
-    if (shouldAskLocalImageChoice) {
-      const chooseZip = await dialog.confirm(
-        t("share.confirm.localImageTitle"),
-        t("share.confirm.localImageMessage"),
-        false,
-        t("share.confirm.localImageZip"),
-        t("share.confirm.localImageLink"),
-      );
-      if (chooseZip) {
-        const zipResult = await withShareStatus(
-          () => shareSingleRecipeBackup(selectedRecipe),
-          t("share.error.recipeFile"),
-        );
-        if (zipResult === "downloaded") status.setStatus(t("share.status.recipeZipDownloaded"));
-        if (zipResult === "shared") status.setStatus(t("share.status.recipeZipShared"));
-        return;
-      }
-      const noImageResult = await withShareStatus(
-        () => shareRecipeLink(selectedRecipe, { dropLocalImage: true }),
-        t("share.error.link"),
-      );
-      if (noImageResult === "shared") status.setStatus(t("share.status.linkSharedNoImage"));
-      if (noImageResult === "copied") status.setStatus(t("share.status.linkCopiedNoImage"));
-      if (noImageResult === "manual") status.setStatus(t("share.status.linkManualNoImage"));
-      if (noImageResult === "too_long") status.setStatus(t("share.status.linkStillTooLong"));
-      return;
+  async function shareSelectedRecipeLink() {
+    if (!selectedRecipe || creatingShare) return;
+    setCreatingShare(true);
+    status.setStatus(t("cloud.creatingShare"));
+    try {
+      const url = await createCloudShare(selectedRecipe);
+      setShareLink(url);
+      status.clear();
+    } catch (error) {
+      if (!isAbortError(error)) status.setStatus(t("cloud.shareFailed"));
+    } finally {
+      setCreatingShare(false);
     }
-
-    if (hasLocalImage && tooLongWithFullPayload && tooLongWithoutLocalImage) {
-      const zipResult = await withShareStatus(
-        () => shareSingleRecipeBackup(selectedRecipe),
-        t("share.error.recipeFile"),
-      );
-      if (zipResult === "downloaded") status.setStatus(t("share.status.linkTooLongZipDownloaded"));
-      if (zipResult === "shared") status.setStatus(t("share.status.linkTooLongZipShared"));
-      return;
-    }
-
-    let result = await withShareStatus(
-      () => shareRecipeLink(selectedRecipe),
-      t("share.error.link"),
-    );
-    if (result === "too_long") {
-      result = await withShareStatus(
-        () => shareSingleRecipeBackup(selectedRecipe),
-        t("share.error.recipeFile"),
-      );
-      if (result === "downloaded") status.setStatus(t("share.status.linkTooLongZipDownloaded"));
-      if (result === "shared") status.setStatus(t("share.status.linkTooLongZipShared"));
-      return;
-    }
-    if (result === "shared") status.setStatus(t("share.status.linkShared"));
-    if (result === "copied") status.setStatus(t("share.status.linkCopied"));
-    if (result === "manual") status.setStatus(t("share.status.linkManual"));
   }
 
   async function exportRecipesFile() {
@@ -382,7 +328,7 @@ export function App() {
             onExportPdf: exportSelectedPdf,
             onShareImage: shareSelectedImage,
             onShareText: shareSelectedText,
-            onExportRecipeFile: exportSelectedRecipeFile,
+            onShareLink: shareSelectedRecipeLink,
             onSelectRecipe: setSelectedId,
             onShowList: () => setSelectedId(null),
           }}
@@ -440,6 +386,7 @@ export function App() {
       {activePanel === "backup" && (
         <Suspense fallback={<section className="panel workspace"><p>{t("app.loading")}</p></section>}>
           <BackupScreen
+            cloud={cloud}
             onExport={exportRecipesFile}
             onImport={handleBackupImport}
             onDownloadExample={downloadImportExampleFile}
@@ -469,6 +416,23 @@ export function App() {
           />
         </Suspense>
       )}
+
+      {shareLink && <AppDialog
+        open
+        title={t("cloud.shareReady")}
+        message={t("cloud.shareHelp")}
+        promptValue={shareLink}
+        promptReadOnly
+        confirmLabel={t("cloud.copyLink")}
+        cancelLabel={t("cloud.close")}
+        onCancel={() => setShareLink(null)}
+        onConfirm={() => {
+          void copyRecipeShareLink(shareLink).then((result) => {
+            status.setStatus(t(result === "copied" ? "share.status.linkCopied" : "cloud.copyManually"));
+            if (result === "copied") setShareLink(null);
+          });
+        }}
+      />}
 
       <AppDialog
         open={dialogState.open}

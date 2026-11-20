@@ -20,7 +20,7 @@ type Props = {
   onExportPdf: () => void;
   onShareImage: () => void;
   onShareText: () => void;
-  onExportRecipeFile: () => void;
+  onShareLink: () => void;
 };
 
 export function RecipeDetail({
@@ -33,7 +33,7 @@ export function RecipeDetail({
   onExportPdf,
   onShareImage,
   onShareText,
-  onExportRecipeFile,
+  onShareLink,
 }: Props) {
   if (!recipe) {
     return (
@@ -80,7 +80,7 @@ export function RecipeDetail({
         <button className="button button--primary button--icon-mobile" onClick={onShareText} title={t("recipe.detail.shareSms")}>
           <MessageSquareText size={18} /> SMS
         </button>
-        <button className="button button--icon-mobile" onClick={onExportRecipeFile} title={t("recipe.detail.shareRecipe")}>
+        <button className="button button--icon-mobile" onClick={onShareLink} title={t("recipe.detail.shareRecipe")}>
           <Share2 size={18} /> {t("recipe.detail.link")}
         </button>
         <button className="button button--danger button--icon-mobile" onClick={() => onDelete(recipe)} title={t("recipe.detail.delete")}>

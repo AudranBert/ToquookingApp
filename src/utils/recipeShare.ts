@@ -2,19 +2,11 @@ import type { Recipe, RecipeDraft } from "../types";
 import { t } from "../i18n";
 import { createId } from "./id";
 import { cleanRecipeDraft, ingredientLabel, nowIso, recipeToDraft } from "./recipes";
-import { mergedRecipeImageUrls, primaryRecipeImageUrl } from "./images";
+import { primaryRecipeImageUrl } from "./images";
 import { displayTagName } from "./tags";
 
 const SHARE_HASH_KEY = "toqueRecipe";
-const MAX_SHARE_URL_LENGTH = 1000;
 const MAX_SMS_BODY_LENGTH = 1800;
-
-export function createRecipeShareUrl(recipe: Recipe) {
-  const url = new URL(window.location.href);
-  url.search = "";
-  url.hash = `${SHARE_HASH_KEY}=${encodeRecipeSharePayload(recipe)}`;
-  return url.toString();
-}
 
 export function readRecipeShareFromLocation() {
   const hash = window.location.hash.slice(1);
@@ -120,55 +112,13 @@ function recipeTextFileName(recipe: Recipe) {
   return `toque-recette-${slug || "recette"}.txt`;
 }
 
-export function hasLocalRecipeImage(recipe: Recipe) {
-  return mergedRecipeImageUrls(recipe).some((image) => !/^https?:\/\//i.test(image));
-}
-
-export function isRecipeShareUrlTooLong(recipe: Recipe, options?: { dropLocalImage?: boolean }) {
-  const url = buildRecipeShareUrl(recipe, options);
-  return url.length > MAX_SHARE_URL_LENGTH;
-}
-
-export async function shareRecipeLink(recipe: Recipe, options?: { dropLocalImage?: boolean }) {
-  const url = buildRecipeShareUrl(recipe, options);
-  if (url.length > MAX_SHARE_URL_LENGTH) {
-    return "too_long";
-  }
-  const text = t("share.text.recipeTitle", { name: recipe.name });
-
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: recipe.name, text, url });
-      return "shared";
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") throw error;
-    }
-  }
-
+export async function copyRecipeShareLink(url: string) {
   try {
     await navigator.clipboard.writeText(url);
     return "copied";
   } catch {
     return "manual";
   }
-}
-
-function buildRecipeShareUrl(recipe: Recipe, options?: { dropLocalImage?: boolean }) {
-  const withLocalImageRemoved =
-    options?.dropLocalImage && hasLocalRecipeImage(recipe)
-      ? { ...recipe, imageUrl: undefined, imageUrls: [], sourceImageUrl: undefined, sourceImageUrls: [] }
-      : recipe;
-  return createRecipeShareUrl(withLocalImageRemoved);
-}
-
-function encodeRecipeSharePayload(recipe: Recipe) {
-  const json = JSON.stringify(compactRecipeDraft(cleanRecipeDraft(recipeToDraft(recipe))));
-  const bytes = new TextEncoder().encode(json);
-  let binary = "";
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte);
-  });
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
 function decodeRecipeSharePayload(payload: string): Recipe | null {
@@ -213,29 +163,6 @@ type CompactDraftV2 = {
   ims?: string[];
   sis?: string[];
 };
-
-function compactRecipeDraft(draft: RecipeDraft): CompactDraftV2 {
-  return {
-    v: 2,
-    n: draft.name,
-    t: draft.tags.length ? draft.tags : undefined,
-    o: draft.origin || undefined,
-    i: draft.ingredients.map((item) => [item.name, item.quantity, item.unit, item.note]),
-    s: draft.instructions.length ? draft.instructions : undefined,
-    u: draft.sourceUrl || undefined,
-    vv: draft.videoUrl || undefined,
-    sv: draft.servings,
-    pt: draft.prepTime,
-    rt: draft.restTime,
-    ct: draft.cookTime,
-    tt: draft.totalTime,
-    no: draft.notes || undefined,
-    im: draft.imageUrl || undefined,
-    si: draft.sourceImageUrl || undefined,
-    ims: draft.imageUrls?.length ? draft.imageUrls : undefined,
-    sis: draft.sourceImageUrls?.length ? draft.sourceImageUrls : undefined,
-  };
-}
 
 function expandSharedDraft(parsed: unknown): RecipeDraft {
   if (!parsed || typeof parsed !== "object") return parsed as RecipeDraft;

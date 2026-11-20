@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { db } from "../db";
+import { putRecipe, putRecipes, deleteRecipe } from "../cloud/recipeRepository";
 import type { Recipe, RecipeDraft } from "../types";
 import { createId } from "../utils/id";
 import { cleanRecipeDraft, cleanStoredRecipe, nowIso } from "../utils/recipes";
@@ -40,7 +41,7 @@ export function useRecipes(status: StatusApi) {
       };
 
       try {
-        await db.recipes.put(recipe);
+        await putRecipe(recipe);
         await refresh();
         status.setStatus(editingId ? "Recette mise à jour." : "Recette enregistrée.");
         return recipe;
@@ -48,7 +49,7 @@ export function useRecipes(status: StatusApi) {
         try {
           if (db.isOpen()) db.close();
           await db.open();
-          await db.recipes.put(recipe);
+          await putRecipe(recipe);
           await refresh();
           status.setStatus(editingId ? "Recette mise à jour." : "Recette enregistrée.");
           return recipe;
@@ -66,7 +67,7 @@ export function useRecipes(status: StatusApi) {
 
   const remove = useCallback(
     async (recipe: Recipe) => {
-      await db.recipes.delete(recipe.id);
+      await deleteRecipe(recipe.id);
       await refresh();
       status.setStatus("Recette supprimée.");
       return true;
@@ -84,7 +85,7 @@ export function useRecipes(status: StatusApi) {
         updatedAt: nowIso(),
       };
 
-      await db.recipes.put(copy);
+      await putRecipe(copy);
       await refresh();
       status.setStatus("Recette dupliquée.");
       return copy;
@@ -96,7 +97,7 @@ export function useRecipes(status: StatusApi) {
     async (file: File) => {
       try {
         const imported = await parseBackupFile(file, await db.recipes.toArray());
-        await db.recipes.bulkPut(imported.recipes.map(cleanStoredRecipe));
+        await putRecipes(imported.recipes.map(cleanStoredRecipe));
         const existingTags = await db.tags.toArray();
         const existingByName = new Map(existingTags.map((tag) => [tag.name.toLowerCase(), tag]));
         await db.tags.bulkPut(

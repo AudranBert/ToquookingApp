@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { db } from "../db";
+import { putRecipes } from "../cloud/recipeRepository";
 import { t } from "../i18n";
 import type { Recipe } from "../types";
 import { formatIngredientName } from "../utils/ingredients";
@@ -39,7 +39,7 @@ export function useIngredientsManagement(recipes: Recipe[], status: StatusApi, o
     const affected = recipes.filter((recipe) => recipe.ingredients.some((ingredient) => normalizeText(ingredient.name) === oldKey));
     if (affected.length === 0) return;
 
-    await db.recipes.bulkPut(
+    await putRecipes(
       affected.map((recipe) => ({
         ...recipe,
         ingredients: recipe.ingredients.map((ingredient) =>
@@ -61,7 +61,7 @@ export function useIngredientsManagement(recipes: Recipe[], status: StatusApi, o
     const key = normalizeText(name);
     const affected = recipes.filter((recipe) => recipe.ingredients.some((ingredient) => normalizeText(ingredient.name) === key));
     if (affected.length === 0) return;
-    await db.recipes.bulkPut(
+    await putRecipes(
       affected.map((recipe) => ({
         ...recipe,
         ingredients: recipe.ingredients.filter((ingredient) => normalizeText(ingredient.name) !== key),

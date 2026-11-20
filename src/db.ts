@@ -6,12 +6,14 @@ import { createId } from "./utils/id";
 import { nowIso } from "./utils/recipes";
 import { formatTagName } from "./utils/tags";
 import { normalizeText } from "./utils/text";
+import type { CloudMutation } from "./cloud/types";
 
 const DB_NAME = "toque-recipe-hub-v2";
 
 class ToqueDatabase extends Dexie {
   recipes!: Table<Recipe, string>;
   tags!: Table<RecipeTag, string>;
+  cloudQueue!: Table<CloudMutation, [string, string]>;
 
   constructor() {
     super(DB_NAME);
@@ -106,6 +108,11 @@ class ToqueDatabase extends Dexie {
 
         if (toUpsert.length > 0) await tagsTable.bulkPut(toUpsert);
       });
+    this.version(5).stores({
+      recipes: "id, name, updatedAt",
+      tags: "&id, &name, category, updatedAt",
+      cloudQueue: "[target+recipeId], target",
+    });
   }
 }
 

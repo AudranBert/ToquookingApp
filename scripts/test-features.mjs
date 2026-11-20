@@ -144,8 +144,11 @@ async function run() {
       assert((parsed.instructions?.length ?? 0) === 2, "json instructions not parsed");
     });
 
-    await test("recipe share url + import from text payload roundtrip", async () => {
-      const url = share.createRecipeShareUrl(sampleRecipe);
+    await test("legacy recipe share links remain importable", async () => {
+      const payload = Buffer.from(JSON.stringify({ v: 2, n: "Poulet Teriyaki", i: [["Poulet", "250", "g"], ["Sauce soja", "3", "c. à soupe"]], s: ["Coupez le poulet.", "Faites mariner.", "Cuisez au wok."] })).toString("base64url");
+      const url = `https://example.github.io/toquooking/#toqueRecipe=${payload}`;
+      window.location.hash = new URL(url).hash;
+      assert(share.readRecipeShareFromLocation()?.name === sampleRecipe.name, "legacy share link unreadable");
       const imported = importer.importRecipeFromText(url);
       assert(imported.name === sampleRecipe.name, "share payload name mismatch");
       assert((imported.ingredients?.length ?? 0) >= 2, "share payload ingredients mismatch");

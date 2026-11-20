@@ -1,4 +1,4 @@
-const CACHE_NAME = "toque-v3";
+const CACHE_NAME = "toque-v4";
 
 function normalizeBasePath(pathname) {
   if (!pathname) return "/";
@@ -28,6 +28,7 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
+  if (requestUrl.pathname.endsWith("/online-config.json")) return;
 
   event.respondWith(
     fetch(event.request)
