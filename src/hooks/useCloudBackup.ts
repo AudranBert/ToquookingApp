@@ -74,9 +74,7 @@ export function useCloudBackup(
       } catch {
         /* Keep durable mutations for the next attempt. */
       }
-      if (!stopped) {
-        if (!stopped) timer = setTimeout(retry, 30000);
-      }
+      if (!stopped) timer = setTimeout(retry, 30000);
     };
     const subscription = liveQuery(() =>
       db.cloudQueue.where("target").equals(target).count()
@@ -101,7 +99,7 @@ export function useCloudBackup(
       subscription.unsubscribe();
       window.removeEventListener("online", online);
     };
-  }, [settings, check]);
+  }, [settings]);
 
   function configure(next: CloudSettings) {
     try {

@@ -4,6 +4,23 @@ Le frontend reste un site statique GitHub Pages. Sans serveur configuré, toutes
 les fonctions locales et les sauvegardes ZIP restent disponibles. L'importeur
 `src/importer.ts` ne dépend pas de ce backend.
 
+## Service commun Toquooking
+
+Le service gratuit `toquooking` est créé sur Render à Francfort :
+`https://toquooking.onrender.com`. L'adresse est déjà renseignée dans
+`public/online-config.json` et proposée par défaut aux nouvelles installations.
+Chaque appareil reçoit sa propre clé ; fournir la même clé sur un autre appareil
+retrouve le même espace. Aucune adresse serveur n'est à saisir pour ce service.
+
+Le service déploie automatiquement la branche `codex/cloud-backup` du dépôt.
+Une base PostgreSQL persistante doit encore être raccordée avec `DATABASE_URL`
+avant de rendre la sauvegarde commune opérationnelle. L'offre gratuite du serveur
+ne fournit pas, à elle seule, ce stockage. Ne pas utiliser la base Render gratuite
+à durée limitée comme sauvegarde durable. Les quotas gratuits du fournisseur de
+base et de Render sont partagés entre tous les utilisateurs du service commun.
+
+Suivi : [service Render](https://dashboard.render.com/web/srv-dc0ajsk9v7es73b5dgs0).
+
 ## Déployer
 
 1. Créer une base PostgreSQL persistante (par exemple Supabase). Garder sa chaîne
