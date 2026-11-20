@@ -6,7 +6,7 @@ import {
   purgeCloudRecipe,
   restoreCloudRecipe,
 } from "../cloud/trash";
-import { flushCloudQueue } from "../cloud/sync";
+import { flushCloudQueue } from "../cloud/queue";
 import type { CloudTrashEntry } from "../cloud/types";
 import { t } from "../i18n";
 

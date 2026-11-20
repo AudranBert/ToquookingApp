@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Recipe, ShoppingItem } from "../types";
 import { createId } from "../utils/id";
-import { buildShoppingList } from "../utils/recipes";
+import { buildShoppingList } from "../utils/shoppingList";
 import type { StatusApi } from "./useStatus";
 
 export function useShoppingList(recipes: Recipe[], status: StatusApi) {

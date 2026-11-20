@@ -160,9 +160,10 @@ photos et le contenu complet sont récupérés uniquement à la restauration.
 ## Structure et vérification
 
 - `src/cloud/settings.ts` : configuration locale et valeurs de déploiement.
-- `src/cloud/recipeRepository.ts` : écritures locales et file atomique.
-- `src/cloud/sync.ts` : lots, reprise, acquittements et fusion au chargement.
-- `src/cloud/client.ts`, `sharing.ts` : appels réseau et liens publics.
+- `src/data/recipeRepository.ts` : écritures locales et file atomique.
+- `src/cloud/queue.ts` : lots, reprise et acquittements.
+- `src/cloud/transfers.ts` : sauvegarde manuelle et fusion au chargement.
+- `src/cloud/apiClient.ts`, `sharing.ts` : appels réseau et liens publics.
 - `src/cloud/validation.ts` : validation des réponses et filtrage des URL publiques.
 - `src/hooks/useCloudBackup.ts` : cycle de vie React, état et tentatives.
 - `src/cloud/trash.ts`, `src/hooks/useCloudTrash.ts` et `src/components/CloudTrash.tsx` : corbeille cloud, restauration et confirmations.
@@ -187,3 +188,6 @@ laisser `npm run dev` servir le frontend, puis saisir
 `http://127.0.0.1:3001` dans Sauvegarde. HTTP n'est accepté que pour localhost.
 La limite HTTP est appliquée par adresse de connexion (120 requêtes/minute) ;
 derrière un proxy partagé elle peut être commune à plusieurs utilisateurs.
+
+Les délais et tailles de lots du navigateur sont regroupés dans `src/cloud/config.ts`.
+Les limites de validation, la rétention de la corbeille et les réglages de maintenance du serveur sont dans `backend/config.mjs`. Les secrets restent dans les variables d’environnement. Les limites du serveur font autorité ; les lots du navigateur doivent rester compatibles avec elles.

@@ -1,3 +1,4 @@
+import { CLOUD_CONFIG } from "./config.mjs";
 import http from "node:http";
 import { createHash } from "node:crypto";
 import { HttpError, validateMutations, validateRecipe } from "./validation.mjs";
@@ -7,7 +8,8 @@ async function readJson(request) {
   let size = 0;
   for await (const chunk of request) {
     size += chunk.length;
-    if (size > 24 * 1024 * 1024) throw new HttpError(413, "Request exceeds 24 MB");
+    if (size > CLOUD_CONFIG.maxRequestBytes)
+      throw new HttpError(413, `Request exceeds ${CLOUD_CONFIG.maxRequestBytes} bytes`);
     chunks.push(chunk);
   }
   try {
@@ -17,7 +19,11 @@ async function readJson(request) {
   }
 }
 
-export function createServer({ store, origins = [], rateLimit = 120 } = {}) {
+export function createServer({
+  store,
+  origins = [],
+  rateLimit = CLOUD_CONFIG.requestsPerMinute,
+} = {}) {
   const requests = new Map();
   return http.createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -38,10 +44,12 @@ export function createServer({ store, origins = [], rateLimit = 120 } = {}) {
       res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
       if (req.method === "OPTIONS") return reply(204, null);
       const now = Date.now();
-      for (const [key, value] of requests) if (now - value.start > 60000) requests.delete(key);
+      for (const [key, value] of requests)
+        if (now - value.start > CLOUD_CONFIG.rateWindowMs) requests.delete(key);
       const ip = req.socket.remoteAddress;
       const rate = requests.get(ip) ?? { start: now, count: 0 };
-      if (!requests.has(ip) && requests.size >= 10000) throw new HttpError(429, "Server busy");
+      if (!requests.has(ip) && requests.size >= CLOUD_CONFIG.maxTrackedAddresses)
+        throw new HttpError(429, "Server busy");
       requests.set(ip, rate);
       if (++rate.count > rateLimit) throw new HttpError(429, "Too many requests");
       const url = new URL(req.url, "http://localhost");

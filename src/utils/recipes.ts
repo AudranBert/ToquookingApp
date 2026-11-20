@@ -1,6 +1,6 @@
-import type { Ingredient, Recipe, RecipeDraft, ShoppingItem } from "../types";
+import type { Ingredient, Recipe, RecipeDraft } from "../types";
 import { createId } from "./id";
-import { canonicalIngredientKey, formatIngredientName, ingredientSearchText, isPantryIngredient } from "./ingredients";
+import { formatIngredientName, ingredientSearchText } from "./ingredients";
 import { formatTagName } from "./tags";
 import { normalizeText } from "./text";
 
@@ -50,7 +50,9 @@ export function cleanRecipeDraft(draft: RecipeDraft): RecipeDraft {
   return {
     ...draft,
     name: stripWrappingQuotes(draft.name.trim()) ?? "",
-    tags: draft.tags.map((tag) => formatTagName(stripWrappingQuotes(tag.trim()) ?? "")).filter(Boolean),
+    tags: draft.tags
+      .map((tag) => formatTagName(stripWrappingQuotes(tag.trim()) ?? ""))
+      .filter(Boolean),
     origin: stripWrappingQuotes(draft.origin?.trim()),
     ingredients: draft.ingredients
       .map((ingredient) => ({
@@ -61,15 +63,21 @@ export function cleanRecipeDraft(draft: RecipeDraft): RecipeDraft {
         note: stripWrappingQuotes(ingredient.note?.trim()),
       }))
       .filter((ingredient) => ingredient.name),
-    instructions: draft.instructions.map((step) => stripWrappingQuotes(step.trim()) ?? "").filter(Boolean),
+    instructions: draft.instructions
+      .map((step) => stripWrappingQuotes(step.trim()) ?? "")
+      .filter(Boolean),
     sourceUrl: stripWrappingQuotes(draft.sourceUrl?.trim()),
     videoUrl: stripWrappingQuotes(draft.videoUrl?.trim()),
     servings: cleanServings(draft.servings),
     notes: stripWrappingQuotes(draft.notes?.trim()),
     imageUrl: stripWrappingQuotes(draft.imageUrl?.trim()),
-    imageUrls: (draft.imageUrls ?? []).map((url) => stripWrappingQuotes(url?.trim()) ?? "").filter(Boolean),
+    imageUrls: (draft.imageUrls ?? [])
+      .map((url) => stripWrappingQuotes(url?.trim()) ?? "")
+      .filter(Boolean),
     sourceImageUrl: stripWrappingQuotes(draft.sourceImageUrl?.trim()),
-    sourceImageUrls: (draft.sourceImageUrls ?? []).map((url) => stripWrappingQuotes(url?.trim()) ?? "").filter(Boolean),
+    sourceImageUrls: (draft.sourceImageUrls ?? [])
+      .map((url) => stripWrappingQuotes(url?.trim()) ?? "")
+      .filter(Boolean),
   };
 }
 
@@ -99,7 +107,11 @@ function stripWrappingQuotes(value: string | undefined) {
     ["Ã‚Â«", "Ã‚Â»"],
   ];
   for (const [start, end] of pairs) {
-    if (trimmed.startsWith(start) && trimmed.endsWith(end) && trimmed.length >= start.length + end.length) {
+    if (
+      trimmed.startsWith(start) &&
+      trimmed.endsWith(end) &&
+      trimmed.length >= start.length + end.length
+    ) {
       return trimmed.slice(start.length, trimmed.length - end.length).trim();
     }
   }
@@ -107,7 +119,12 @@ function stripWrappingQuotes(value: string | undefined) {
 }
 
 export function ingredientLabel(ingredient: Ingredient) {
-  return [ingredient.quantity, ingredient.unit, ingredient.name, ingredient.note && `(${ingredient.note})`]
+  return [
+    ingredient.quantity,
+    ingredient.unit,
+    ingredient.name,
+    ingredient.note && `(${ingredient.note})`,
+  ]
     .filter(Boolean)
     .join(" ");
 }
@@ -123,36 +140,8 @@ export function recipeMatchesQuery(recipe: Recipe, query: string) {
       recipe.tags.join(" "),
       recipe.ingredients.map((ingredient) => ingredientSearchText(ingredient.name)).join(" "),
       recipe.instructions.join(" "),
-    ].join(" "),
+    ].join(" ")
   );
 
   return searchable.includes(normalized);
-}
-
-export function buildShoppingList(recipes: Recipe[]) {
-  const grouped = new Map<string, ShoppingItem>();
-
-  recipes.forEach((recipe) => {
-    recipe.ingredients.forEach((ingredient) => {
-      const key = canonicalIngredientKey(ingredient.name);
-      const label = ingredientLabel(ingredient);
-      const existing = grouped.get(key);
-
-      if (existing) {
-        existing.label = existing.label.includes(label) ? existing.label : `${existing.label} + ${label}`;
-        existing.recipeIds.push(recipe.id);
-        return;
-      }
-
-      grouped.set(key, {
-        id: createId(),
-        label,
-        checked: false,
-        recipeIds: [recipe.id],
-        pantry: isPantryIngredient(ingredient),
-      });
-    });
-  });
-
-  return [...grouped.values()].sort((a, b) => Number(a.pantry) - Number(b.pantry) || a.label.localeCompare(b.label, "fr"));
 }

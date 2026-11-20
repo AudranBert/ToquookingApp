@@ -1,3 +1,4 @@
+import { CLOUD_CONFIG } from "./config.mjs";
 import { randomUUID } from "node:crypto";
 import { HttpError } from "./validation.mjs";
 
@@ -30,19 +31,19 @@ export class PostgresStore {
 
   async cleanup() {
     // Keep a compact tombstone to prevent another device resurrecting a deleted
-    // recipe. The recipe content itself is permanently removed after seven days.
+    // recipe. The recipe content itself is permanently removed after the configured retention period.
     await this.pool.query(
-      "DELETE FROM toque_shares WHERE (owner, recipe_id) IN (SELECT owner, id FROM toque_recipes WHERE deleted_at <= now() - interval '7 days')"
+      "DELETE FROM toque_shares WHERE (owner, recipe_id) IN (SELECT owner, id FROM toque_recipes WHERE deleted_at <= now() - ($1::int * interval '1 day'))",
+      [CLOUD_CONFIG.trashRetentionDays]
     );
     await this.pool.query(
-      "UPDATE toque_recipes SET payload = NULL WHERE deleted_at <= now() - interval '7 days' AND payload IS NOT NULL"
+      "UPDATE toque_recipes SET payload = NULL WHERE deleted_at <= now() - ($1::int * interval '1 day') AND payload IS NOT NULL",
+      [CLOUD_CONFIG.trashRetentionDays]
     );
   }
 
   async sync(owner, mutations) {
-    const client = await this.pool.connect();
-    try {
-      await client.query("BEGIN");
+    return this.transaction(async (client) => {
       for (const mutation of mutations) {
         // Retried requests must never roll back a newer edit or reset trash age.
         const receipt = await client.query(
@@ -64,13 +65,7 @@ export class PostgresStore {
           );
         }
       }
-      await client.query("COMMIT");
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async recipes(owner) {
@@ -100,14 +95,16 @@ export class PostgresStore {
     const { rows } = await this.pool.query(
       `SELECT id, payload->>'name' AS name, deleted_at
       FROM toque_recipes WHERE owner = $1 AND payload IS NOT NULL
-      AND deleted_at > now() - interval '7 days' ORDER BY deleted_at DESC, id`,
-      [owner]
+      AND deleted_at > now() - ($2::int * interval '1 day') ORDER BY deleted_at DESC, id`,
+      [owner, CLOUD_CONFIG.trashRetentionDays]
     );
     return rows.map((row) => ({
       id: row.id,
       name: row.name,
       deletedAt: new Date(row.deleted_at).toISOString(),
-      expiresAt: new Date(new Date(row.deleted_at).getTime() + 7 * 86400000).toISOString(),
+      expiresAt: new Date(
+        new Date(row.deleted_at).getTime() + CLOUD_CONFIG.trashRetentionDays * 86400000
+      ).toISOString(),
     }));
   }
 
@@ -115,9 +112,9 @@ export class PostgresStore {
     return this.transaction(async (client) => {
       const { rows } = await client.query(
         `SELECT payload, deleted_at,
-        deleted_at > now() - interval '7 days' AS restorable
+        deleted_at > now() - ($3::int * interval '1 day') AS restorable
         FROM toque_recipes WHERE owner = $1 AND id = $2 FOR UPDATE`,
-        [owner, id]
+        [owner, id, CLOUD_CONFIG.trashRetentionDays]
       );
       const row = rows[0];
       if (!row?.payload || (row.deleted_at && !row.restorable))
@@ -173,9 +170,7 @@ export class PostgresStore {
   }
 
   async share(owner, recipe) {
-    const client = await this.pool.connect();
-    try {
-      await client.query("BEGIN");
+    return this.transaction(async (client) => {
       const result = await client.query(
         `INSERT INTO toque_recipes(owner, id, payload) VALUES ($1, $2, $3)
         ON CONFLICT (owner, id) DO UPDATE SET payload = EXCLUDED.payload WHERE toque_recipes.deleted_at IS NULL RETURNING id`,
@@ -187,14 +182,8 @@ export class PostgresStore {
         ON CONFLICT (owner, recipe_id) DO UPDATE SET recipe_id = EXCLUDED.recipe_id RETURNING id`,
         [randomUUID(), owner, recipe.id]
       );
-      await client.query("COMMIT");
       return rows[0].id;
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async sharedRecipe(id) {

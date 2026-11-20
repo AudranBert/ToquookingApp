@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { db } from "../db";
-import { putRecipe, putRecipes, deleteRecipe } from "../cloud/recipeRepository";
+import { putRecipe, putRecipes, deleteRecipe } from "../data/recipeRepository";
 import type { Recipe, RecipeDraft } from "../types";
 import { createId } from "../utils/id";
 import { cleanRecipeDraft, cleanStoredRecipe, nowIso } from "../utils/recipes";

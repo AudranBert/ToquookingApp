@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { putRecipes } from "../cloud/recipeRepository";
+import { putRecipes } from "../data/recipeRepository";
 import { t } from "../i18n";
 import type { Recipe } from "../types";
 import { formatIngredientName } from "../utils/ingredients";

@@ -10,12 +10,11 @@ import { RecipeForm } from "./screens/RecipeForm";
 import { ShoppingScreen } from "./screens/ShoppingScreen";
 import { downloadRecipeDatabaseJson, downloadRecipeImportExample, parseBackupFile, shareRecipesBackup, summarizeBackupImport } from "./utils/backup";
 import {
-  clearRecipeShareFromLocation,
-  readRecipeShareFromLocation,
   copyRecipeShareLink,
   shareRecipeText,
   sharedRecipeToImport,
-} from "./utils/recipeShare";
+} from "./utils/recipeSharing";
+import { clearRecipeShareFromLocation, readRecipeShareFromLocation } from "./utils/legacyRecipeLink";
 import { useStatus } from "./hooks/useStatus";
 import { useRecipes } from "./hooks/useRecipes";
 import { useRecipeFilters } from "./hooks/useRecipeFilters";
@@ -27,7 +26,7 @@ import { t } from "./i18n";
 import type { Panel, Recipe } from "./types";
 import { buildTagColorMap } from "./utils/tagStyle";
 import { useAppDialog } from "./hooks/useAppDialog";
-import { putRecipe } from "./cloud/recipeRepository";
+import { putRecipe } from "./data/recipeRepository";
 import { useCloudBackup } from "./hooks/useCloudBackup";
 import { createCloudShare, readCloudShareFromLocation } from "./cloud/sharing";
 import { AppDialog } from "./components/AppDialog";

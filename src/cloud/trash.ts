@@ -1,7 +1,7 @@
 import { db } from "../db";
-import { cloudRequest } from "./client";
+import { cloudRequest } from "./apiClient";
 import { cloudTarget, type CloudSettings } from "./settings";
-import { flushCloudQueue } from "./sync";
+import { flushCloudQueue } from "./queue";
 import { parseCloudRecipe } from "./validation";
 import { preserveLocalImages } from "./recipePayload";
 import type { CloudTrashEntry } from "./types";

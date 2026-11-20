@@ -1,3 +1,4 @@
+import { CLOUD_CONFIG } from "./config.mjs";
 import pg from "pg";
 import { createServer } from "./server.mjs";
 import { PostgresStore } from "./postgres-store.mjs";
@@ -5,9 +6,9 @@ import { PostgresStore } from "./postgres-store.mjs";
 const pool = process.env.DATABASE_URL
   ? new pg.Pool({
       connectionString: process.env.DATABASE_URL,
-      max: 5,
-      connectionTimeoutMillis: 10000,
-      statement_timeout: 15000,
+      max: CLOUD_CONFIG.databasePoolSize,
+      connectionTimeoutMillis: CLOUD_CONFIG.databaseConnectionTimeoutMs,
+      statement_timeout: CLOUD_CONFIG.databaseStatementTimeoutMs,
     })
   : undefined;
 pool?.on("error", (error) => console.error("Cloud pool error", error.code ?? error.name));
@@ -28,7 +29,7 @@ async function maintain() {
   }
 }
 await maintain();
-const maintenance = setInterval(maintain, 60 * 1000);
+const maintenance = setInterval(maintain, CLOUD_CONFIG.maintenanceIntervalMs);
 maintenance.unref();
 const server = createServer({
   store,
@@ -37,7 +38,7 @@ const server = createServer({
     .map((value) => value.trim())
     .filter(Boolean),
 });
-server.requestTimeout = 120000;
+server.requestTimeout = CLOUD_CONFIG.requestTimeoutMs;
 server.listen(Number(process.env.PORT ?? 3001), "0.0.0.0", () =>
   console.log("Toquooking cloud server ready")
 );

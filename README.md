@@ -125,3 +125,20 @@ TO DO:
 
 - Recipe tools/equipment support: add a tools field (oven, air fryer, blender, etc.) with filtering and batch tagging.
 - Smart scaling + unit conversion: scale servings with better fractional display and metric/imperial conversion.
+
+## Code Organization
+
+- `src/screens/`: application screens.
+- `src/components/`: UI components.
+- `src/hooks/`: React state and interactions.
+- `src/data/recipeRepository.ts`: local recipe writes and atomic cloud queue updates.
+- `src/cloud/`: optional API access, upload queue, manual transfers, sharing and trash.
+- `src/importer.ts`: public import entry point; helpers and site parsers live in `src/import/`.
+- `src/utils/`: focused helpers, including shopping lists, image compression, backups and text sharing.
+- `src/utils/legacyRecipeLink.ts`: compatibility reader for older embedded recipe links.
+- `src/styles/`: base, responsive and backup styles, loaded in order by `src/styles.css`.
+- `backend/`: optional Node server and PostgreSQL storage.
+
+Cloud browser settings are in `src/cloud/config.ts`; server limits and maintenance settings are in `backend/config.mjs`. Image compression settings remain in `src/utils/imageCompression.ts`. Private keys and database identifiers retain their existing storage names for compatibility.
+
+See [cloud documentation](docs/cloud.md) for configuration and deployment.

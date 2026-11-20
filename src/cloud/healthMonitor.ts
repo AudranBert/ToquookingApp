@@ -1,4 +1,4 @@
-export const CLOUD_HEALTH_INTERVAL_MS = 10000;
+import { CLOUD_CONFIG } from "./config";
 
 /** Poll while the backup screen is open, without overlapping slow requests. */
 export function startHealthPolling(check: () => Promise<void>) {
@@ -16,7 +16,7 @@ export function startHealthPolling(check: () => Promise<void>) {
   void poll();
   const timer = setInterval(() => {
     void poll();
-  }, CLOUD_HEALTH_INTERVAL_MS);
+  }, CLOUD_CONFIG.healthIntervalMs);
   return () => {
     stopped = true;
     clearInterval(timer);

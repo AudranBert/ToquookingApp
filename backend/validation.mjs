@@ -1,3 +1,4 @@
+import { CLOUD_CONFIG } from "./config.mjs";
 export class HttpError extends Error {
   constructor(status, message) {
     super(message);
@@ -5,14 +6,14 @@ export class HttpError extends Error {
   }
 }
 
-function text(value, max = 20000) {
+function text(value, max = CLOUD_CONFIG.maxTextCharacters) {
   if (typeof value !== "string" || value.length > max)
     throw new HttpError(400, "Invalid text field");
   return value;
 }
 
 function image(value) {
-  const result = text(value, 8 * 1024 * 1024);
+  const result = text(value, CLOUD_CONFIG.maxImageCharacters);
   if (
     result &&
     !/^https?:\/\//i.test(result) &&
@@ -92,13 +93,17 @@ export function validateRecipe(raw) {
     (value) => typeof value === "string" && value.trim()
   );
   if (cover) recipe.imageUrl = image(cover.trim());
-  if (Buffer.byteLength(JSON.stringify(recipe)) > 12 * 1024 * 1024)
-    throw new HttpError(413, "Recipe exceeds 12 MB");
+  if (Buffer.byteLength(JSON.stringify(recipe)) > CLOUD_CONFIG.maxRecipeBytes)
+    throw new HttpError(413, `Recipe exceeds ${CLOUD_CONFIG.maxRecipeBytes} bytes`);
   return recipe;
 }
 
 export function validateMutations(body) {
-  if (!Array.isArray(body?.mutations) || body.mutations.length < 1 || body.mutations.length > 25)
+  if (
+    !Array.isArray(body?.mutations) ||
+    body.mutations.length < 1 ||
+    body.mutations.length > CLOUD_CONFIG.maxBatchRecipes
+  )
     throw new HttpError(400, "Invalid batch");
   return body.mutations.map((raw) => {
     if (!raw || !["put", "delete"].includes(raw.operation))

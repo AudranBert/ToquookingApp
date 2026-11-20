@@ -1,7 +1,8 @@
+import { CLOUD_CONFIG } from "../cloud/config";
 import { useCallback, useEffect, useState } from "react";
 import { liveQuery } from "dexie";
 import { db } from "../db";
-import { checkCloudHealth } from "../cloud/client";
+import { checkCloudHealth } from "../cloud/apiClient";
 import { startHealthPolling } from "../cloud/healthMonitor";
 import {
   cloudTarget,
@@ -12,7 +13,8 @@ import {
   writeCloudSettings,
   type CloudSettings,
 } from "../cloud/settings";
-import { downloadCloudRecipes, flushCloudQueue, uploadLocalRecipes } from "../cloud/sync";
+import { flushCloudQueue } from "../cloud/queue";
+import { downloadCloudRecipes, uploadLocalRecipes } from "../cloud/transfers";
 import type { CloudHealth } from "../cloud/types";
 import { t } from "../i18n";
 import { useCloudTrash } from "./useCloudTrash";
@@ -80,7 +82,7 @@ export function useCloudBackup(
       } catch {
         /* Keep durable mutations for the next attempt. */
       }
-      if (!stopped) timer = setTimeout(retry, 30000);
+      if (!stopped) timer = setTimeout(retry, CLOUD_CONFIG.retryIntervalMs);
     };
     const subscription = liveQuery(() =>
       db.cloudQueue.where("target").equals(target).count()
@@ -90,7 +92,7 @@ export function useCloudBackup(
       if (count)
         debounce = setTimeout(() => {
           void flushCloudQueue().catch(() => undefined);
-        }, 750);
+        }, CLOUD_CONFIG.uploadDebounceMs);
     });
     const online = () => {
       clearTimeout(timer);

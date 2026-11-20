@@ -79,7 +79,7 @@ async function run() {
     await Promise.all([
       bundleEntry("src/importer.ts", importerOut),
       bundleEntry("src/utils/backup.ts", backupOut),
-      bundleEntry("src/utils/recipeShare.ts", shareOut),
+      bundleEntry("src/utils/legacyRecipeLink.ts", shareOut),
       bundleEntry("src/exporters.ts", exportersOut),
     ]);
 

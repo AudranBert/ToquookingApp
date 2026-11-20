@@ -1,3 +1,4 @@
+import { CLOUD_CONFIG } from "./config";
 import { readCloudSettings, type CloudSettings } from "./settings";
 import type { CloudHealth } from "./types";
 
@@ -14,7 +15,7 @@ export async function cloudRequest<T>(
       Authorization: `Bearer ${settings.key}`,
     },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    signal: AbortSignal.timeout(options.timeout ?? 90000),
+    signal: AbortSignal.timeout(options.timeout ?? CLOUD_CONFIG.requestTimeoutMs),
     cache: "no-store",
     credentials: "omit",
   });
@@ -28,7 +29,7 @@ export async function checkCloudHealth(): Promise<CloudHealth> {
   try {
     const response = await fetch(`${apiUrl}/health`, {
       cache: "no-store",
-      signal: AbortSignal.timeout(9000),
+      signal: AbortSignal.timeout(CLOUD_CONFIG.healthTimeoutMs),
     });
     const health = await response.json();
     return {

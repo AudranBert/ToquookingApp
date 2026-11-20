@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { db } from "../db";
-import { putRecipes } from "../cloud/recipeRepository";
+import { putRecipes } from "../data/recipeRepository";
 import { t } from "../i18n";
 import type { Recipe, RecipeTag } from "../types";
 import { DEFAULT_RECIPE_TOOLS } from "../constants";

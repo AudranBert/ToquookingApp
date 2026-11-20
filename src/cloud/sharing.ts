@@ -1,6 +1,7 @@
+import { CLOUD_CONFIG } from "./config";
 import type { Recipe } from "../types";
 import { parseCloudRecipe } from "./validation";
-import { cloudRequest } from "./client";
+import { cloudRequest } from "./apiClient";
 import { toCloudRecipe } from "./recipePayload";
 import {
   generateCloudKey,
@@ -36,7 +37,7 @@ export async function readCloudShareFromLocation(): Promise<Recipe | null> {
   const response = await fetch(`${server}/shares/${id}`, {
     cache: "no-store",
     credentials: "omit",
-    signal: AbortSignal.timeout(90000),
+    signal: AbortSignal.timeout(CLOUD_CONFIG.requestTimeoutMs),
   });
   if (!response.ok) throw new Error("Share unavailable");
   const { recipe } = await response.json();

@@ -1,3 +1,4 @@
+import { CLOUD_CONFIG } from "./config";
 export type CloudServerMode = "default" | "custom" | "disabled";
 export type CloudSettings = {
   apiUrl: string;
@@ -75,7 +76,7 @@ export async function loadCloudDefaults() {
   try {
     const response = await fetch(`${import.meta.env.BASE_URL}online-config.json`, {
       cache: "no-store",
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(CLOUD_CONFIG.defaultsTimeoutMs),
     });
     if (!response.ok) return getDefaultCloudServer();
     const config = await response.json();

@@ -11,7 +11,12 @@ Follow this first, then implement changes.
 
 ## Project Structure
 - `src/`: React frontend app.
-- `src/importer.ts`: Main URL/text recipe import pipeline.
+- `src/importer.ts`: Public entry point for the URL/text recipe import pipeline.
+- `src/import/`: Parsing helpers, structured data, merging and source fetching.
+- `src/import/domains/registry.ts`: Domain parser registration; site-specific parsers live alongside it.
+- `src/data/recipeRepository.ts`: Atomic local recipe writes and cloud queue updates.
+- `src/cloud/`: Optional cloud API, queue, transfers and settings.
+- `src/styles.css`: Ordered stylesheet imports; rules live in `src/styles/`.
 - `src/hooks/useRecipeDraft.ts`: Import UX status/loading text.
 - `src/utils/ingredients.ts` + `src/utils/ingredientParser.ts`: Ingredient parsing.
 - `src/origins.ts`: Origin mapping.
@@ -31,7 +36,7 @@ Follow this first, then implement changes.
 4. Use text/markdown fallback only when needed.
 5. Merge and sanitize result.
 
-Known domain parsers currently registered in `DOMAIN_PARSERS`:
+Known domain parsers currently registered in `DOMAIN_PARSERS` in `src/import/domains/registry.ts`:
 - `marmiton.org`
 - `cuisine-libre.org`
 - `cuisineaz.com`

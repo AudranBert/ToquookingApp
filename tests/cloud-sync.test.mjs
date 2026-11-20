@@ -21,7 +21,7 @@ test("frontend: durable queue, offline replay, edit during upload, scope isolati
   const outfile = path.join(folder, "client.mjs");
   await build({
     stdin: {
-      contents: `export { db } from './src/db'; export * from './src/cloud/settings'; export * from './src/cloud/recipeRepository'; export * from './src/cloud/sync'; export * from './src/cloud/sharing'; export * from './src/cloud/validation'; export * from './src/cloud/healthMonitor'; export * from './src/cloud/recipePayload'; export * from './src/cloud/trash';`,
+      contents: `export { db } from './src/db'; export * from './src/cloud/settings'; export * from './src/data/recipeRepository'; export * from './src/cloud/queue'; export * from './src/cloud/transfers'; export * from './src/cloud/sharing'; export * from './src/cloud/validation'; export * from './src/cloud/healthMonitor'; export * from './src/cloud/recipePayload'; export * from './src/cloud/trash';`,
       resolveDir: process.cwd(),
     },
     bundle: true,
