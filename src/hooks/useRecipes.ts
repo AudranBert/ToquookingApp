@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { db } from "../db";
+import { putRecipe, putRecipes, deleteRecipe } from "../data/recipeRepository";
 import type { Recipe, RecipeDraft } from "../types";
 import { createId } from "../utils/id";
-import { cleanRecipeDraft, nowIso } from "../utils/recipes";
+import { cleanRecipeDraft, cleanStoredRecipe, nowIso } from "../utils/recipes";
 import { parseBackupFile } from "../utils/backup";
 import type { StatusApi } from "./useStatus";
 
@@ -10,7 +11,12 @@ export function useRecipes(status: StatusApi) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
 
   const refresh = useCallback(async (nextSelectedId?: string) => {
-    const next = await db.recipes.orderBy("updatedAt").reverse().toArray();
+    const stored = await db.recipes.orderBy("updatedAt").reverse().toArray();
+    const next = stored.map(cleanStoredRecipe);
+    const normalized = next.filter((recipe, index) => JSON.stringify(recipe) !== JSON.stringify(stored[index]));
+    if (normalized.length > 0) {
+      await db.recipes.bulkPut(normalized);
+    }
     setRecipes(next);
     return nextSelectedId;
   }, []);
@@ -35,7 +41,7 @@ export function useRecipes(status: StatusApi) {
       };
 
       try {
-        await db.recipes.put(recipe);
+        await putRecipe(recipe);
         await refresh();
         status.setStatus(editingId ? "Recette mise à jour." : "Recette enregistrée.");
         return recipe;
@@ -43,7 +49,7 @@ export function useRecipes(status: StatusApi) {
         try {
           if (db.isOpen()) db.close();
           await db.open();
-          await db.recipes.put(recipe);
+          await putRecipe(recipe);
           await refresh();
           status.setStatus(editingId ? "Recette mise à jour." : "Recette enregistrée.");
           return recipe;
@@ -61,7 +67,7 @@ export function useRecipes(status: StatusApi) {
 
   const remove = useCallback(
     async (recipe: Recipe) => {
-      await db.recipes.delete(recipe.id);
+      await deleteRecipe(recipe.id);
       await refresh();
       status.setStatus("Recette supprimée.");
       return true;
@@ -79,7 +85,7 @@ export function useRecipes(status: StatusApi) {
         updatedAt: nowIso(),
       };
 
-      await db.recipes.put(copy);
+      await putRecipe(copy);
       await refresh();
       status.setStatus("Recette dupliquée.");
       return copy;
@@ -91,7 +97,7 @@ export function useRecipes(status: StatusApi) {
     async (file: File) => {
       try {
         const imported = await parseBackupFile(file, await db.recipes.toArray());
-        await db.recipes.bulkPut(imported.recipes);
+        await putRecipes(imported.recipes.map(cleanStoredRecipe));
         const existingTags = await db.tags.toArray();
         const existingByName = new Map(existingTags.map((tag) => [tag.name.toLowerCase(), tag]));
         await db.tags.bulkPut(

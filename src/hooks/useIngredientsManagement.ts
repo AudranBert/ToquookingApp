@@ -1,7 +1,8 @@
 import { useMemo } from "react";
-import { db } from "../db";
+import { putRecipes } from "../data/recipeRepository";
 import { t } from "../i18n";
 import type { Recipe } from "../types";
+import { formatIngredientName } from "../utils/ingredients";
 import { nowIso } from "../utils/recipes";
 import { normalizeText } from "../utils/text";
 import type { StatusApi } from "./useStatus";
@@ -31,14 +32,14 @@ export function useIngredientsManagement(recipes: Recipe[], status: StatusApi, o
   }, [recipes]);
 
   async function renameIngredient(oldName: string, newNameRaw: string) {
-    const newName = newNameRaw.trim();
+    const newName = formatIngredientName(newNameRaw);
     if (!newName || normalizeText(oldName) === normalizeText(newName)) return;
     const oldKey = normalizeText(oldName);
 
     const affected = recipes.filter((recipe) => recipe.ingredients.some((ingredient) => normalizeText(ingredient.name) === oldKey));
     if (affected.length === 0) return;
 
-    await db.recipes.bulkPut(
+    await putRecipes(
       affected.map((recipe) => ({
         ...recipe,
         ingredients: recipe.ingredients.map((ingredient) =>
@@ -60,7 +61,7 @@ export function useIngredientsManagement(recipes: Recipe[], status: StatusApi, o
     const key = normalizeText(name);
     const affected = recipes.filter((recipe) => recipe.ingredients.some((ingredient) => normalizeText(ingredient.name) === key));
     if (affected.length === 0) return;
-    await db.recipes.bulkPut(
+    await putRecipes(
       affected.map((recipe) => ({
         ...recipe,
         ingredients: recipe.ingredients.filter((ingredient) => normalizeText(ingredient.name) !== key),

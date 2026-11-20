@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: toquooking
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm run start:cloud
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: ALLOWED_ORIGINS
+        value: https://audranbert.github.io,http://127.0.0.1:5174,http://localhost:5174,http://127.0.0.1:5173,http://localhost:5173
+      - key: DATABASE_URL
+        sync: false

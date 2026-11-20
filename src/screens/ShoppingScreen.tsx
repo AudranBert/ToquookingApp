@@ -175,14 +175,14 @@ async function shareShoppingListText(text: string, filename: string) {
     window.location.href = `sms:?&body=${encodeURIComponent(text)}`;
     return "sms";
   }
-  try { await copyText(text); return "copied"; } catch {}
+  try { await copyText(text); return "copied"; } catch { /* Fall back to a downloadable file. */ }
   downloadTextFile(text, filename);
   return "downloaded";
 }
 
 async function copyText(text: string) {
   if (navigator.clipboard?.writeText) {
-    try { await navigator.clipboard.writeText(text); return; } catch {}
+    try { await navigator.clipboard.writeText(text); return; } catch { /* Try the legacy clipboard fallback. */ }
   }
   const textarea = document.createElement("textarea");
   textarea.value = text;

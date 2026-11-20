@@ -4,12 +4,14 @@ import { ArrowLeft, ChefHat, Clock, Filter, Flag, Flame, Hourglass, Search, Snow
 import { POPULAR_RECIPE_ORIGINS, RECIPE_ORIGIN_GROUPS, RECIPE_ORIGINS } from "../origins";
 import { RecipeDetail } from "../components/RecipeDetail";
 import { SectionToggleHeader } from "../components/SectionToggleHeader";
-import { SEASONAL_THRESHOLDS, SEASONAL_THRESHOLD_LABELS } from "../constants";
+import { DEFAULT_RECIPE_TOOLS, SEASONAL_THRESHOLDS, SEASONAL_THRESHOLD_LABELS } from "../constants";
 import type { Recipe, RegimeFilter, SeasonalThreshold } from "../types";
 import { primaryRecipeImageUrl, proxiedImageUrl } from "../utils/images";
+import { displayTagName } from "../utils/tags";
 import { normalizeText } from "../utils/text";
 import { getTagStyle } from "../utils/tagStyle";
 import type { TagCategory } from "../hooks/useTags";
+import type { LibraryFilterPreset } from "../hooks/useRecipeFilters";
 import { t } from "../i18n";
 
 const REGIME_FILTER_OPTIONS: { value: RegimeFilter; label: string }[] = [
@@ -31,6 +33,9 @@ export type LibraryFilters = {
   allTags: string[];
   tagColorByName: Map<string, string>;
   tagCategories: TagCategory[];
+  excludedTagFilters: string[];
+  filterPresets: LibraryFilterPreset[];
+  activePresetId: LibraryFilterPreset["id"] | "";
 };
 
 export type LibraryFilterHandlers = {
@@ -41,6 +46,8 @@ export type LibraryFilterHandlers = {
   onNoHeatingOnlyChange: (enabled: boolean) => void;
   onMaxTotalTimeChange: (minutes?: number) => void;
   onSeasonalThresholdChange: (threshold: SeasonalThreshold) => void;
+  onApplyPreset: (preset: LibraryFilterPreset) => void;
+  onClearFilters: () => void;
 };
 
 export type LibraryRecipeActions = {
@@ -50,7 +57,7 @@ export type LibraryRecipeActions = {
   onExportPdf: () => void;
   onShareImage: () => void;
   onShareText: () => void;
-  onExportRecipeFile: () => void;
+  onShareLink: () => void;
   onSelectRecipe: (id: string) => void;
   onShowList: () => void;
 };
@@ -105,7 +112,7 @@ export function LibraryScreen({
             onExportPdf={actions.onExportPdf}
             onShareImage={actions.onShareImage}
             onShareText={actions.onShareText}
-            onExportRecipeFile={actions.onExportRecipeFile}
+            onShareLink={actions.onShareLink}
           />
         </div>
       ) : (
@@ -127,6 +134,15 @@ function LibrarySidebar({ filters, handlers, filteredCount, seasonalRecipeCount,
   const [ingredientsOpen, setIngredientsOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
   const [originsOpen, setOriginsOpen] = useState(false);
+  const hasActiveFilters =
+    Boolean(filters.query) ||
+    filters.tagFilters.length > 0 ||
+    filters.excludedTagFilters.length > 0 ||
+    Boolean(filters.originFilter) ||
+    Boolean(filters.regimeFilter) ||
+    filters.noHeatingOnly ||
+    Boolean(filters.maxTotalTime) ||
+    filters.seasonalThreshold > 0;
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(min-width: 861px)");
@@ -147,6 +163,27 @@ function LibrarySidebar({ filters, handlers, filteredCount, seasonalRecipeCount,
           {t("library.filters.count", { count: filteredCount })}
           {filters.seasonalThreshold > 0 ? ` ${t("library.filters.seasonalCount", { threshold: filters.seasonalThreshold, month: seasonMonthName })}` : ""}
         </p>
+        <div className="filter-presets" aria-label={t("library.presets.title")}>
+          <span className="filter-presets__title">{t("library.presets.title")}</span>
+          <div className="origin-filter__options">
+            {filters.filterPresets.map((preset) => (
+              <button
+                className={`origin-filter__option${preset.id === filters.activePresetId ? " origin-filter__option--active" : ""}`}
+                key={preset.id}
+                type="button"
+                onClick={() => handlers.onApplyPreset(preset)}
+                aria-pressed={preset.id === filters.activePresetId}
+              >
+                {t(preset.labelKey)}
+              </button>
+            ))}
+          </div>
+          {hasActiveFilters && (
+            <button className="origin-filter__clear" type="button" onClick={handlers.onClearFilters}>
+              <X size={14} /> {t("library.filters.clear")}
+            </button>
+          )}
+        </div>
         <details className="advanced-filters" open={advancedOpen} onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}>
           <summary><span className="label-with-icon"><Filter size={16} /> {t("library.filters.title")}</span></summary>
           <div className="advanced-filters__body">
@@ -197,12 +234,12 @@ function LibrarySidebar({ filters, handlers, filteredCount, seasonalRecipeCount,
                 <div className="tag-filter__groups filter-group-content">
                   {filters.tagCategories.filter((category) => normalizeText(category.name) !== normalizeText("Régime alimentaire")).length > 0 ? (
                     filters.tagCategories.filter((category) => normalizeText(category.name) !== normalizeText("Régime alimentaire")).map((category) => (
-                      <section className="origin-filter__group" key={category.name}>
+                      isHiddenTagFilterCategory(category.name) ? null : <section className="origin-filter__group" key={category.name}>
                         <h3>{category.name}</h3>
                         <div className="tag-filter__options">
                           {category.tags.map((tag) => {
                             const selected = filters.tagFilters.includes(tag.name);
-                            return <button className={`origin-filter__option${selected ? " origin-filter__option--active" : ""}`} key={tag.id} type="button" style={selected ? undefined : getTagStyle(tag.name, filters.tagColorByName, tag.color)} onClick={() => handlers.onTagFiltersChange(selected ? filters.tagFilters.filter((selectedTag) => selectedTag !== tag.name) : [...filters.tagFilters, tag.name])} aria-pressed={selected}>{tag.name}</button>;
+                            return <button className={`origin-filter__option${selected ? " origin-filter__option--active" : ""}`} key={tag.id} type="button" style={selected ? undefined : getTagStyle(tag.name, filters.tagColorByName, tag.color)} onClick={() => handlers.onTagFiltersChange(selected ? filters.tagFilters.filter((selectedTag) => selectedTag !== tag.name) : [...filters.tagFilters, tag.name])} aria-pressed={selected}>{displayTagName(tag.name)}</button>;
                           })}
                         </div>
                       </section>
@@ -219,7 +256,11 @@ function LibrarySidebar({ filters, handlers, filteredCount, seasonalRecipeCount,
 }
 
 function toolTags(categories: TagCategory[]) {
-  return categories.find((category) => normalizeText(category.name) === normalizeText(t("manage.category.tools")))?.tags ?? [];
+  const categorized = categories.find((category) => normalizeText(category.name) === normalizeText(t("manage.category.tools")))?.tags;
+  if (categorized && categorized.length > 0) return categorized;
+
+  const defaultToolKeys = new Set(DEFAULT_RECIPE_TOOLS.map((tool) => normalizeText(tool)));
+  return categories.flatMap((category) => category.tags).filter((tag) => defaultToolKeys.has(normalizeText(tag.name)));
 }
 
 function isToolTag(tagName: string, categories: TagCategory[]) {
@@ -228,7 +269,12 @@ function isToolTag(tagName: string, categories: TagCategory[]) {
 }
 
 function toolLabel(name: string) {
-  return t(`recipe.tools.${name}` as never);
+  return displayTagName(name);
+}
+
+function isHiddenTagFilterCategory(name: string) {
+  const normalized = normalizeText(name);
+  return normalized === normalizeText("Regime alimentaire") || normalized === normalizeText("RÃ©gime alimentaire") || normalized === normalizeText(t("manage.category.tools"));
 }
 
 function OriginFilterPicker({ value, onChange, open, onToggle }: { value: string; onChange: (origin: string) => void; open: boolean; onToggle: () => void; }) {
@@ -278,7 +324,7 @@ function RecipeGrid({ recipes, seasonalMatchCounts, seasonalRecipeIds, onSelectR
             {recipe.restTime ? <span aria-label={`${t("recipe.detail.rest")} ${recipe.restTime} min`} title={t("recipe.detail.rest")}><Hourglass size={15} /> {recipe.restTime} min</span> : null}
             <span aria-label={`${t("recipe.detail.total")} ${recipe.totalTime ? `${recipe.totalTime} min` : t("library.time.unknown")}`} title={t("recipe.detail.total")}><Clock size={15} /> {recipe.totalTime ? `${recipe.totalTime} min` : "-"}</span>
           </span>
-          {(recipe.tags.length > 0 || seasonalRecipeIds.has(recipe.id)) && <span className="chip-list">{seasonalRecipeIds.has(recipe.id) && <span className="chip chip--seasonal">{seasonalMatchCounts.get(recipe.id)} {t("recipe.detail.seasonal")}</span>}{recipe.tags.slice(0, 4).map((tag) => <span className="chip" key={tag} style={getTagStyle(tag, tagColorByName)}>{tag}</span>)}</span>}
+          {(recipe.tags.length > 0 || seasonalRecipeIds.has(recipe.id)) && <span className="chip-list">{seasonalRecipeIds.has(recipe.id) && <span className="chip chip--seasonal">{seasonalMatchCounts.get(recipe.id)} {t("recipe.detail.seasonal")}</span>}{recipe.tags.slice(0, 4).map((tag) => <span className="chip" key={tag} style={getTagStyle(tag, tagColorByName)}>{displayTagName(tag)}</span>)}</span>}
         </button>
       ))}
     </section>

@@ -65,6 +65,14 @@ export function ingredientSearchText(value: string) {
   return `${normalizeText(value)} ${canonicalIngredientKey(value).replace(/_/g, " ")}`;
 }
 
+export function formatIngredientName(value: string) {
+  const trimmed = value.trim().replace(/\s+/g, " ");
+  if (!trimmed) return "";
+
+  const lowercased = trimmed.toLocaleLowerCase("fr");
+  return `${lowercased.charAt(0).toLocaleUpperCase("fr")}${lowercased.slice(1)}`;
+}
+
 export function isPantryIngredient(ingredient: Pick<Ingredient, "name" | "quantity" | "unit"> | string) {
   const value = typeof ingredient === "string" ? ingredient : ingredient.name;
   const key = canonicalIngredientKey(value);

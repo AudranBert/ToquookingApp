@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { importRecipeFromText, importRecipeFromUrl } from "../importer";
 import type { ParsedRecipe, Recipe, RecipeDraft, ReimportMode } from "../types";
@@ -14,19 +14,40 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
   const [importUrl, setImportUrl] = useState("");
   const [importText, setImportText] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const importVersion = useRef(0);
+  const baseline = useRef(JSON.stringify(draft));
+  const hasChanges = JSON.stringify(draft) !== baseline.current || Boolean(importText.trim() || importUrl.trim());
+
+  useEffect(() => {
+    if (!hasChanges) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [hasChanges]);
 
   function startNew() {
+    importVersion.current++;
+    setIsImporting(false);
     setEditingId(null);
-    setDraft(createEmptyDraft());
+    const empty = createEmptyDraft();
+    baseline.current = JSON.stringify(empty);
+    setDraft(empty);
     setImportWarnings([]);
     setImportText("");
+    setImportUrl("");
   }
 
   function startEdit(recipe: Recipe) {
+    importVersion.current++;
+    setIsImporting(false);
     setEditingId(recipe.id);
-    setDraft(recipeToDraft(recipe));
+    const next = recipeToDraft(recipe);
+    baseline.current = JSON.stringify(next);
+    setDraft(next);
     setImportWarnings([]);
     setImportText("");
+    setImportUrl("");
   }
 
   async function importFromUrl() {
@@ -108,22 +129,31 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
     errorStatus: string;
     apply: (imported: RecipeDraft) => void;
   }) {
+    if (isImporting) return false;
+    const version = ++importVersion.current;
+    setIsImporting(true);
     status.setStatus(loadingStatus);
     try {
       const parsed = await importRecipeFromUrl(url);
+      if (version !== importVersion.current) return false;
       const imported = parsedToDraft(parsed, url, allTags);
       apply(imported);
       setImportWarnings(parsed.warnings ?? []);
-      status.setStatus(successStatus);
+      status.setStatus(parsed.ingredients?.length || parsed.instructions?.length ? successStatus : errorStatus);
       return true;
     } catch (error) {
+      if (version !== importVersion.current) return false;
       status.setStatus(`${errorStatus} (${classifyImportError(error)})`);
       return false;
+    } finally {
+      if (version === importVersion.current) setIsImporting(false);
     }
   }
 
   return {
     draft,
+    hasChanges,
+    isImporting,
     setDraft,
     editingId,
     importWarnings,

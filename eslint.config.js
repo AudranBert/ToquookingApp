@@ -32,5 +32,9 @@ export default tseslint.config(
       "no-empty": "warn",
       "no-useless-assignment": "warn",
     },
+  },
+  {
+    files: ["backend/**/*.mjs", "tests/**/*.mjs"],
+    languageOptions: { ecmaVersion: 2022, globals: globals.node },
   }
 );

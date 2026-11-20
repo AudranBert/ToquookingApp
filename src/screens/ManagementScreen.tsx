@@ -5,6 +5,7 @@ import { t } from "../i18n";
 import type { IngredientUsage } from "../hooks/useIngredientsManagement";
 import type { TagCategory } from "../hooks/useTags";
 import type { RecipeTag } from "../types";
+import { displayTagName } from "../utils/tags";
 
 type Props = {
   tags: RecipeTag[];
@@ -20,7 +21,7 @@ type Props = {
   onMergeIngredients: (sourceName: string, targetName: string) => Promise<unknown>;
   onDeleteIngredient: (name: string) => Promise<unknown>;
   onConfirm: (title: string, message?: string, danger?: boolean) => Promise<boolean>;
-  onPrompt: (title: string, defaultValue?: string, message?: string) => Promise<string | null>;
+  onPrompt: (title: string, defaultValue?: string, message?: string, suggestions?: string[]) => Promise<string | null>;
 };
 
 export function ManagementScreen({
@@ -114,15 +115,15 @@ export function ManagementScreen({
           <div className="stack">
             {ingredients.map((ingredient) => (
               <div className="panel management-line" key={ingredient.name}>
-                <span>{ingredient.name} <span className="muted">({ingredient.usageCount})</span></span>
-                <div className="action-bar">
-                  <button className="button button--ghost management-action-button" type="button" onClick={async () => { const next = await onPrompt(t("manage.prompt.newName"), ingredient.name); if (next) await onRenameIngredient(ingredient.name, next); }}>
+                <span className="management-line__label">{ingredient.name} <span className="muted">({ingredient.usageCount})</span></span>
+                <div className="action-bar management-line__actions">
+                  <button className="button button--ghost management-action-button" aria-label={t("manage.tag.rename")} title={t("manage.tag.rename")} type="button" onClick={async () => { const next = await onPrompt(t("manage.prompt.newName"), ingredient.name); if (next) await onRenameIngredient(ingredient.name, next); }}>
                     <Pencil size={16} /><span className="management-action-button__label">{t("manage.tag.rename")}</span>
                   </button>
-                  <button className="button button--ghost management-action-button" type="button" onClick={async () => { const target = await onPrompt(t("manage.prompt.mergeTo", { name: ingredient.name }), ""); if (target) await onMergeIngredients(ingredient.name, target); }}>
+                  <button className="button button--ghost management-action-button" aria-label={t("manage.tag.merge")} title={t("manage.tag.merge")} type="button" onClick={async () => { const target = await onPrompt(t("manage.prompt.mergeTo", { name: ingredient.name }), "", undefined, ingredients.filter((item) => item.name !== ingredient.name).map((item) => item.name)); if (target) await onMergeIngredients(ingredient.name, target); }}>
                     <GitMerge size={16} /><span className="management-action-button__label">{t("manage.tag.merge")}</span>
                   </button>
-                  <button className="button button--danger management-action-button" type="button" onClick={async () => { if (!await onConfirm(t("manage.confirm.deleteIngredientGlobal", { name: ingredient.name }), undefined, true)) return; await onDeleteIngredient(ingredient.name); }}>
+                  <button className="button button--danger management-action-button" aria-label={t("manage.tag.delete")} title={t("manage.tag.delete")} type="button" onClick={async () => { if (!await onConfirm(t("manage.confirm.deleteIngredientGlobal", { name: ingredient.name }), undefined, true)) return; await onDeleteIngredient(ingredient.name); }}>
                     <Trash2 size={16} /><span className="management-action-button__label">{t("manage.tag.delete")}</span>
                   </button>
                 </div>
@@ -145,11 +146,11 @@ function TagRow({ tag, allTags, protectedTag, onRenameTag, onMergeTags, onDelete
   onDeleteTag: (name: string) => Promise<unknown>;
   onUpdateTagMeta: (name: string, meta: { category?: string; color?: string }) => Promise<unknown>;
   onConfirm: (title: string, message?: string, danger?: boolean) => Promise<boolean>;
-  onPrompt: (title: string, defaultValue?: string, message?: string) => Promise<string | null>;
+  onPrompt: (title: string, defaultValue?: string, message?: string, suggestions?: string[]) => Promise<string | null>;
 }) {
   return (
     <div className="panel management-tag-card">
-      <span className="management-tag-name">{tag.name}{tag.color && <span className="chip" style={{ background: tag.color, color: "#111", borderColor: tag.color }} />}</span>
+      <span className="management-tag-name">{displayTagName(tag.name)}{tag.color && <span className="chip" style={{ background: tag.color, color: "#111", borderColor: tag.color }} />}</span>
       <div className="action-bar">
         <select value={tag.category ?? ""} onChange={(event) => void onUpdateTagMeta(tag.name, { category: event.target.value, color: tag.color })}>
           <option value="">{t("manage.tag.none")}</option>
@@ -157,13 +158,13 @@ function TagRow({ tag, allTags, protectedTag, onRenameTag, onMergeTags, onDelete
             <option key={category} value={category}>{category}</option>
           ))}
         </select>
-        <button className="button button--ghost management-action-button" type="button" onClick={async () => { const next = await onPrompt(t("manage.prompt.newName"), tag.name); if (next) await onRenameTag(tag.name, next); }}>
+        <button className="button button--ghost management-action-button" aria-label={t("manage.tag.rename")} title={t("manage.tag.rename")} type="button" onClick={async () => { const next = await onPrompt(t("manage.prompt.newName"), tag.name); if (next) await onRenameTag(tag.name, next); }}>
           <Pencil size={16} /><span className="management-action-button__label">{t("manage.tag.rename")}</span>
         </button>
-        <button className="button button--ghost management-action-button" type="button" onClick={async () => { const target = await onPrompt(t("manage.prompt.mergeTo", { name: tag.name }), ""); if (target) await onMergeTags(tag.name, target); }}>
+        <button className="button button--ghost management-action-button" aria-label={t("manage.tag.merge")} title={t("manage.tag.merge")} type="button" onClick={async () => { const target = await onPrompt(t("manage.prompt.mergeTo", { name: tag.name }), "", undefined, allTags.filter((item) => item.name !== tag.name).map((item) => item.name)); if (target) await onMergeTags(tag.name, target); }}>
           <GitMerge size={16} /><span className="management-action-button__label">{t("manage.tag.merge")}</span>
         </button>
-        <button className="button button--danger management-action-button" type="button" disabled={protectedTag} onClick={async () => { if (!await onConfirm(t("manage.confirm.deleteTagGlobal", { name: tag.name }), undefined, true)) return; await onDeleteTag(tag.name); }}>
+        <button className="button button--danger management-action-button" aria-label={t("manage.tag.delete")} title={t("manage.tag.delete")} type="button" disabled={protectedTag} onClick={async () => { if (!await onConfirm(t("manage.confirm.deleteTagGlobal", { name: tag.name }), undefined, true)) return; await onDeleteTag(tag.name); }}>
           <Trash2 size={16} /><span className="management-action-button__label">{t("manage.tag.delete")}</span>
         </button>
       </div>

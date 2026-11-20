@@ -7,6 +7,7 @@ import { mergedRecipeImageUrls, proxiedImageUrl, shouldUseImageCrossOrigin } fro
 import { isPantryIngredient } from "../utils/ingredients";
 import { ingredientLabel } from "../utils/recipes";
 import { getTagStyle } from "../utils/tagStyle";
+import { displayTagName } from "../utils/tags";
 import { t } from "../i18n";
 
 type Props = {
@@ -19,7 +20,7 @@ type Props = {
   onExportPdf: () => void;
   onShareImage: () => void;
   onShareText: () => void;
-  onExportRecipeFile: () => void;
+  onShareLink: () => void;
 };
 
 export function RecipeDetail({
@@ -32,8 +33,26 @@ export function RecipeDetail({
   onExportPdf,
   onShareImage,
   onShareText,
-  onExportRecipeFile,
+  onShareLink,
 }: Props) {
+  const images = mergedRecipeImageUrls(recipe ?? {});
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [recipe?.id]);
+
+  const hasSeveralImages = images.length > 1;
+  const activeImage = images[Math.min(activeImageIndex, Math.max(0, images.length - 1))];
+  const numericServings = numericServingValue(recipe?.servings);
+  const [targetServings, setTargetServings] = useState<number | undefined>(numericServings);
+  const [unitSystem, setUnitSystem] = useState<"metric" | "imperial">("metric");
+
+  useEffect(() => {
+    setTargetServings(numericServingValue(recipe?.servings));
+    setUnitSystem("metric");
+  }, [recipe?.id, recipe?.servings]);
+
   if (!recipe) {
     return (
       <section className="empty-state panel">
@@ -43,22 +62,6 @@ export function RecipeDetail({
       </section>
     );
   }
-  const images = mergedRecipeImageUrls(recipe);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-
-  useEffect(() => {
-    setActiveImageIndex(0);
-  }, [recipe.id]);
-
-  const hasSeveralImages = images.length > 1;
-  const activeImage = images[Math.min(activeImageIndex, Math.max(0, images.length - 1))];
-  const [targetServings, setTargetServings] = useState<number | undefined>(recipe.servings);
-  const [unitSystem, setUnitSystem] = useState<"metric" | "imperial">("metric");
-
-  useEffect(() => {
-    setTargetServings(recipe.servings);
-    setUnitSystem("metric");
-  }, [recipe.id, recipe.servings]);
 
   return (
     <article className="recipe-detail">
@@ -78,7 +81,7 @@ export function RecipeDetail({
         <button className="button button--primary button--icon-mobile" onClick={onShareText} title={t("recipe.detail.shareSms")}>
           <MessageSquareText size={18} /> SMS
         </button>
-        <button className="button button--icon-mobile" onClick={onExportRecipeFile} title={t("recipe.detail.shareRecipe")}>
+        <button className="button button--icon-mobile" onClick={onShareLink} title={t("recipe.detail.shareRecipe")}>
           <Share2 size={18} /> {t("recipe.detail.link")}
         </button>
         <button className="button button--danger button--icon-mobile" onClick={() => onDelete(recipe)} title={t("recipe.detail.delete")}>
@@ -136,13 +139,13 @@ export function RecipeDetail({
           {recipe.origin && <span className="chip chip--origin">{recipe.origin}</span>}
           {recipe.tags.map((tag) => (
             <span className="chip" key={tag} style={getTagStyle(tag, tagColorByName)}>
-              {tag}
+              {displayTagName(tag)}
             </span>
           ))}
         </div>
         <div className="meta-list" role="list" aria-label={t("recipe.detail.infoAria")}>
           {hasValue(recipe.servings) && (
-            <span className="meta-pill" role="listitem" title={t("recipe.detail.servings")} aria-label={`${recipe.servings} personne(s)`}>
+            <span className="meta-pill" role="listitem" title={t("recipe.detail.servings")} aria-label={`${recipe.servings} ${t("recipe.detail.parts")}`}>
               <Users size={15} />
               <strong>{recipe.servings}</strong>
               <span className="meta-pill__label">{t("recipe.detail.parts")}</span>
@@ -177,36 +180,33 @@ export function RecipeDetail({
             </span>
           )}
         </div>
-        {hasPositiveValue(recipe.servings) && (
-          <section className="form-section">
-            <h3>{t("recipe.detail.scale")}</h3>
-            <div className="inline-control">
-              <label>
-                {t("recipe.detail.targetServings")}
-                <input
-                  type="number"
-                  min="1"
-                  value={targetServings ?? ""}
-                  onChange={(event) => setTargetServings(Number(event.target.value) || undefined)}
-                />
-              </label>
-              <label>
-                {t("recipe.detail.unitSystem")}
-                <select value={unitSystem} onChange={(event) => setUnitSystem(event.target.value as "metric" | "imperial")}>
-                  <option value="metric">{t("recipe.detail.unitSystem.metric")}</option>
-                  <option value="imperial">{t("recipe.detail.unitSystem.imperial")}</option>
-                </select>
-              </label>
-            </div>
-          </section>
-        )}
         <div className="recipe-columns">
           <section>
-            <h3>{t("recipe.detail.ingredients")}</h3>
+            <div className="recipe-section-header">
+              <h3>{t("recipe.detail.ingredients")}</h3>
+              {hasPositiveValue(numericServings) && (
+                <div className="ingredient-scale-control">
+                  <label>{t("recipe.detail.targetServings")}
+                    <input
+                      type="number"
+                      min="1"
+                      value={targetServings ?? ""}
+                      onChange={(event) => setTargetServings(Number(event.target.value) || undefined)}
+                    />
+                  </label>
+                  <label>{t("recipe.detail.unitSystem")}
+                    <select value={unitSystem} onChange={(event) => setUnitSystem(event.target.value as "metric" | "imperial")}>
+                      <option value="metric">{t("recipe.detail.unitSystem.metric")}</option>
+                      <option value="imperial">{t("recipe.detail.unitSystem.imperial")}</option>
+                    </select>
+                  </label>
+                </div>
+              )}
+            </div>
             <ul>
               {recipe.ingredients.map((ingredient) => (
                 <li className="ingredient-status-row" key={ingredient.id}>
-                  <span>{scaledIngredientLabel(ingredient, recipe.servings, targetServings, unitSystem)}</span>
+                  <span>- {scaledIngredientLabel(ingredient, numericServings, targetServings, unitSystem)}</span>
                   <span className="ingredient-badges">
                     {recipeContainsSeasonalIngredient([ingredient.name], currentSeasonalIngredients()) && (
                       <span className="chip chip--seasonal">{t("recipe.detail.seasonal")}</span>
@@ -337,7 +337,15 @@ function youtubeEmbedUrl(url: string) {
   return match ? `https://www.youtube.com/embed/${match[1]}` : null;
 }
 
-function hasValue(value: number | undefined) {
+function numericServingValue(value: Recipe["servings"]) {
+  if (typeof value === "number") return value;
+  if (typeof value !== "string") return undefined;
+  if (!/^\d+(?:[.,]\d+)?$/.test(value.trim())) return undefined;
+  const parsed = Number(value.replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function hasValue(value: Recipe["servings"] | undefined) {
   return value !== undefined && value !== null;
 }
 

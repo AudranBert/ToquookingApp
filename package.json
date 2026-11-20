@@ -1,5 +1,5 @@
 {
-  "name": "toque-recipe-hub",
+  "name": "toquooking-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -15,26 +15,34 @@
     "test:features:network": "node scripts/test-features.mjs --with-network",
     "preview": "vite preview --host 0.0.0.0",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "start:cloud": "node backend/start.mjs",
+    "test:cloud": "node --test tests/cloud*.test.mjs"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@vitejs/plugin-react": "^4.3.4",
     "dexie": "^4.0.11",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.2",
     "jszip": "^3.10.1",
     "lucide-react": "^0.468.0",
+    "pg": "^8.23.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "vite": "^6.0.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.17",
     "@eslint/js": "^10.0.1",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "eslint": "^10.4.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "fake-indexeddb": "^6.2.8",
     "gh-pages": "^6.3.0",
     "globals": "^17.6.0",
     "prettier": "^3.8.3",

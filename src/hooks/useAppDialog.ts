@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { t } from "../i18n";
 
 type DialogBase = {
   open: boolean;
@@ -17,6 +18,7 @@ type ConfirmDialogState = DialogBase & {
 type PromptDialogState = DialogBase & {
   kind: "prompt";
   promptValue: string;
+  suggestions?: string[];
   resolve?: (value: string | null) => void;
 };
 
@@ -29,13 +31,13 @@ const CLOSED: ClosedDialogState = { open: false, title: "" };
 export function useAppDialog() {
   const [state, setState] = useState<DialogState>(CLOSED);
 
-  const confirm = useCallback((title: string, message?: string, danger = false, confirmLabel = "Confirmer", cancelLabel = "Annuler") => {
+  const confirm = useCallback((title: string, message?: string, danger = false, confirmLabel = t("dialog.confirm"), cancelLabel = t("dialog.cancel")) => {
     return new Promise<boolean>((resolve) => {
       setState({ open: true, kind: "confirm", title, message, danger, resolve, confirmLabel, cancelLabel });
     });
   }, []);
 
-  const prompt = useCallback((title: string, defaultValue = "", message?: string) => {
+  const prompt = useCallback((title: string, defaultValue = "", message?: string, suggestions?: string[]) => {
     return new Promise<string | null>((resolve) => {
       setState({
         open: true,
@@ -43,9 +45,10 @@ export function useAppDialog() {
         title,
         message,
         promptValue: defaultValue,
+        suggestions,
         resolve,
-        confirmLabel: "Valider",
-        cancelLabel: "Annuler",
+        confirmLabel: t("dialog.confirm"),
+        cancelLabel: t("dialog.cancel"),
       });
     });
   }, []);
@@ -70,3 +73,5 @@ export function useAppDialog() {
     closeWith,
   };
 }
+
+export type ConfirmAction = ReturnType<typeof useAppDialog>["confirm"];
