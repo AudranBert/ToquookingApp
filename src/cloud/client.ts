@@ -28,7 +28,7 @@ export async function checkCloudHealth(): Promise<CloudHealth> {
   try {
     const response = await fetch(`${apiUrl}/health`, {
       cache: "no-store",
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(9000),
     });
     const health = await response.json();
     return {

@@ -40,13 +40,17 @@ export function useCloudBackup(
     const changed = () => setSettings(readCloudSettings());
     window.addEventListener("toque-cloud-settings", changed);
     window.addEventListener("storage", changed);
-    initializeCloudSettings();
+    try {
+      initializeCloudSettings();
+    } catch {
+      onStatus(t("cloud.storageUnavailable"));
+    }
     void loadCloudDefaults().then(setDefaultApiUrl);
     return () => {
       window.removeEventListener("toque-cloud-settings", changed);
       window.removeEventListener("storage", changed);
     };
-  }, []);
+  }, [onStatus]);
 
   // Monitor independently of uploads: a waking server must not block the badges.
   useEffect(() => {

@@ -1,4 +1,5 @@
 export const fr = {
+  "cloud.storageUnavailable": "Le navigateur bloque l’enregistrement des réglages cloud.",
   "cloud.autoHelp": "À chaque enregistrement de recette.",
   "cloud.publicServer": "Cloud Toquooking",
   "cloud.customServer": "Serveur personnel",

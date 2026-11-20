@@ -1,6 +1,7 @@
 import type { Messages } from "./types";
 
 export const en: Messages = {
+  "cloud.storageUnavailable": "Your browser is blocking cloud settings storage.",
   "cloud.autoHelp": "Whenever you save a recipe.",
   "cloud.publicServer": "Toquooking Cloud",
   "cloud.customServer": "Personal server",
