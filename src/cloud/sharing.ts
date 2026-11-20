@@ -1,6 +1,7 @@
 import type { Recipe } from "../types";
 import { parseCloudRecipe } from "./validation";
 import { cloudRequest } from "./client";
+import { toCloudRecipe } from "./recipePayload";
 import {
   generateCloudKey,
   normalizeApiUrl,
@@ -15,7 +16,7 @@ export async function createCloudShare(recipe: Recipe) {
   const { shareId } = await cloudRequest<{ shareId: string }>("/shares", {
     method: "POST",
     settings,
-    body: { recipe },
+    body: { recipe: toCloudRecipe(recipe) },
   });
   const url = new URL(window.location.href);
   url.search = "";

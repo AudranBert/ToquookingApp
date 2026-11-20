@@ -73,7 +73,16 @@ Les fichiers locaux du serveur ne servent jamais de stockage de production.
   **dans la même transaction**. Les recettes existantes ne sont pas toutes
   envoyées à l'activation : utiliser **Sauvegarder sur le cloud** pour cela.
 - Les mises à jour sont regroupées (750 ms), puis envoyées par lots de 25 et
-  d'environ 16 Mo maximum. Les photos stockées en data URL restent incluses.
+  d'environ 16 Mo maximum. Seule la première image (la couverture visible) est envoyée une seule fois,
+  sans galerie ni images d'origine. Les URL distantes restent des liens et ne sont
+  jamais téléchargées par la sauvegarde. Les autres photos restent locales ; un
+  chargement cloud sur une recette existante les conserve.
+- Les nouvelles photos ajoutées depuis l'appareil sont optimisées localement en
+  WebP (grand côté 1600 px maximum, qualité 80 %). L'original est conservé s'il
+  pèse moins que la version encodée. Les GIF restent animés et ne sont pas
+  recompressés. Repli JPEG si l'encodage WebP n'est pas disponible. Les images
+  fournies par URL et les anciennes sauvegardes ZIP ne sont pas reconverties.
+  Les exports ZIP locaux continuent à inclure toutes les images.
   Limite serveur : 12 Mo par recette, 24 Mo par requête. Une erreur conserve la
   file ; pour une recette trop volumineuse, réduire ses photos et enregistrer.
 - La file persiste après fermeture, se réduit à une entrée par recette et se

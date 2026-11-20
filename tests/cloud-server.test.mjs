@@ -13,6 +13,9 @@ function sampleRecipe(id = "recipe-1", name = "Soupe") {
     ingredients: [{ id: "ingredient-1", name: "Carotte", quantity: "2" }],
     instructions: ["Cuire."],
     imageUrl: "data:image/png;base64,YQ==",
+    imageUrls: ["data:image/png;base64,YQ==", "https://images.example/extra.jpg"],
+    sourceImageUrl: "data:image/png;base64,Yg==",
+    sourceImageUrls: ["data:image/png;base64,Yg=="],
     createdAt: "2026-11-20T10:00:00Z",
     updatedAt: "2026-11-20T10:00:00Z",
   };
@@ -71,6 +74,11 @@ test("cloud API: isolation, persistent storage, public links, retries and trash"
     (await (await request("/recipes", { token: "b".repeat(64) })).json()).recipes,
     []
   );
+  const storedCover = (await (await request("/recipes")).json()).recipes[0];
+  assert.equal(storedCover.imageUrls, undefined);
+  assert.equal(storedCover.sourceImageUrl, undefined);
+  assert.equal(storedCover.sourceImageUrls, undefined);
+  assert(!JSON.stringify(storedCover).includes("extra.jpg"));
   const freshStore = new PostgresStore(pool);
   // New store instances use the database, never process memory.
   const { createHash } = await import("node:crypto");

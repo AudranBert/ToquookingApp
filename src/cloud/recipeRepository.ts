@@ -2,6 +2,7 @@ import { db } from "../db";
 import type { Recipe } from "../types";
 import { createId } from "../utils/id";
 import { cloudTarget, readCloudSettings } from "./settings";
+import { toCloudRecipe } from "./recipePayload";
 
 /** Local writes and their latest cloud mutation commit atomically. */
 export async function putRecipes(recipes: Recipe[]) {
@@ -16,7 +17,7 @@ export async function putRecipes(recipes: Recipe[]) {
           recipeId: recipe.id,
           revision: createId(),
           operation: "put" as const,
-          recipe,
+          recipe: toCloudRecipe(recipe),
         }))
       );
     }

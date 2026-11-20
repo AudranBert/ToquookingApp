@@ -1804,3 +1804,10 @@ label {
     justify-content: center;
   }
 }
+
+fieldset.image-field__body {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}

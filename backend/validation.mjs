@@ -78,14 +78,20 @@ export function validateRecipe(raw) {
       recipe.servings = raw.servings;
     else throw new HttpError(400, "Invalid servings");
   }
-  for (const field of ["imageUrl", "sourceImageUrl"])
-    if (raw[field] != null) recipe[field] = image(raw[field]);
-  for (const field of ["imageUrls", "sourceImageUrls"]) {
-    if (raw[field] == null) continue;
-    if (!Array.isArray(raw[field]) || raw[field].length > 30)
-      throw new HttpError(400, "Invalid image list");
-    recipe[field] = raw[field].map(image);
-  }
+  // Store the cover once, including requests from older clients with galleries.
+  const images = raw.imageUrls ?? [];
+  if (
+    !Array.isArray(images) ||
+    images.length > 30 ||
+    !images.every((value) => typeof value === "string")
+  )
+    throw new HttpError(400, "Invalid image list");
+  if (raw.imageUrl != null && typeof raw.imageUrl !== "string")
+    throw new HttpError(400, "Invalid image");
+  const cover = [raw.imageUrl, ...images].find(
+    (value) => typeof value === "string" && value.trim()
+  );
+  if (cover) recipe.imageUrl = image(cover.trim());
   if (Buffer.byteLength(JSON.stringify(recipe)) > 12 * 1024 * 1024)
     throw new HttpError(413, "Recipe exceeds 12 MB");
   return recipe;

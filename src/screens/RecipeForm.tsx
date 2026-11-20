@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, FormEvent, KeyboardEvent, SetStateAction } from "react";
 import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -13,6 +13,7 @@ import { mergedRecipeImageUrls } from "../utils/images";
 import { getTagStyle } from "../utils/tagStyle";
 import { displayTagName } from "../utils/tags";
 import { t } from "../i18n";
+import { compressImageFile } from "../utils/imageCompression";
 
 type Props = {
   draft: RecipeDraft;
@@ -38,6 +39,7 @@ type Props = {
 
 export function RecipeForm({ draft, editing, warnings, allTags, categories, tagColorByName, onCreateTag, importUrl, onImportUrlChange, onImport, importText, onImportTextChange, onImportText, onImportFile, onSubmit, onCancel, onReimport, setDraft, onStatus }: Props) {
   const [isImportSupportOpen, setIsImportSupportOpen] = useState(false);
+  const [imageProcessing, setImageProcessing] = useState(false);
   const [creationMode, setCreationMode] = useState<"manual" | "url" | "text" | "file">("manual");
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -98,7 +100,7 @@ export function RecipeForm({ draft, editing, warnings, allTags, categories, tagC
   }
 
   return (
-    <form className="panel workspace recipe-form" onSubmit={onSubmit}>
+    <form className="panel workspace recipe-form" onSubmit={(event) => { if (imageProcessing) event.preventDefault(); else onSubmit(event); }}>
       <div className="section-heading">
         <div className="recipe-form__title-wrap">
           <span className="eyebrow">{editing ? t("recipe.form.editing") : t("recipe.form.new")}</span>
@@ -106,7 +108,7 @@ export function RecipeForm({ draft, editing, warnings, allTags, categories, tagC
         </div>
         <div className="action-bar recipe-form__actions">
           <button className="button button--ghost button--icon-mobile" onClick={onCancel} type="button" aria-label={t("recipe.form.cancel")}><X size={18} /></button>
-          <button className="button button--primary button--icon-mobile" type="submit"><Check size={18} /> {t("recipe.form.save")}</button>
+          <button className="button button--primary button--icon-mobile" type="submit" disabled={imageProcessing}><Check size={18} /> {t("recipe.form.save")}</button>
         </div>
       </div>
 
@@ -187,7 +189,7 @@ export function RecipeForm({ draft, editing, warnings, allTags, categories, tagC
         </div>
       </div>
 
-      <ImageField values={mergedRecipeImageUrls({ imageUrl: draft.imageUrl, imageUrls: draft.imageUrls })} sourceValues={mergedRecipeImageUrls({ imageUrl: draft.sourceImageUrl, imageUrls: draft.sourceImageUrls })} onChange={setImageOverride} onReset={resetImageOverride} onStatus={onStatus} />
+      <ImageField processing={imageProcessing} onProcessingChange={setImageProcessing} values={mergedRecipeImageUrls({ imageUrl: draft.imageUrl, imageUrls: draft.imageUrls })} sourceValues={mergedRecipeImageUrls({ imageUrl: draft.sourceImageUrl, imageUrls: draft.sourceImageUrls })} onChange={setImageOverride} onReset={resetImageOverride} onStatus={onStatus} />
 
       <section className="form-section">
         <h3>{t("recipe.detail.ingredients")}</h3>
@@ -217,14 +219,23 @@ export function RecipeForm({ draft, editing, warnings, allTags, categories, tagC
   );
 }
 
-function ImageField({ values, sourceValues, onChange, onReset, onStatus }: { values: string[]; sourceValues: string[]; onChange: (value: string[]) => void; onReset: () => void; onStatus: (message: string) => void; }) {
+function ImageField({ values, sourceValues, onChange, onReset, onStatus, processing, onProcessingChange }: { processing: boolean; onProcessingChange: (processing: boolean) => void; values: string[]; sourceValues: string[]; onChange: (value: string[]) => void; onReset: () => void; onStatus: (message: string) => void; }) {
   const [newImageUrl, setNewImageUrl] = useState("");
+  const uploadVersion = useRef(0);
+  useEffect(() => () => { uploadVersion.current++; }, []);
   const hasImage = values.length > 0;
   const hasCustomImage = values.join("|") !== sourceValues.join("|");
 
   async function handleUpload(file: File | undefined) {
-    if (!file) return;
-    try { const image = await imageFileToDataUrl(file); onChange([...values, image]); } catch { onStatus(t("recipe.form.imageReadError")); }
+    if (!file || processing) return;
+    const version = ++uploadVersion.current;
+    onProcessingChange(true);
+    try {
+      const image = await compressImageFile(file);
+      if (version === uploadVersion.current) onChange([...values, image]);
+    }
+    catch { if (version === uploadVersion.current) onStatus(t("recipe.form.imageReadError")); }
+    finally { if (version === uploadVersion.current) onProcessingChange(false); }
   }
 
   return (
@@ -234,10 +245,10 @@ function ImageField({ values, sourceValues, onChange, onReset, onStatus }: { val
           <h3>{t("recipe.form.photos")}</h3>
           <p className="muted">{t("recipe.form.photosHint")}</p>
         </div>
-        {hasCustomImage && <button className="button button--danger button--icon-mobile" type="button" onClick={onReset}><Trash2 size={18} /> {sourceValues.length > 0 ? t("recipe.form.image.resetSource") : t("recipe.form.image.remove")}</button>}
+        {hasCustomImage && <button className="button button--danger button--icon-mobile" type="button" disabled={processing} onClick={onReset}><Trash2 size={18} /> {sourceValues.length > 0 ? t("recipe.form.image.resetSource") : t("recipe.form.image.remove")}</button>}
       </div>
 
-      <div className="image-field__body">
+      <fieldset className="image-field__body" disabled={processing} aria-label={t("recipe.form.photos")}>
         {hasImage ? <img className="image-field__preview" src={values[0]} alt="" /> : <div className="image-field__empty"><ImageIcon size={30} /></div>}
         <div className="image-field__controls">
           <label>
@@ -250,30 +261,11 @@ function ImageField({ values, sourceValues, onChange, onReset, onStatus }: { val
           </label>
           {values.length > 0 && <div className="stack">{values.map((imageUrl, index) => <div className="image-field__list-row" key={`${imageUrl}-${index}`}><input value={imageUrl} onChange={(event) => onChange(values.map((value, i) => (i === index ? event.target.value : value)))} /><button className="button" type="button" onClick={() => onChange([imageUrl, ...values.filter((_, i) => i !== index)])}>{t("recipe.form.image.main")}</button><button className="button button--danger" type="button" onClick={() => onChange(values.filter((_, i) => i !== index))}>{t("recipe.form.image.remove")}</button></div>)}</div>}
         </div>
-      </div>
+      </fieldset>
+      {processing && <p className="muted" role="status">{t("recipe.form.image.processing")}</p>}
     </section>
   );
 }
-
-async function imageFileToDataUrl(file: File) {
-  const rawDataUrl = await readFileAsDataUrl(file);
-  if (!file.type.startsWith("image/") || file.type === "image/gif" || file.type === "image/svg+xml") return rawDataUrl;
-  try {
-    const image = await loadImage(rawDataUrl);
-    const maxSize = 1600;
-    const scale = Math.min(1, maxSize / Math.max(image.naturalWidth, image.naturalHeight));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-    const context = canvas.getContext("2d");
-    if (!context) return rawDataUrl;
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.84);
-  } catch { return rawDataUrl; }
-}
-
-function readFileAsDataUrl(file: File) { return new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result ?? "")); reader.onerror = () => reject(reader.error); reader.readAsDataURL(file); }); }
-function loadImage(src: string) { return new Promise<HTMLImageElement>((resolve, reject) => { const image = new window.Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = src; }); }
 
 function ReimportControls({ sourceUrl, onSourceUrlChange, onReimport }: { sourceUrl: string; onSourceUrlChange: (value: string) => void; onReimport: (mode: ReimportMode) => void; }) {
   return (

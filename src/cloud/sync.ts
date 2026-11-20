@@ -5,6 +5,7 @@ import { createId } from "../utils/id";
 import { cloudRequest } from "./client";
 import { cloudTarget, readCloudSettings } from "./settings";
 import type { CloudMutation } from "./types";
+import { preserveLocalImages, toCloudRecipe } from "./recipePayload";
 
 let running: Promise<void> | undefined;
 
@@ -26,9 +27,11 @@ async function drainQueue() {
   while (cloudTarget() === target) {
     const queued = await db.cloudQueue.where("target").equals(target).toArray();
     // Turning automatic backup off pauses uploads, but never pauses deletions.
-    const eligible = queued.filter(
-      (item) => readCloudSettings().autoBackup || item.operation === "delete" || item.manual
-    );
+    const eligible = queued
+      .filter(
+        (item) => readCloudSettings().autoBackup || item.operation === "delete" || item.manual
+      )
+      .map((item) => (item.recipe ? { ...item, recipe: toCloudRecipe(item.recipe) } : item));
     if (!eligible.length) return;
     const batch: CloudMutation[] = [];
     let bytes = 0;
@@ -82,7 +85,7 @@ export async function uploadLocalRecipes() {
           recipeId: recipe.id,
           revision: createId(),
           operation: "put",
-          recipe,
+          recipe: toCloudRecipe(recipe),
           manual: true,
         });
     }
@@ -105,7 +108,7 @@ export async function downloadCloudRecipes() {
       const local = await db.recipes.get(recipe.id);
       const pending = await db.cloudQueue.get([target, recipe.id]);
       if (!pending && (!local || Date.parse(recipe.updatedAt) > Date.parse(local.updatedAt))) {
-        await db.recipes.put(recipe);
+        await db.recipes.put(preserveLocalImages(recipe, local));
         count++;
       }
     }

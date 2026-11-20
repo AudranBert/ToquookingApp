@@ -21,7 +21,7 @@ test("frontend: durable queue, offline replay, edit during upload, scope isolati
   const outfile = path.join(folder, "client.mjs");
   await build({
     stdin: {
-      contents: `export { db } from './src/db'; export * from './src/cloud/settings'; export * from './src/cloud/recipeRepository'; export * from './src/cloud/sync'; export * from './src/cloud/sharing'; export * from './src/cloud/validation'; export * from './src/cloud/healthMonitor';`,
+      contents: `export { db } from './src/db'; export * from './src/cloud/settings'; export * from './src/cloud/recipeRepository'; export * from './src/cloud/sync'; export * from './src/cloud/sharing'; export * from './src/cloud/validation'; export * from './src/cloud/healthMonitor'; export * from './src/cloud/recipePayload';`,
       resolveDir: process.cwd(),
     },
     bundle: true,
@@ -41,6 +41,10 @@ test("frontend: durable queue, offline replay, edit during upload, scope isolati
   const recipe = {
     id: "recipe-1",
     name: "Soupe",
+    imageUrl: "https://images.example/cover.jpg",
+    imageUrls: ["https://images.example/cover.jpg", "data:image/png;base64,Yg=="],
+    sourceImageUrl: "data:image/png;base64,Yw==",
+    sourceImageUrls: ["data:image/png;base64,Yw==", "https://images.example/original.jpg"],
     tags: [],
     ingredients: [],
     instructions: [],
@@ -66,6 +70,16 @@ test("frontend: durable queue, offline replay, edit during upload, scope isolati
   await client.putRecipe(recipe);
   await client.putRecipe({ ...recipe, name: "Dernière version" });
   assert.equal(await client.db.cloudQueue.count(), 1);
+  const queuedCover = (await client.db.cloudQueue.toArray())[0].recipe;
+  assert.equal(queuedCover.imageUrl, recipe.imageUrl);
+  assert.equal(queuedCover.imageUrls, undefined);
+  assert.equal(queuedCover.sourceImageUrl, undefined);
+  assert.equal(queuedCover.sourceImageUrls, undefined);
+  assert.equal((await client.db.recipes.get(recipe.id)).imageUrls.length, 2);
+  // Queues saved by old app versions must be compacted at the network boundary too.
+  await client.db.cloudQueue.update([client.cloudTarget(), recipe.id], {
+    recipe: { ...recipe, name: "Dernière version" },
+  });
   globalThis.fetch = async () => {
     throw Error("offline");
   };
@@ -86,8 +100,33 @@ test("frontend: durable queue, offline replay, edit during upload, scope isolati
   await client.flushCloudQueue();
   assert.equal(sent.length, 2);
   assert.equal(sent[0].mutations[0].recipe.name, "Dernière version");
+  for (const batch of sent) {
+    const payload = batch.mutations[0].recipe;
+    assert.equal(payload.imageUrl, recipe.imageUrl);
+    assert.equal(payload.imageUrls, undefined);
+    assert.equal(payload.sourceImageUrl, undefined);
+    assert.equal(payload.sourceImageUrls, undefined);
+  }
   assert.equal(sent[1].mutations[0].recipe.name, "Modifiée pendant l’envoi");
   assert.equal(await client.db.cloudQueue.count(), 0);
+  globalThis.fetch = async () =>
+    Response.json({
+      recipes: [
+        {
+          ...client.toCloudRecipe(recipe),
+          imageUrl: "https://images.example/new-cover.jpg",
+          updatedAt: "2026-11-21T12:00:00Z",
+        },
+      ],
+    });
+  assert.equal(await client.downloadCloudRecipes(), 1);
+  const restored = await client.db.recipes.get(recipe.id);
+  assert.equal(restored.imageUrl, "https://images.example/new-cover.jpg");
+  assert(restored.imageUrls.includes(recipe.imageUrls[1]));
+  globalThis.fetch = async (_url, options) => {
+    sent.push(JSON.parse(options.body));
+    return Response.json({ ok: true });
+  };
   client.writeCloudSettings({ ...settings, autoBackup: false });
   await client.deleteRecipe(recipe.id);
   assert.equal((await client.db.cloudQueue.toArray())[0].operation, "delete");
@@ -99,6 +138,7 @@ test("frontend: durable queue, offline replay, edit during upload, scope isolati
   };
   await assert.rejects(client.uploadLocalRecipes());
   assert.equal((await client.db.cloudQueue.toArray())[0].manual, true);
+  assert.equal((await client.db.cloudQueue.toArray())[0].recipe.imageUrls, undefined);
   globalThis.fetch = async () => Response.json({ ok: true });
   await client.flushCloudQueue(); // manually requested backups retry with auto off
   assert.equal(await client.db.cloudQueue.count(), 0);
@@ -124,8 +164,13 @@ test("frontend: durable queue, offline replay, edit during upload, scope isolati
   assert.equal((await client.db.recipes.get(recipe.id)).name, recipe.name); // local pending wins
   let publicAuthorization;
   globalThis.fetch = async (url, options) => {
-    if (options.method === "POST")
+    if (options.method === "POST") {
+      const payload = JSON.parse(options.body).recipe;
+      assert.equal(payload.imageUrl, recipe.imageUrl);
+      assert.equal(payload.imageUrls, undefined);
+      assert.equal(payload.sourceImageUrls, undefined);
       return Response.json({ shareId: "12345678-1234-1234-1234-123456789012" });
+    }
     publicAuthorization = options.headers?.Authorization;
     assert.equal(url, "https://api.example/shares/12345678-1234-1234-1234-123456789012");
     return Response.json({ recipe });
