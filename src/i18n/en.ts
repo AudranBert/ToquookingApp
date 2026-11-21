@@ -348,6 +348,13 @@ export const en: Messages = {
   "import.error.unsupported": "unsupported source",
   "import.error.parse": "parsing error",
   "import.error.unknown": "unknown error",
+  "import.background.started": "Importing “{name}” in the background.",
+  "import.background.completed": "{name} imported",
+  "import.background.failed": "Could not import {name}",
+  "import.background.createFailed": "Could not create the temporary recipe.",
+  "import.background.noContent": "No usable recipe content was detected.",
+  "import.card.pending": "Import in progress",
+  "import.card.failed": "Import failed",
 
   "manage.eyebrow": "Administration",
   "manage.title": "Tags and ingredients",

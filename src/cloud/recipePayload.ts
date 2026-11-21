@@ -7,6 +7,9 @@ export function toCloudRecipe(recipe: Recipe): Recipe {
   delete payload.imageUrls;
   delete payload.sourceImageUrl;
   delete payload.sourceImageUrls;
+  delete payload.importStatus;
+  delete payload.importPlaceholderName;
+  delete payload.importError;
   return payload;
 }
 

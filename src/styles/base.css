@@ -275,6 +275,32 @@ label {
   margin-bottom: 0;
 }
 
+.notice--action {
+  position: fixed;
+  right: clamp(12px, 3vw, 28px);
+  bottom: clamp(12px, 3vw, 28px);
+  z-index: 30;
+  width: min(440px, calc(100vw - 24px));
+  margin: 0;
+  box-shadow: var(--shadow-soft);
+}
+
+.notice__content {
+  flex: 1;
+  align-self: stretch;
+  padding: 4px;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.notice__content:hover,
+.notice__content:focus-visible {
+  text-decoration: underline;
+}
+
 .layout {
   display: grid;
   gap: var(--space-6);
@@ -631,6 +657,32 @@ label {
 .recipe-card-title {
   font-size: 1.05rem;
   font-weight: 800;
+}
+
+.recipe-import-status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  gap: var(--space-1);
+  padding: 4px 8px;
+  color: var(--color-muted);
+  background: var(--color-chip-bg);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.recipe-import-status--failed {
+  color: var(--color-danger);
+  background: var(--color-warning-bg);
+}
+
+.recipe-import-status__spinner {
+  animation: recipe-import-spin 1s linear infinite;
+}
+
+@keyframes recipe-import-spin {
+  to { transform: rotate(360deg); }
 }
 
 .recipe-card-meta {

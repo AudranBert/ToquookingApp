@@ -50,22 +50,6 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
     setImportUrl("");
   }
 
-  async function importFromUrl() {
-    const url = importUrl.trim();
-    if (!url) return false;
-
-    return runImport({
-      url,
-      loadingStatus: t("import.status.urlLoading"),
-      successStatus: t("import.status.urlSuccess"),
-      errorStatus: t("import.status.urlError"),
-      apply: (imported) => {
-        setDraft(imported);
-        setEditingId(null);
-      },
-    });
-  }
-
   async function reimport(mode: ReimportMode) {
     const url = draft.sourceUrl?.trim();
     if (!url) {
@@ -163,7 +147,6 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
     setImportText,
     startNew,
     startEdit,
-    importFromUrl,
     importFromText,
     importFromRawText,
     importFromRecipe,

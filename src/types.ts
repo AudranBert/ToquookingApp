@@ -25,6 +25,9 @@ export type Recipe = {
   imageUrls?: string[];
   sourceImageUrl?: string;
   sourceImageUrls?: string[];
+  importStatus?: "pending" | "failed";
+  importPlaceholderName?: string;
+  importError?: string;
   createdAt: string;
   updatedAt: string;
 };

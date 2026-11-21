@@ -1,12 +1,12 @@
 import type { RefObject } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ChefHat, Clock, Filter, Flag, Flame, Hourglass, Search, Snowflake, Soup, Sprout, Tag, Timer, Vegan, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, ChefHat, Clock, Filter, Flag, Flame, Hourglass, LoaderCircle, Search, Snowflake, Soup, Sprout, Tag, Timer, Vegan, X } from "lucide-react";
 import { POPULAR_RECIPE_ORIGINS, RECIPE_ORIGIN_GROUPS, RECIPE_ORIGINS } from "../origins";
 import { RecipeDetail } from "../components/RecipeDetail";
 import { SectionToggleHeader } from "../components/SectionToggleHeader";
 import { DEFAULT_RECIPE_TOOLS, SEASONAL_THRESHOLDS, SEASONAL_THRESHOLD_LABELS } from "../constants";
 import type { Recipe, RegimeFilter, SeasonalThreshold } from "../types";
-import { primaryRecipeImageUrl, proxiedImageUrl } from "../utils/images";
+import { primaryRecipeImageUrl, proxiedImageUrl, retryImageDirectly } from "../utils/images";
 import { displayTagName } from "../utils/tags";
 import { normalizeText } from "../utils/text";
 import { getTagStyle } from "../utils/tagStyle";
@@ -315,8 +315,10 @@ function RecipeGrid({ recipes, seasonalMatchCounts, seasonalRecipeIds, onSelectR
     <section className="recipe-grid" aria-label={t("recipe.actions.backToList")}>
       {recipes.map((recipe) => (
         <button className="recipe-card-button" key={recipe.id} onClick={() => onSelectRecipe(recipe.id)}>
-          {primaryRecipeImageUrl(recipe) ? <img src={proxiedImageUrl(primaryRecipeImageUrl(recipe), recipe.sourceUrl)} alt="" /> : <div className="recipe-card-placeholder" />}
+          {primaryRecipeImageUrl(recipe) ? <img src={proxiedImageUrl(primaryRecipeImageUrl(recipe), recipe.sourceUrl)} onError={(event) => retryImageDirectly(event, primaryRecipeImageUrl(recipe), recipe.sourceUrl)} alt="" /> : <div className="recipe-card-placeholder" />}
           <span className="recipe-card-title">{recipe.name}</span>
+          {recipe.importStatus === "pending" && <span className="recipe-import-status"><LoaderCircle className="recipe-import-status__spinner" size={14} /> {t("import.card.pending")}</span>}
+          {recipe.importStatus === "failed" && <span className="recipe-import-status recipe-import-status--failed" title={recipe.importError}><AlertCircle size={14} /> {t("import.card.failed")}</span>}
           {recipe.origin && <span className="muted">{recipe.origin}</span>}
           <span className="recipe-card-meta">
             <span aria-label={`${t("recipe.detail.prep")} ${recipe.prepTime ? `${recipe.prepTime} min` : t("library.time.unknown")}`} title={t("recipe.detail.prep")}><ChefHat size={15} /> {recipe.prepTime ? `${recipe.prepTime} min` : "-"}</span>

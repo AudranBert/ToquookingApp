@@ -13,6 +13,7 @@ export async function uploadLocalRecipes() {
   if (!target) throw new Error("Cloud not configured");
   await db.transaction("rw", db.recipes, db.cloudQueue, async () => {
     for (const recipe of await db.recipes.toArray()) {
+      if (recipe.importStatus) continue;
       const pending = await db.cloudQueue.get([target, recipe.id]);
       if (pending?.operation !== "delete")
         await db.cloudQueue.put({

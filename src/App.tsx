@@ -30,6 +30,13 @@ import { putRecipe } from "./data/recipeRepository";
 import { useCloudBackup } from "./hooks/useCloudBackup";
 import { createCloudShare, readCloudShareFromLocation } from "./cloud/sharing";
 import { AppDialog } from "./components/AppDialog";
+import { importRecipeFromUrl } from "./importer";
+import {
+  completePendingImport,
+  createPendingImport,
+  failPendingImport,
+  hasImportedContent,
+} from "./import/background";
 
 const BackupScreen = lazy(async () => import("./screens/BackupScreen").then((module) => ({ default: module.BackupScreen })));
 const ManagementScreen = lazy(async () => import("./screens/ManagementScreen").then((module) => ({ default: module.ManagementScreen })));
@@ -51,6 +58,7 @@ export function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<Panel>("library");
   const cloud = useCloudBackup(refresh, status.setStatus, activePanel === "backup");
+  const activeImports = useRef(new Set<string>());
   const handledSharedRecipe = useRef(false);
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [creatingShare, setCreatingShare] = useState(false);
@@ -67,6 +75,14 @@ export function App() {
         .catch(() => undefined);
     }
   }, []);
+
+  useEffect(() => {
+    for (const recipe of recipes) {
+      if (recipe.importStatus !== "pending" || activeImports.current.has(recipe.id)) continue;
+      activeImports.current.add(recipe.id);
+      void runBackgroundImport(recipe.id, recipe.sourceUrl ?? "");
+    }
+  }, [recipes]);
 
   useEffect(() => {
     if (handledSharedRecipe.current) return;
@@ -143,8 +159,71 @@ export function App() {
   }
 
   async function handleAssistedImport() {
-    const ok = await draftApi.importFromUrl();
-    if (ok) setActivePanel("form");
+    const url = draftApi.importUrl.trim();
+    if (!url) return;
+    const pending = createPendingImport(url);
+    try {
+      activeImports.current.add(pending.id);
+      await db.recipes.put(pending);
+      await refresh();
+      draftApi.startNew();
+      setSelectedId(null);
+      setActivePanel("library");
+      status.setStatus(t("import.background.started", { name: pending.name }));
+      void runBackgroundImport(pending.id, url);
+    } catch {
+      activeImports.current.delete(pending.id);
+      status.setStatus(t("import.background.createFailed"));
+    }
+  }
+
+  async function runBackgroundImport(recipeId: string, url: string) {
+    try {
+      const parsed = await importRecipeFromUrl(url);
+      const current = await db.recipes.get(recipeId);
+      if (!current) return;
+      if (!hasImportedContent(parsed)) {
+        const reason = parsed.warnings?.join(" ") || t("import.background.noContent");
+        await db.recipes.put(failPendingImport(current, reason));
+        await refresh();
+        showImportFailure(recipeId, current.name);
+        return;
+      }
+      const completed = completePendingImport(current, parsed, tagApi.allTags);
+      await putRecipe(completed);
+      await refresh();
+      status.setStatus(
+        t("import.background.completed", { name: completed.name }),
+        () => {
+          setSelectedId(completed.id);
+          setActivePanel("library");
+          status.clear();
+        },
+        8_000,
+      );
+    } catch (error) {
+      const current = await db.recipes.get(recipeId);
+      if (!current) return;
+      const message = error instanceof Error ? error.message : t("import.background.noContent");
+      await db.recipes.put(failPendingImport(current, message));
+      await refresh();
+      showImportFailure(recipeId, current.name);
+    }
+  }
+
+  function showImportFailure(recipeId: string, name: string) {
+    status.setStatus(
+      t("import.background.failed", { name }),
+      () => {
+        void db.recipes.get(recipeId).then((recipe) => {
+          if (!recipe) return;
+          draftApi.startEdit(recipe);
+          setActivePanel("form");
+          status.clear();
+        });
+      },
+      8_000,
+    );
   }
 
   function handleTextImport() {
@@ -283,8 +362,12 @@ export function App() {
       />
 
       {status.status && (
-        <div className="notice" role="status">
-          {status.status}
+        <div className={`notice${status.onActivate ? " notice--action" : ""}`} role="status">
+          {status.onActivate ? (
+            <button className="notice__content" type="button" onClick={status.onActivate}>
+              {status.status}
+            </button>
+          ) : <span>{status.status}</span>}
           <button className="button button--icon" onClick={status.clear} aria-label={t("app.status.close")}>
             <X size={16} />
           </button>

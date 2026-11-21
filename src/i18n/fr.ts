@@ -346,6 +346,13 @@ export const fr = {
   "import.error.unsupported": "source non supportée",
   "import.error.parse": "erreur de parsing",
   "import.error.unknown": "erreur inconnue",
+  "import.background.started": "Import de « {name} » lancé en arrière-plan.",
+  "import.background.completed": "{name} importé",
+  "import.background.failed": "Échec de l’import de {name}",
+  "import.background.createFailed": "Impossible de créer la recette provisoire.",
+  "import.background.noContent": "Aucun contenu de recette exploitable n’a été détecté.",
+  "import.card.pending": "Import en cours",
+  "import.card.failed": "Import échoué",
 
   "manage.eyebrow": "Administration",
   "manage.title": "Tags et ingrédients",

@@ -3,7 +3,7 @@ import type { RefObject } from "react";
 import { BookOpen, ChefHat, Clock3, Copy, Edit3, FileDown, FileImage, Flame, Hourglass, MessageSquareText, Share2, Trash2, Users } from "lucide-react";
 import type { Recipe } from "../types";
 import { currentSeasonalIngredients, recipeContainsSeasonalIngredient } from "../seasonal";
-import { mergedRecipeImageUrls, proxiedImageUrl, shouldUseImageCrossOrigin } from "../utils/images";
+import { mergedRecipeImageUrls, proxiedImageUrl, retryImageDirectly, shouldUseImageCrossOrigin } from "../utils/images";
 import { isPantryIngredient } from "../utils/ingredients";
 import { ingredientLabel } from "../utils/recipes";
 import { getTagStyle } from "../utils/tagStyle";
@@ -95,6 +95,7 @@ export function RecipeDetail({
             <img
               className="recipe-image"
               src={proxiedImageUrl(activeImage, recipe.sourceUrl)}
+              onError={(event) => retryImageDirectly(event, activeImage, recipe.sourceUrl)}
               crossOrigin={shouldUseImageCrossOrigin(activeImage, recipe.sourceUrl) ? "anonymous" : undefined}
               alt=""
             />

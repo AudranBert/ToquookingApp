@@ -1,3 +1,5 @@
+import type { SyntheticEvent } from "react";
+
 function absolutize(url: string, baseUrl?: string) {
   if (/^https?:\/\//i.test(url)) return url;
   if (url.startsWith("//")) {
@@ -15,6 +17,16 @@ function absolutize(url: string, baseUrl?: string) {
   } catch {
     return url;
   }
+}
+
+/** Retry directly if the development image proxy cannot reach the source. */
+export function retryImageDirectly(event: SyntheticEvent<HTMLImageElement>, url?: string, baseUrl?: string) {
+  if (!url) return;
+  const element = event.currentTarget;
+  const direct = absolutize(url, baseUrl);
+  if (element.src === direct) return;
+  element.removeAttribute("crossorigin");
+  element.src = direct;
 }
 
 export function proxiedImageUrl(url?: string, baseUrl?: string) {
