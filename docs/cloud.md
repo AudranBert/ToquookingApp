@@ -1,8 +1,8 @@
 # Cloud optionnel et partage par lien
 
-Le frontend reste un site statique GitHub Pages. Sans serveur configuré, toutes
-les fonctions locales et les sauvegardes ZIP restent disponibles. L'importeur
-`src/importer.ts` ne dépend pas de ce backend.
+Le frontend reste un site statique GitHub Pages. Les fonctions locales et les
+sauvegardes ZIP restent disponibles sans base de données. L'import par URL passe
+par le serveur configuré ; l'import de texte et de fichiers reste local.
 
 ## Service commun Toquooking
 
@@ -59,6 +59,10 @@ autre espace (elle ne produit pas une erreur d'authentification).
 
 Sans `DATABASE_URL`, le serveur démarre mais les opérations cloud répondent 503.
 `GET /health` indique séparément si le serveur et la base sont accessibles.
+`POST /import` reste disponible sans base : il reçoit `{ "url": "https://…" }`,
+récupère la page et renvoie `{ "recipe": { … } }`. Cette route ne demande pas
+la clé privée, mais applique la limite de débit générale et refuse les adresses
+du réseau privé.
 Les indicateurs se mettent à jour toutes les dix secondes uniquement quand le
 menu Sauvegarde est ouvert, indépendamment des transferts et sans vérifications
 simultanées. La file de sauvegarde conserve sa propre reprise toutes les 30 s.

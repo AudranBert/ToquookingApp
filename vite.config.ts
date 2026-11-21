@@ -1,7 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { fetchProxiedImage } from "./src/dev/imageProxyCore";
-import { importRecipeFromSourceUrl } from "./src/dev/recipeImportCore";
 
 export default defineConfig(() => {
   const configuredBase = process.env.BASE_PATH?.trim();
@@ -17,17 +16,8 @@ export default defineConfig(() => {
     plugins: [
       react(),
       {
-        name: "toque-local-import-api",
+        name: "toque-local-image-api",
         configureServer(server) {
-          server.middlewares.use("/api/import", async (request, response) => {
-            const requestUrl = new URL(request.url ?? "", "http://localhost");
-            const sourceUrl = requestUrl.searchParams.get("url") ?? "";
-            const result = await importRecipeFromSourceUrl(sourceUrl);
-
-            response.statusCode = sourceUrl ? 200 : 400;
-            response.setHeader("content-type", "application/json; charset=utf-8");
-            response.end(JSON.stringify(result));
-          });
           server.middlewares.use("/api/image", async (request, response) => {
             const requestUrl = new URL(request.url ?? "", "http://localhost");
             const imageUrl = requestUrl.searchParams.get("url") ?? "";

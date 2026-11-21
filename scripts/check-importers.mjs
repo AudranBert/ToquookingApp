@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { importRecipeFromUrl as importOnServer } from "../backend/recipe-importer.mjs";
 
 const DEFAULT_URLS = [
   "https://www.cuisine-libre.org/osso-bucco-lombard",
@@ -52,6 +53,23 @@ async function run() {
   const urls = args.urls.length > 0 ? args.urls : DEFAULT_URLS;
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "toquooking-import-check-"));
   const outFile = path.join(tempDir, "importer.bundle.mjs");
+  const apiUrl = "https://import.test";
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    if (String(input).endsWith("online-config.json")) {
+      return Response.json({ apiUrl });
+    }
+    if (String(input) === `${apiUrl}/import`) {
+      const { url } = JSON.parse(String(init?.body ?? "{}"));
+      return Response.json({ recipe: await importOnServer(url) });
+    }
+    return originalFetch(input, init);
+  };
+  const storage = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => storage.get(key) ?? null,
+    setItem: (key, value) => storage.set(key, value),
+  };
 
   globalThis.window = {
     setTimeout: globalThis.setTimeout.bind(globalThis),
@@ -65,6 +83,7 @@ async function run() {
       bundle: true,
       platform: "node",
       format: "esm",
+      define: { "import.meta.env.BASE_URL": '"/ToquookingApp/"' },
       outfile: outFile,
       logLevel: "silent",
     });
@@ -93,10 +112,9 @@ async function run() {
           warnings,
         });
       } catch (error) {
-        const suspicious = (recipe.ingredients?.length ?? 0) > 40 || (recipe.instructions?.length ?? 0) > 40;
         results.push({
           url,
-          suspicious,
+          suspicious: false,
           ok: false,
           error: String(error),
         });
@@ -130,6 +148,7 @@ async function run() {
     process.stdout.write(`${lines.join("\n")}\n`);
 
   } finally {
+    globalThis.fetch = originalFetch;
     await rm(tempDir, { recursive: true, force: true });
   }
 }

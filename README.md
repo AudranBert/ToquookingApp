@@ -5,7 +5,7 @@ Toquooking is a local-first digital recipe book for importing, personalizing, se
 ## Overview
 
 Main capabilities:
-- Import recipes from supported websites and free text.
+- Import recipes from websites through the Toquooking server, and from free text locally.
 - Edit imported content (title, ingredients, steps, images, tags, notes).
 - Search by name, ingredient, tags, origin, and seasonal hints.
 - Export/share recipes as PDF, PNG, text, and JSON.
@@ -46,12 +46,12 @@ Open the preview URL (usually `http://localhost:4173/ToquookingApp/`).
 
 This matches GitHub Pages behavior:
 - Static files served from `dist/`.
-- No runtime dependency on serverless `api/` handlers.
-- Frontend importer path from `src/importer.ts`.
+- URL imports sent to the server configured in `public/online-config.json`.
+- A small frontend client in `src/importer.ts`; website fetching and parsing run in `backend/recipe-importer.mjs`.
 
 Note for local development:
-- `npm run dev` exposes `/api/import` and `/api/image` via Vite middleware.
-- Those routes are backed by `src/dev/recipeImportCore.ts` and `src/dev/imageProxyCore.ts`.
+- Start the backend with `npm run start:cloud` to test URL imports.
+- `npm run dev` exposes `/api/image` via Vite middleware for local image loading.
 
 ## Offline Test Flow
 
