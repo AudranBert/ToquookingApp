@@ -14,8 +14,6 @@
     "test:features": "node scripts/test-features.mjs",
     "test:features:network": "node scripts/test-features.mjs --with-network",
     "preview": "vite preview --host 0.0.0.0",
-    "predeploy": "npm run lint && npm run format:check && npm test && npm run build:budget",
-    "deploy": "gh-pages -d dist",
     "start:cloud": "node backend/start.mjs",
     "test:cloud": "node --test tests/cloud*.test.mjs",
     "test": "npm run test:features && node --test tests/*.test.mjs"
@@ -44,7 +42,6 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "fake-indexeddb": "^6.2.8",
-    "gh-pages": "^6.3.0",
     "globals": "^17.6.0",
     "prettier": "^3.8.3",
     "sharp": "^0.34.5",

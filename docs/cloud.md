@@ -12,14 +12,24 @@ Le service gratuit `toquooking` est créé sur Render à Francfort :
 Chaque appareil reçoit sa propre clé ; fournir la même clé sur un autre appareil
 retrouve le même espace. Aucune adresse serveur n'est à saisir pour ce service.
 
-Le service déploie automatiquement la branche `codex/cloud-backup` du dépôt.
-Une base PostgreSQL persistante doit encore être raccordée avec `DATABASE_URL`
-avant de rendre la sauvegarde commune opérationnelle. L'offre gratuite du serveur
-ne fournit pas, à elle seule, ce stockage. Ne pas utiliser la base Render gratuite
-à durée limitée comme sauvegarde durable. Les quotas gratuits du fournisseur de
-base et de Render sont partagés entre tous les utilisateurs du service commun.
+Le service déploie automatiquement la branche `main` du dépôt.
+La base PostgreSQL Supabase `toquooking`, dans `AudranBert's Org`, est hébergée
+à Francfort et raccordée par le Session pooler IPv4. La variable secrète
+`DATABASE_URL` reste uniquement dans Render. Le compte dédié `toque_backend`
+utilise le schéma privé `toquooking`, inaccessible aux rôles publics Supabase ;
+les trois tables cloud ont RLS activé. Le serveur, propriétaire des tables,
+applique l'isolation des espaces à partir de l'empreinte de leur clé privée.
+
+La connexion vérifie le certificat et le nom d'hôte avec `sslmode=verify-full`
+et `sslrootcert=backend/certs/supabase-ca.crt`. Ce certificat d'autorité public
+est versionné ; il ne contient aucun identifiant privé. Ne pas désactiver la
+vérification TLS pour contourner une erreur de certificat.
+
+Les quotas gratuits de Supabase et de Render sont partagés entre tous les
+utilisateurs du service commun. Conserver aussi des sauvegardes ZIP locales.
 
 Suivi : [service Render](https://dashboard.render.com/web/srv-dc0ajsk9v7es73b5dgs0).
+Base : [projet Supabase](https://supabase.com/dashboard/project/zrjjkwnmpcjlfrobfljx).
 
 ## Déployer
 
