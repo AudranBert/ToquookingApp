@@ -31,27 +31,48 @@ const CLOSED: ClosedDialogState = { open: false, title: "" };
 export function useAppDialog() {
   const [state, setState] = useState<DialogState>(CLOSED);
 
-  const confirm = useCallback((title: string, message?: string, danger = false, confirmLabel = t("dialog.confirm"), cancelLabel = t("dialog.cancel")) => {
-    return new Promise<boolean>((resolve) => {
-      setState({ open: true, kind: "confirm", title, message, danger, resolve, confirmLabel, cancelLabel });
-    });
-  }, []);
-
-  const prompt = useCallback((title: string, defaultValue = "", message?: string, suggestions?: string[]) => {
-    return new Promise<string | null>((resolve) => {
-      setState({
-        open: true,
-        kind: "prompt",
-        title,
-        message,
-        promptValue: defaultValue,
-        suggestions,
-        resolve,
-        confirmLabel: t("dialog.confirm"),
-        cancelLabel: t("dialog.cancel"),
+  const confirm = useCallback(
+    (
+      title: string,
+      message?: string,
+      danger = false,
+      confirmLabel = t("dialog.confirm"),
+      cancelLabel = t("dialog.cancel")
+    ) => {
+      return new Promise<boolean>((resolve) => {
+        setState({
+          open: true,
+          kind: "confirm",
+          title,
+          message,
+          danger,
+          resolve,
+          confirmLabel,
+          cancelLabel,
+        });
       });
-    });
-  }, []);
+    },
+    []
+  );
+
+  const prompt = useCallback(
+    (title: string, defaultValue = "", message?: string, suggestions?: string[]) => {
+      return new Promise<string | null>((resolve) => {
+        setState({
+          open: true,
+          kind: "prompt",
+          title,
+          message,
+          promptValue: defaultValue,
+          suggestions,
+          resolve,
+          confirmLabel: t("dialog.confirm"),
+          cancelLabel: t("dialog.cancel"),
+        });
+      });
+    },
+    []
+  );
 
   const closeWith = useCallback((result: boolean | string | null) => {
     setState((current) => {
@@ -67,7 +88,9 @@ export function useAppDialog() {
   return {
     dialogState: state,
     setPromptValue: (value: string) =>
-      setState((current) => (current.kind === "prompt" ? { ...current, promptValue: value } : current)),
+      setState((current) =>
+        current.kind === "prompt" ? { ...current, promptValue: value } : current
+      ),
     confirm,
     prompt,
     closeWith,

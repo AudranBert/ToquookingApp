@@ -1,7 +1,13 @@
 import type { Messages } from "./types";
 
 export const en: Messages = {
-  "cloud.trashRestoredLocalPreserved": "Recipe restored in the cloud. Your local changes were preserved.",
+  "recipe.status.nameRequired": "Add at least a name.",
+  "recipe.status.updated": "Recipe updated.",
+  "recipe.status.saved": "Recipe saved.",
+  "recipe.status.saveFailed": "Could not save. Check available storage and try again.",
+  "recipe.form.saving": "Saving…",
+  "cloud.trashRestoredLocalPreserved":
+    "Recipe restored in the cloud. Your local changes were preserved.",
   "cloud.trashTitle": "Cloud trash",
   "cloud.trashRetention": "7 days",
   "cloud.trashConfigure": "Choose a cloud service to access trash.",
@@ -12,16 +18,19 @@ export const en: Messages = {
   "cloud.trashExpires": "Expires: {date}",
   "cloud.trashRestore": "Restore",
   "cloud.trashRestoring": "Restoring…",
-  "cloud.trashRestoreTitle": "Restore this recipe in the cloud and on this device, and reactivate its shared link",
+  "cloud.trashRestoreTitle":
+    "Restore this recipe in the cloud and on this device, and reactivate its shared link",
   "cloud.trashPurge": "Delete permanently",
   "cloud.trashPurgeTitle": "Permanently delete “{name}”?",
   "cloud.trashPurgeMessage": "The recipe will be erased from the cloud. This cannot be undone.",
   "cloud.trashEmptyTitle": "Empty cloud trash?",
-  "cloud.trashEmptyMessage": "All recipes currently in cloud trash will be permanently erased. This cannot be undone.",
+  "cloud.trashEmptyMessage":
+    "All recipes currently in cloud trash will be permanently erased. This cannot be undone.",
   "cloud.trashRestored": "Recipe restored in the cloud and on this device.",
   "cloud.trashPurged": "Recipe permanently deleted from the cloud.",
   "cloud.trashEmptied": "Cloud trash emptied.",
-  "cloud.trashActionFailed": "Action failed: the recipe may have expired or the cloud is unavailable.",
+  "cloud.trashActionFailed":
+    "Action failed: the recipe may have expired or the cloud is unavailable.",
 
   "recipe.form.image.processing": "Preparing photo…",
   "cloud.storageUnavailable": "Your browser is blocking cloud settings storage.",
@@ -43,19 +52,22 @@ export const en: Messages = {
   "backup.localSubtitle": "ZIP files · recipes and photos",
   "backup.toolsTitle": "Import tools",
   "cloud.creatingShare": "Creating link… Waking the server may take about a minute.",
-  "cloud.shareHelp": "Anyone with this link can read this recipe. Your private backup key remains secret.",
+  "cloud.shareHelp":
+    "Anyone with this link can read this recipe. Your private backup key remains secret.",
   "cloud.copyLink": "Copy link",
   "cloud.close": "Close",
   "cloud.copyManually": "Copy the selected link using your device menu or Ctrl+C.",
 
   "cloud.title": "Cloud backup",
-  "cloud.help": "Without configuration, recipes stay on this device. Configure a server to back up recipes and share links.",
+  "cloud.help":
+    "Without configuration, recipes stay on this device. Configure a server to back up recipes and share links.",
   "cloud.serverUrl": "Server address",
   "cloud.key": "Private key",
   "cloud.showKey": "Show key",
   "cloud.hideKey": "Hide key",
   "cloud.configure": "Apply",
-  "cloud.keyHelp": "Enabling automatic backup generates a key when empty. Keep it safe: use the same server and key on your other devices. Anyone with this key can read and modify your backup. Clear the address to disable cloud; changing the key opens a different space.",
+  "cloud.keyHelp":
+    "Enabling automatic backup generates a key when empty. Keep it safe: use the same server and key on your other devices. Anyone with this key can read and modify your backup. Clear the address to disable cloud; changing the key opens a different space.",
   "cloud.autoBackup": "Automatic backup",
   "cloud.server": "Server",
   "cloud.database": "Database",
@@ -67,15 +79,21 @@ export const en: Messages = {
   "cloud.upload": "Back up to cloud",
   "cloud.download": "Load from cloud",
   "cloud.check": "Check connection",
-  "cloud.mergeHelp": "Sync adds missing recipes and updates existing ones. Loading merges by ID without overwriting pending local changes or newer local versions. Recipe tags and saved photos are included; tag colors and categories remain local.",
-  "cloud.trashHelp": "Deleting a recipe also deletes it from the cloud, even with automatic backup off. Offline deletions wait for the server. Cloud trash retains recipes for 7 days; restoration will be available later.",
+  "cloud.mergeHelp":
+    "Sync adds missing recipes and updates existing ones. Loading merges by ID without overwriting pending local changes or newer local versions. Recipe tags and saved photos are included; tag colors and categories remain local.",
+  "cloud.trashHelp":
+    "Deleting a recipe also deletes it from the cloud, even with automatic backup off. Offline deletions wait for the server. Cloud trash retains recipes for 7 days; restoration will be available later.",
   "cloud.saved": "Cloud configuration saved.",
-  "cloud.invalidSettings": "Check the HTTPS server address and private key (64 hexadecimal characters).",
+  "cloud.invalidSettings":
+    "Check the HTTPS server address and private key (64 hexadecimal characters).",
   "cloud.uploaded": "Recipes synced to the cloud.",
   "cloud.downloaded": "{count} recipe(s) loaded from the cloud.",
-  "cloud.failed": "Cloud unavailable or incorrect key. Pending changes are retained and will be retried.",
-  "cloud.shareFailed": "Unable to share. Configure cloud in Backup, then check server and database connectivity.",
-  "cloud.shareLoadFailed": "Link unavailable or recipe deleted. Check your connection and reload the page to retry.",
+  "cloud.failed":
+    "Cloud unavailable or incorrect key. Pending changes are retained and will be retried.",
+  "cloud.shareFailed":
+    "Unable to share. Configure cloud in Backup, then check server and database connectivity.",
+  "cloud.shareLoadFailed":
+    "Link unavailable or recipe deleted. Check your connection and reload the page to retry.",
   "cloud.shareReady": "Share link to copy",
   "cloud.transferring": "Transfer in progress…",
 
@@ -138,7 +156,7 @@ export const en: Messages = {
   "recipe.form.step": "Step",
   "recipe.form.reorder": "Reorder",
   "recipe.form.tags.placeholder": "main, hot, dessert...",
-  "recipe.form.tags.addToList": "Add \"{name}\" to list",
+  "recipe.form.tags.addToList": 'Add "{name}" to list',
   "recipe.form.tags.globalList": "Global tag list",
   "recipe.form.tools": "Tools",
   "recipe.form.tools.placeholder": "oven, air fryer, blender...",
@@ -180,7 +198,8 @@ export const en: Messages = {
   "library.filters.regime": "Diet",
   "library.filters.regime.all": "All",
   "library.filters.seasonal": "Seasonal ingredients",
-  "library.filters.seasonalInfo": "{count} recipe(s) contain at least one seasonal ingredient in {month}.",
+  "library.filters.seasonalInfo":
+    "{count} recipe(s) contain at least one seasonal ingredient in {month}.",
   "library.filters.clear": "Clear",
   "library.filters.origin": "Country / region",
   "library.filters.tools": "Tools",
@@ -277,11 +296,15 @@ export const en: Messages = {
   "backup.importSummary.duplicates": "Existing or duplicate names: {names}",
   "backup.importSummary.duplicates.none": "none",
   "backup.importSummary.duplicates.more": "+ {count} more",
-  "backup.help.files": "Backup files contain all recipes in ZIP format (.zip) with JSON + images. They can be sent by email, messaging, or USB cable between phone and computer.",
-  "backup.help.example": "The ZIP example shows the expected format to create recipes outside the app and then import them.",
-  "backup.help.database": "The JSON database lists tags, ingredients, and recipe names currently available.",
+  "backup.help.files":
+    "Backup files contain all recipes in ZIP format (.zip) with JSON + images. They can be sent by email, messaging, or USB cable between phone and computer.",
+  "backup.help.example":
+    "The ZIP example shows the expected format to create recipes outside the app and then import them.",
+  "backup.help.database":
+    "The JSON database lists tags, ingredients, and recipe names currently available.",
   "backup.status.shareFailed": "Backup sharing failed.",
-  "backup.status.downloadedNoNativeShare": "Backup downloaded. Native sharing is unavailable on this device.",
+  "backup.status.downloadedNoNativeShare":
+    "Backup downloaded. Native sharing is unavailable on this device.",
   "backup.status.exampleDownloaded": "ZIP example downloaded.",
   "backup.status.aiPromptCopied": "AI prompt copied.",
   "backup.status.aiPromptCopyFailed": "Could not copy the AI prompt.",
@@ -330,7 +353,8 @@ export const en: Messages = {
 
   "import.status.urlLoading": "Analyzing link (name, ingredients, steps, image)...",
   "import.status.urlSuccess": "Import complete. Check fields then save the recipe.",
-  "import.status.urlError": "Import failed for this link. The link is kept, complete the recipe manually.",
+  "import.status.urlError":
+    "Import failed for this link. The link is kept, complete the recipe manually.",
   "import.status.reimportMissingSource": "Add a source link before reimporting.",
   "import.status.reimportLoading": "Reimport in progress from source link...",
   "import.status.reimportReplaceSuccess": "Reimport complete: fields replaced from link.",
@@ -342,12 +366,20 @@ export const en: Messages = {
   "import.status.fileSuccess": "Recipe loaded from file. Check fields then save.",
   "import.status.fileTextUnreadable": "Unreadable text/JSON file.",
   "import.status.fileNoRecipe": "No recipe found in this file.",
-  "import.status.fileMultipleRecipes": "This file contains multiple recipes. Use the Backup menu for global import.",
+  "import.status.fileMultipleRecipes":
+    "This file contains multiple recipes. Use the Backup menu for global import.",
   "import.status.fileUnreadable": "Unreadable recipe file.",
   "import.error.network": "network issue",
   "import.error.unsupported": "unsupported source",
   "import.error.parse": "parsing error",
   "import.error.unknown": "unknown error",
+  "import.background.started": "Importing “{name}” in the background.",
+  "import.background.completed": "{name} imported",
+  "import.background.failed": "Could not import {name}",
+  "import.background.createFailed": "Could not create the temporary recipe.",
+  "import.background.noContent": "No usable recipe content was detected.",
+  "import.card.pending": "Import in progress",
+  "import.card.failed": "Import failed",
 
   "manage.eyebrow": "Administration",
   "manage.title": "Tags and ingredients",
@@ -383,7 +415,8 @@ export const en: Messages = {
   "recipe.form.discardTitle": "Discard changes?",
   "recipe.form.discardBody": "The current recipe has not been saved. Its changes will be lost.",
   "recipe.form.image.addUrl": "Add photo",
-  "shopping.status.storageFailed": "The list is available here, but this browser cannot keep it after closing.",
+  "shopping.status.storageFailed":
+    "The list is available here, but this browser cannot keep it after closing.",
   "shopping.status.generated": "Shopping list generated.",
   "shopping.item.new": "New ingredient",
 };

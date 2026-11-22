@@ -1,9 +1,15 @@
+import { downloadBlob } from "./utils/sharing";
 import type { Recipe } from "./types";
 import { t } from "./i18n";
 
 async function elementToCanvas(element: HTMLElement) {
   const { default: html2canvas } = await import("html2canvas");
-  return html2canvas(element, { backgroundColor: "#fffdf7", scale: 2, useCORS: true, allowTaint: false });
+  return html2canvas(element, {
+    backgroundColor: "#fffdf7",
+    scale: 2,
+    useCORS: true,
+    allowTaint: false,
+  });
 }
 
 async function elementToPngBlob(element: HTMLElement) {
@@ -41,11 +47,12 @@ async function elementToPdfBlob(element: HTMLElement) {
   return pdf.output("blob");
 }
 
-export async function exportElementAsPng(element: HTMLElement, filename: string) {
-  downloadBlob(await elementToPngBlob(element), filename);
-}
-
-export async function shareElementAsPng(element: HTMLElement, filename: string, title: string, text: string) {
+export async function shareElementAsPng(
+  element: HTMLElement,
+  filename: string,
+  title: string,
+  text: string
+) {
   const blob = await elementToPngBlob(element);
   const file = new File([blob], filename, { type: "image/png" });
   if (await tryShare({ files: [file], title, text })) {
@@ -56,11 +63,12 @@ export async function shareElementAsPng(element: HTMLElement, filename: string, 
   return "downloaded";
 }
 
-export async function exportElementAsPdf(element: HTMLElement, filename: string) {
-  downloadBlob(await elementToPdfBlob(element), filename);
-}
-
-export async function shareElementAsPdf(element: HTMLElement, filename: string, title: string, text = t("share.text.recipeTitle", { name: title })) {
+export async function shareElementAsPdf(
+  element: HTMLElement,
+  filename: string,
+  title: string,
+  text = t("share.text.recipeTitle", { name: title })
+) {
   const blob = await elementToPdfBlob(element);
   const file = new File([blob], filename, { type: "application/pdf" });
   if (await tryShare({ files: [file], title, text })) {
@@ -102,12 +110,4 @@ async function tryShare(shareData: ShareData) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
     return false;
   }
-}
-
-function downloadBlob(blob: Blob, filename: string) {
-  const link = document.createElement("a");
-  link.download = filename;
-  link.href = URL.createObjectURL(blob);
-  link.click();
-  URL.revokeObjectURL(link.href);
 }

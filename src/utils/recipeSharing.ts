@@ -1,11 +1,11 @@
+import { copyText } from "./clipboard";
+import { shareText } from "./sharing";
 import type { Recipe } from "../types";
 import { t } from "../i18n";
 import { createId } from "./id";
 import { cleanRecipeDraft, ingredientLabel, nowIso, recipeToDraft } from "./recipes";
 import { primaryRecipeImageUrl } from "./images";
 import { displayTagName } from "./tags";
-
-const MAX_SMS_BODY_LENGTH = 1800;
 
 export function sharedRecipeToImport(recipe: Recipe, existingRecipes: Recipe[]): Recipe {
   const draft = cleanRecipeDraft(recipeToDraft(recipe));
@@ -23,7 +23,7 @@ export function sharedRecipeToImport(recipe: Recipe, existingRecipes: Recipe[]):
   };
 }
 
-export function recipeToShareText(recipe: Recipe) {
+function recipeToShareText(recipe: Recipe) {
   const shareableImageUrl = /^https?:\/\//i.test(primaryRecipeImageUrl(recipe) ?? "")
     ? primaryRecipeImageUrl(recipe)
     : "";
@@ -58,41 +58,7 @@ export function recipeToShareText(recipe: Recipe) {
 }
 
 export async function shareRecipeText(recipe: Recipe) {
-  const text = recipeToShareText(recipe);
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: recipe.name, text });
-      return "shared";
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") throw error;
-    }
-  }
-
-  if (isLikelyMobile()) {
-    if (text.length > MAX_SMS_BODY_LENGTH) {
-      downloadTextFile(text, recipeTextFileName(recipe));
-      return "downloaded";
-    }
-    window.location.href = `sms:?&body=${encodeURIComponent(text)}`;
-    return "sms";
-  }
-
-  try {
-    await navigator.clipboard.writeText(text);
-    return "copied";
-  } catch {
-    downloadTextFile(text, recipeTextFileName(recipe));
-    return "downloaded";
-  }
-}
-
-function downloadTextFile(text: string, filename: string) {
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(link.href);
+  return shareText(recipeToShareText(recipe), recipeTextFileName(recipe), recipe.name);
 }
 
 function recipeTextFileName(recipe: Recipe) {
@@ -107,7 +73,7 @@ function recipeTextFileName(recipe: Recipe) {
 
 export async function copyRecipeShareLink(url: string) {
   try {
-    await navigator.clipboard.writeText(url);
+    await copyText(url);
     return "copied";
   } catch {
     return "manual";
@@ -128,8 +94,4 @@ function formatMeta(recipe: Recipe) {
   ].filter(Boolean);
 
   return meta.length ? meta.join(" | ") : "";
-}
-
-function isLikelyMobile() {
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }

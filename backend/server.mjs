@@ -2,6 +2,7 @@ import { CLOUD_CONFIG } from "./config.mjs";
 import http from "node:http";
 import { createHash } from "node:crypto";
 import { HttpError, validateMutations, validateRecipe } from "./validation.mjs";
+import { importRecipeFromUrl } from "./recipe-importer.mjs";
 
 async function readJson(request) {
   const chunks = [];
@@ -23,6 +24,7 @@ export function createServer({
   store,
   origins = [],
   rateLimit = CLOUD_CONFIG.requestsPerMinute,
+  recipeImporter = importRecipeFromUrl,
 } = {}) {
   const requests = new Map();
   return http.createServer(async (req, res) => {
@@ -64,6 +66,16 @@ export function createServer({
           /* Report each connection separately. */
         }
         return reply(200, { server: true, database });
+      }
+      if (req.method === "POST" && url.pathname === "/import") {
+        const body = await readJson(req);
+        if (typeof body?.url !== "string" || body.url.length > 4_000)
+          throw new HttpError(400, "Invalid source URL");
+        try {
+          return reply(200, { recipe: await recipeImporter(body.url) });
+        } catch (error) {
+          throw new HttpError(400, error instanceof Error ? error.message : "Import failed");
+        }
       }
       if (!store) throw new HttpError(503, "Database not configured");
       const shared = url.pathname.match(/^\/shares\/([a-f0-9-]{36})$/);

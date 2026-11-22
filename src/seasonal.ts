@@ -60,7 +60,14 @@ export const seasonalCalendar: Record<number, SeasonalMonth> = {
       "poireau",
       "pomme",
     ],
-    poissonsFruitsDeMer: ["cabillaud", "coquille saint-jacques", "huitre", "lieu", "merlan", "raie"],
+    poissonsFruitsDeMer: [
+      "cabillaud",
+      "coquille saint-jacques",
+      "huitre",
+      "lieu",
+      "merlan",
+      "raie",
+    ],
   },
   2: {
     fruitsLegumes: [
@@ -219,7 +226,14 @@ export const seasonalCalendar: Record<number, SeasonalMonth> = {
       "poireau",
       "pomme",
     ],
-    poissonsFruitsDeMer: ["cabillaud", "coquille saint-jacques", "hareng", "huitre", "lieu", "merlan"],
+    poissonsFruitsDeMer: [
+      "cabillaud",
+      "coquille saint-jacques",
+      "hareng",
+      "huitre",
+      "lieu",
+      "merlan",
+    ],
   },
   11: {
     fruitsLegumes: [
@@ -234,7 +248,14 @@ export const seasonalCalendar: Record<number, SeasonalMonth> = {
       "poireau",
       "pomme",
     ],
-    poissonsFruitsDeMer: ["cabillaud", "coquille saint-jacques", "huitre", "lieu", "merlan", "saumon"],
+    poissonsFruitsDeMer: [
+      "cabillaud",
+      "coquille saint-jacques",
+      "huitre",
+      "lieu",
+      "merlan",
+      "saumon",
+    ],
   },
 };
 

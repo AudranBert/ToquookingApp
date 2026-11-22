@@ -26,7 +26,14 @@ const INGREDIENT_FAMILIES: Record<string, string[]> = {
   vinaigre: ["vinaigre", "vinaigre vin", "vinaigre de vin", "vinaigre de vin blanc"],
   sel: ["sel", "gros sel", "fleur de sel"],
   poivre: ["poivre", "poivre noir", "poivre blanc"],
-  huile: ["huile", "huile neutre", "huile tournesol", "huile de tournesol", "huile colza", "huile de colza"],
+  huile: [
+    "huile",
+    "huile neutre",
+    "huile tournesol",
+    "huile de tournesol",
+    "huile colza",
+    "huile de colza",
+  ],
   farine: ["farine", "farine ble", "farine de ble"],
   beurre: ["beurre", "beurre doux", "beurre demi sel"],
   lait: ["lait", "lait entier", "lait demi ecreme", "lait ecreme"],
@@ -46,7 +53,9 @@ const LOW_QUANTITY_PANTRY_KEYS = new Set([
 ]);
 
 const FAMILY_VARIANTS = Object.entries(INGREDIENT_FAMILIES)
-  .flatMap(([family, variants]) => variants.map((variant) => ({ family, variant: normalizeText(variant) })))
+  .flatMap(([family, variants]) =>
+    variants.map((variant) => ({ family, variant: normalizeText(variant) }))
+  )
   .sort((a, b) => b.variant.length - a.variant.length);
 
 export function canonicalIngredientKey(value: string) {
@@ -55,10 +64,7 @@ export function canonicalIngredientKey(value: string) {
 
   if (match) return match.family;
 
-  return normalized
-    .split(" ")
-    .map(singularizeToken)
-    .join(" ");
+  return normalized.split(" ").map(singularizeToken).join(" ");
 }
 
 export function ingredientSearchText(value: string) {
@@ -73,7 +79,9 @@ export function formatIngredientName(value: string) {
   return `${lowercased.charAt(0).toLocaleUpperCase("fr")}${lowercased.slice(1)}`;
 }
 
-export function isPantryIngredient(ingredient: Pick<Ingredient, "name" | "quantity" | "unit"> | string) {
+export function isPantryIngredient(
+  ingredient: Pick<Ingredient, "name" | "quantity" | "unit"> | string
+) {
   const value = typeof ingredient === "string" ? ingredient : ingredient.name;
   const key = canonicalIngredientKey(value);
 

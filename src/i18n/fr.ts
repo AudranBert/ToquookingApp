@@ -1,5 +1,12 @@
 export const fr = {
-  "cloud.trashRestoredLocalPreserved": "Recette restaurée dans le cloud. Vos modifications locales ont été conservées.",
+  "recipe.status.nameRequired": "Ajoute au minimum un nom.",
+  "recipe.status.updated": "Recette mise à jour.",
+  "recipe.status.saved": "Recette enregistrée.",
+  "recipe.status.saveFailed":
+    "Enregistrement impossible. Vérifie le stockage disponible et réessaie.",
+  "recipe.form.saving": "Enregistrement…",
+  "cloud.trashRestoredLocalPreserved":
+    "Recette restaurée dans le cloud. Vos modifications locales ont été conservées.",
   "cloud.trashTitle": "Corbeille cloud",
   "cloud.trashRetention": "7 jours",
   "cloud.trashConfigure": "Choisissez un service cloud pour accéder à la corbeille.",
@@ -10,16 +17,19 @@ export const fr = {
   "cloud.trashExpires": "Expiration : {date}",
   "cloud.trashRestore": "Restaurer",
   "cloud.trashRestoring": "Restauration…",
-  "cloud.trashRestoreTitle": "Restaurer la recette dans le cloud et sur cet appareil, et réactiver son lien partagé",
+  "cloud.trashRestoreTitle":
+    "Restaurer la recette dans le cloud et sur cet appareil, et réactiver son lien partagé",
   "cloud.trashPurge": "Supprimer définitivement",
   "cloud.trashPurgeTitle": "Supprimer définitivement « {name} » ?",
   "cloud.trashPurgeMessage": "La recette sera effacée du cloud. Cette action est irréversible.",
   "cloud.trashEmptyTitle": "Vider la corbeille cloud ?",
-  "cloud.trashEmptyMessage": "Toutes les recettes actuellement dans la corbeille cloud seront effacées définitivement. Cette action est irréversible.",
+  "cloud.trashEmptyMessage":
+    "Toutes les recettes actuellement dans la corbeille cloud seront effacées définitivement. Cette action est irréversible.",
   "cloud.trashRestored": "Recette restaurée dans le cloud et sur cet appareil.",
   "cloud.trashPurged": "Recette supprimée définitivement du cloud.",
   "cloud.trashEmptied": "Corbeille cloud vidée.",
-  "cloud.trashActionFailed": "Action impossible : la recette a peut-être expiré ou le cloud est indisponible.",
+  "cloud.trashActionFailed":
+    "Action impossible : la recette a peut-être expiré ou le cloud est indisponible.",
 
   "recipe.form.image.processing": "Préparation de la photo…",
   "cloud.storageUnavailable": "Le navigateur bloque l’enregistrement des réglages cloud.",
@@ -41,19 +51,22 @@ export const fr = {
   "backup.localSubtitle": "Fichiers ZIP · recettes et photos",
   "backup.toolsTitle": "Outils d’import",
   "cloud.creatingShare": "Création du lien… Le réveil du serveur peut prendre environ une minute.",
-  "cloud.shareHelp": "Toute personne ayant ce lien peut consulter cette recette. La clé privée de votre sauvegarde reste secrète.",
+  "cloud.shareHelp":
+    "Toute personne ayant ce lien peut consulter cette recette. La clé privée de votre sauvegarde reste secrète.",
   "cloud.copyLink": "Copier le lien",
   "cloud.close": "Fermer",
   "cloud.copyManually": "Copiez le lien sélectionné avec le menu de votre appareil ou Ctrl+C.",
 
   "cloud.title": "Sauvegarde cloud",
-  "cloud.help": "Sans configuration, vos recettes restent sur cet appareil. Configurez un serveur pour sauvegarder et partager par lien.",
+  "cloud.help":
+    "Sans configuration, vos recettes restent sur cet appareil. Configurez un serveur pour sauvegarder et partager par lien.",
   "cloud.serverUrl": "Adresse du serveur",
   "cloud.key": "Clé privée",
   "cloud.showKey": "Afficher la clé",
   "cloud.hideKey": "Masquer la clé",
   "cloud.configure": "Appliquer",
-  "cloud.keyHelp": "Activer la sauvegarde automatique génère une clé si le champ est vide. Conservez-la en lieu sûr : utilisez la même adresse et la même clé sur vos autres appareils. Toute personne ayant cette clé peut lire et modifier votre sauvegarde. Vider l’adresse désactive le cloud ; changer de clé ouvre un autre espace.",
+  "cloud.keyHelp":
+    "Activer la sauvegarde automatique génère une clé si le champ est vide. Conservez-la en lieu sûr : utilisez la même adresse et la même clé sur vos autres appareils. Toute personne ayant cette clé peut lire et modifier votre sauvegarde. Vider l’adresse désactive le cloud ; changer de clé ouvre un autre espace.",
   "cloud.autoBackup": "Sauvegarde automatique",
   "cloud.server": "Serveur",
   "cloud.database": "Base de données",
@@ -65,15 +78,21 @@ export const fr = {
   "cloud.upload": "Sauvegarder sur le cloud",
   "cloud.download": "Charger depuis le cloud",
   "cloud.check": "Vérifier la connexion",
-  "cloud.mergeHelp": "La synchronisation ajoute les recettes manquantes et met à jour les recettes existantes. Le chargement fusionne les recettes par identifiant, sans écraser les modifications locales en attente ni les versions locales plus récentes. Les tags des recettes et les photos enregistrées sont inclus ; les couleurs et catégories des tags restent locales.",
-  "cloud.trashHelp": "Supprimer une recette la supprime aussi du cloud, même si la sauvegarde automatique est désactivée. Hors connexion, la suppression attend le retour du serveur. La corbeille cloud conserve les recettes 7 jours ; la restauration sera disponible plus tard.",
+  "cloud.mergeHelp":
+    "La synchronisation ajoute les recettes manquantes et met à jour les recettes existantes. Le chargement fusionne les recettes par identifiant, sans écraser les modifications locales en attente ni les versions locales plus récentes. Les tags des recettes et les photos enregistrées sont inclus ; les couleurs et catégories des tags restent locales.",
+  "cloud.trashHelp":
+    "Supprimer une recette la supprime aussi du cloud, même si la sauvegarde automatique est désactivée. Hors connexion, la suppression attend le retour du serveur. La corbeille cloud conserve les recettes 7 jours ; la restauration sera disponible plus tard.",
   "cloud.saved": "Configuration cloud enregistrée.",
-  "cloud.invalidSettings": "Vérifiez l’adresse HTTPS du serveur et la clé privée (64 caractères hexadécimaux).",
+  "cloud.invalidSettings":
+    "Vérifiez l’adresse HTTPS du serveur et la clé privée (64 caractères hexadécimaux).",
   "cloud.uploaded": "Recettes synchronisées vers le cloud.",
   "cloud.downloaded": "{count} recette(s) chargée(s) depuis le cloud.",
-  "cloud.failed": "Cloud indisponible ou clé incorrecte. Les modifications en attente sont conservées et seront réessayées.",
-  "cloud.shareFailed": "Partage impossible. Configurez le cloud dans Sauvegarde, puis vérifiez la connexion au serveur et à la base.",
-  "cloud.shareLoadFailed": "Lien indisponible ou recette supprimée. Vérifiez votre connexion puis rechargez la page pour réessayer.",
+  "cloud.failed":
+    "Cloud indisponible ou clé incorrecte. Les modifications en attente sont conservées et seront réessayées.",
+  "cloud.shareFailed":
+    "Partage impossible. Configurez le cloud dans Sauvegarde, puis vérifiez la connexion au serveur et à la base.",
+  "cloud.shareLoadFailed":
+    "Lien indisponible ou recette supprimée. Vérifiez votre connexion puis rechargez la page pour réessayer.",
   "cloud.shareReady": "Lien de partage à copier",
   "cloud.transferring": "Transfert en cours…",
 
@@ -118,10 +137,12 @@ export const fr = {
   "recipe.form.importSupport.papilles": "papillesetpupilles.fr: bon à partiel selon la page",
   "recipe.form.importSupport.youtube": "youtube.com/shorts: partiel (titre/description)",
   "recipe.form.importFromText": "Importer depuis un texte (SMS / partage)",
-  "recipe.form.importTextPlaceholder": "Colle ici le texte partagé par SMS (titre, ingrédients, étapes...)",
+  "recipe.form.importTextPlaceholder":
+    "Colle ici le texte partagé par SMS (titre, ingrédients, étapes...)",
   "recipe.form.importTextAction": "Importer le texte",
   "recipe.form.importFileAction": "Importer un fichier JSON/ZIP/TXT",
-  "recipe.form.importFileHint": "Pour un fichier avec plusieurs recettes, utilise le menu Sauvegarde.",
+  "recipe.form.importFileHint":
+    "Pour un fichier avec plusieurs recettes, utilise le menu Sauvegarde.",
   "recipe.form.name": "Nom",
   "recipe.form.video": "Vidéo",
   "recipe.form.addIngredient": "Ajouter un ingrédient",
@@ -136,7 +157,7 @@ export const fr = {
   "recipe.form.step": "Étape",
   "recipe.form.reorder": "Réordonner",
   "recipe.form.tags.placeholder": "plat, chaud, dessert...",
-  "recipe.form.tags.addToList": "Ajouter \"{name}\" à la liste",
+  "recipe.form.tags.addToList": 'Ajouter "{name}" à la liste',
   "recipe.form.tags.globalList": "Liste globale des tags",
   "recipe.form.tools": "Outils",
   "recipe.form.tools.placeholder": "four, air fryer, poêle, friteuse, mixeur...",
@@ -178,7 +199,8 @@ export const fr = {
   "library.filters.regime": "Régime",
   "library.filters.regime.all": "Tous",
   "library.filters.seasonal": "Ingrédients de saison",
-  "library.filters.seasonalInfo": "{count} recette(s) contiennent au moins un ingrédient de saison en {month}.",
+  "library.filters.seasonalInfo":
+    "{count} recette(s) contiennent au moins un ingrédient de saison en {month}.",
   "library.filters.clear": "Effacer",
   "library.filters.origin": "Pays / région",
   "library.filters.tools": "Outils",
@@ -242,9 +264,11 @@ export const fr = {
   "shopping.status.smsOpen": "Ouverture de l'app SMS.",
   "shopping.status.textDownloaded": "Texte trop long pour SMS. Fichier .txt téléchargé.",
   "shopping.status.textFailed": "Le partage texte n'a pas abouti.",
-  "shopping.status.pngDownloaded": "PNG téléchargé. Le partage natif n'est pas disponible sur cet appareil.",
+  "shopping.status.pngDownloaded":
+    "PNG téléchargé. Le partage natif n'est pas disponible sur cet appareil.",
   "shopping.status.shareFailed": "Le partage n'a pas abouti.",
-  "shopping.status.pdfDownloaded": "PDF téléchargé. Le partage natif n'est pas disponible sur cet appareil.",
+  "shopping.status.pdfDownloaded":
+    "PDF téléchargé. Le partage natif n'est pas disponible sur cet appareil.",
   "shopping.status.pdfFailed": "Le partage PDF n'a pas abouti.",
   "shopping.title.pdf": "Exporter en PDF",
   "shopping.title.png": "Partager ou télécharger le PNG",
@@ -275,11 +299,15 @@ export const fr = {
   "backup.importSummary.duplicates": "Noms déjà présents ou en double : {names}",
   "backup.importSummary.duplicates.none": "aucun",
   "backup.importSummary.duplicates.more": "+ {count} autre(s)",
-  "backup.help.files": "Les fichiers de sauvegarde contiennent toutes les recettes au format ZIP (.zip) avec JSON + images. Ils peuvent être envoyés par mail, messagerie ou câble USB entre téléphone et ordinateur.",
-  "backup.help.example": "L'exemple ZIP montre le format attendu pour créer des recettes en dehors de l'application puis les importer.",
-  "backup.help.database": "La base JSON liste les tags, ingrédients et noms de recettes actuellement disponibles.",
+  "backup.help.files":
+    "Les fichiers de sauvegarde contiennent toutes les recettes au format ZIP (.zip) avec JSON + images. Ils peuvent être envoyés par mail, messagerie ou câble USB entre téléphone et ordinateur.",
+  "backup.help.example":
+    "L'exemple ZIP montre le format attendu pour créer des recettes en dehors de l'application puis les importer.",
+  "backup.help.database":
+    "La base JSON liste les tags, ingrédients et noms de recettes actuellement disponibles.",
   "backup.status.shareFailed": "Le partage de la sauvegarde n'a pas abouti.",
-  "backup.status.downloadedNoNativeShare": "Sauvegarde téléchargée. Le partage natif n'est pas disponible sur cet appareil.",
+  "backup.status.downloadedNoNativeShare":
+    "Sauvegarde téléchargée. Le partage natif n'est pas disponible sur cet appareil.",
   "backup.status.exampleDownloaded": "Exemple ZIP téléchargé.",
   "backup.status.aiPromptCopied": "Prompt IA copié.",
   "backup.status.aiPromptCopyFailed": "Impossible de copier le prompt IA.",
@@ -290,8 +318,10 @@ export const fr = {
   "share.error.text": "Le partage texte n'a pas abouti.",
   "share.error.link": "Le partage du lien n'a pas abouti.",
   "share.error.recipeFile": "Le partage du fichier recette n'a pas abouti.",
-  "share.status.pdfDownloaded": "PDF téléchargé. Le partage natif n'est pas disponible sur cet appareil.",
-  "share.status.pngDownloaded": "PNG téléchargé. Le partage natif n'est pas disponible sur cet appareil.",
+  "share.status.pdfDownloaded":
+    "PDF téléchargé. Le partage natif n'est pas disponible sur cet appareil.",
+  "share.status.pngDownloaded":
+    "PNG téléchargé. Le partage natif n'est pas disponible sur cet appareil.",
   "share.status.txtDownloaded": "Fichier .txt téléchargé.",
   "share.status.recipeTextCopied": "Texte de la recette copié.",
   "share.status.smsOpen": "Ouverture de l'app SMS.",
@@ -328,24 +358,35 @@ export const fr = {
 
   "import.status.urlLoading": "Analyse du lien en cours (nom, ingrédients, étapes, image)...",
   "import.status.urlSuccess": "Import terminé. Vérifie les champs puis enregistre la recette.",
-  "import.status.urlError": "Import impossible pour ce lien. Le lien est conservé, complète la recette manuellement.",
+  "import.status.urlError":
+    "Import impossible pour ce lien. Le lien est conservé, complète la recette manuellement.",
   "import.status.reimportMissingSource": "Ajoute un lien source avant de réimporter.",
   "import.status.reimportLoading": "Réimport en cours depuis le lien source...",
   "import.status.reimportReplaceSuccess": "Réimport terminé : champs remplacés depuis le lien.",
   "import.status.reimportFillSuccess": "Réimport terminé : champs vides complétés depuis le lien.",
   "import.status.reimportError": "Réimport impossible pour ce lien source.",
   "import.status.textLoading": "Analyse du texte en cours (nom, ingrédients, étapes)...",
-  "import.status.textSuccess": "Import texte terminé. Vérifie les champs puis enregistre la recette.",
+  "import.status.textSuccess":
+    "Import texte terminé. Vérifie les champs puis enregistre la recette.",
   "import.status.textError": "Import texte impossible. Colle un texte plus complet.",
-  "import.status.fileSuccess": "Recette chargée depuis le fichier. Vérifie les champs puis enregistre.",
+  "import.status.fileSuccess":
+    "Recette chargée depuis le fichier. Vérifie les champs puis enregistre.",
   "import.status.fileTextUnreadable": "Fichier texte/JSON illisible.",
   "import.status.fileNoRecipe": "Aucune recette trouvée dans ce fichier.",
-  "import.status.fileMultipleRecipes": "Ce fichier contient plusieurs recettes. Utilise le menu Sauvegarde pour un import global.",
+  "import.status.fileMultipleRecipes":
+    "Ce fichier contient plusieurs recettes. Utilise le menu Sauvegarde pour un import global.",
   "import.status.fileUnreadable": "Fichier recette illisible.",
   "import.error.network": "problème réseau",
   "import.error.unsupported": "source non supportée",
   "import.error.parse": "erreur de parsing",
   "import.error.unknown": "erreur inconnue",
+  "import.background.started": "Import de « {name} » lancé en arrière-plan.",
+  "import.background.completed": "{name} importé",
+  "import.background.failed": "Échec de l’import de {name}",
+  "import.background.createFailed": "Impossible de créer la recette provisoire.",
+  "import.background.noContent": "Aucun contenu de recette exploitable n’a été détecté.",
+  "import.card.pending": "Import en cours",
+  "import.card.failed": "Import échoué",
 
   "manage.eyebrow": "Administration",
   "manage.title": "Tags et ingrédients",
@@ -379,9 +420,11 @@ export const fr = {
   "dialog.confirm": "Confirmer",
   "dialog.cancel": "Annuler",
   "recipe.form.discardTitle": "Abandonner les modifications ?",
-  "recipe.form.discardBody": "La recette en cours n’est pas enregistrée. Ses modifications seront perdues.",
+  "recipe.form.discardBody":
+    "La recette en cours n’est pas enregistrée. Ses modifications seront perdues.",
   "recipe.form.image.addUrl": "Ajouter la photo",
-  "shopping.status.storageFailed": "La liste reste disponible ici, mais ce navigateur ne permet pas de la conserver après fermeture.",
+  "shopping.status.storageFailed":
+    "La liste reste disponible ici, mais ce navigateur ne permet pas de la conserver après fermeture.",
   "shopping.status.generated": "Liste de courses générée.",
   "shopping.item.new": "Nouvel ingrédient",
 } as const;

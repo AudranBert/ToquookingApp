@@ -1,3 +1,4 @@
+import { serverClient } from "./helpers/server-client.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
@@ -37,15 +38,11 @@ test("cloud API: isolation, persistent storage, public links, retries and trash"
   const store = new PostgresStore(pool);
   await store.initialize();
   const server = createServer({ store, origins: ["https://app.example"] });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  t.after(async () => {
-    await new Promise((resolve) => server.close(resolve));
-    await pool.end();
-  });
-  const base = `http://127.0.0.1:${server.address().port}`;
+  t.after(() => pool.end());
+  const fetchServer = await serverClient(t, server);
   const key = "a".repeat(64);
   async function request(path, { method = "GET", body, token = key, origin } = {}) {
-    return fetch(base + path, {
+    return fetchServer(path, {
       method,
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -212,9 +209,7 @@ test("cloud API: isolation, persistent storage, public links, retries and trash"
 
 test("optional database: server is available while cloud operations are disabled", async (t) => {
   const server = createServer();
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  t.after(() => new Promise((resolve) => server.close(resolve)));
-  const base = `http://127.0.0.1:${server.address().port}`;
-  assert.deepEqual(await (await fetch(base + "/health")).json(), { server: true, database: false });
-  assert.equal((await fetch(base + "/recipes")).status, 503);
+  const fetchServer = await serverClient(t, server);
+  assert.deepEqual(await (await fetchServer("/health")).json(), { server: true, database: false });
+  assert.equal((await fetchServer("/recipes")).status, 503);
 });

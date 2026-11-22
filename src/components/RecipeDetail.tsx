@@ -1,10 +1,30 @@
 import { useEffect, useState } from "react";
 import type { RefObject } from "react";
-import { BookOpen, ChefHat, Clock3, Copy, Edit3, FileDown, FileImage, Flame, Hourglass, MessageSquareText, Share2, Trash2, Users } from "lucide-react";
+import {
+  BookOpen,
+  ChefHat,
+  Clock3,
+  Copy,
+  Edit3,
+  FileDown,
+  FileImage,
+  Flame,
+  Hourglass,
+  MessageSquareText,
+  Share2,
+  Trash2,
+  Users,
+} from "lucide-react";
 import type { Recipe } from "../types";
 import { currentSeasonalIngredients, recipeContainsSeasonalIngredient } from "../seasonal";
-import { mergedRecipeImageUrls, proxiedImageUrl, shouldUseImageCrossOrigin } from "../utils/images";
+import {
+  mergedRecipeImageUrls,
+  proxiedImageUrl,
+  retryImageDirectly,
+  shouldUseImageCrossOrigin,
+} from "../utils/images";
 import { isPantryIngredient } from "../utils/ingredients";
+import { parseQuantity, formatQuantity } from "../utils/quantities";
 import { ingredientLabel } from "../utils/recipes";
 import { getTagStyle } from "../utils/tagStyle";
 import { displayTagName } from "../utils/tags";
@@ -66,25 +86,53 @@ export function RecipeDetail({
   return (
     <article className="recipe-detail">
       <div className="action-bar">
-        <button className="button button--icon-mobile" onClick={() => onEdit(recipe)} title={t("recipe.detail.edit")}>
+        <button
+          className="button button--icon-mobile"
+          onClick={() => onEdit(recipe)}
+          title={t("recipe.detail.edit")}
+        >
           <Edit3 size={18} /> {t("recipe.detail.edit")}
         </button>
-        <button className="button button--icon-mobile" onClick={() => onDuplicate(recipe)} title={t("recipe.detail.duplicate")}>
+        <button
+          className="button button--icon-mobile"
+          onClick={() => onDuplicate(recipe)}
+          title={t("recipe.detail.duplicate")}
+        >
           <Copy size={18} /> {t("recipe.detail.duplicate")}
         </button>
-        <button className="button button--icon-mobile" onClick={onExportPdf} title={t("recipe.detail.exportPdf")}>
+        <button
+          className="button button--icon-mobile"
+          onClick={onExportPdf}
+          title={t("recipe.detail.exportPdf")}
+        >
           <FileDown size={18} /> PDF
         </button>
-        <button className="button button--icon-mobile" onClick={onShareImage} title={t("recipe.detail.sharePng")}>
+        <button
+          className="button button--icon-mobile"
+          onClick={onShareImage}
+          title={t("recipe.detail.sharePng")}
+        >
           <FileImage size={18} /> PNG
         </button>
-        <button className="button button--primary button--icon-mobile" onClick={onShareText} title={t("recipe.detail.shareSms")}>
+        <button
+          className="button button--primary button--icon-mobile"
+          onClick={onShareText}
+          title={t("recipe.detail.shareSms")}
+        >
           <MessageSquareText size={18} /> SMS
         </button>
-        <button className="button button--icon-mobile" onClick={onShareLink} title={t("recipe.detail.shareRecipe")}>
+        <button
+          className="button button--icon-mobile"
+          onClick={onShareLink}
+          title={t("recipe.detail.shareRecipe")}
+        >
           <Share2 size={18} /> {t("recipe.detail.link")}
         </button>
-        <button className="button button--danger button--icon-mobile" onClick={() => onDelete(recipe)} title={t("recipe.detail.delete")}>
+        <button
+          className="button button--danger button--icon-mobile"
+          onClick={() => onDelete(recipe)}
+          title={t("recipe.detail.delete")}
+        >
           <Trash2 size={18} /> {t("recipe.detail.delete")}
         </button>
       </div>
@@ -95,7 +143,10 @@ export function RecipeDetail({
             <img
               className="recipe-image"
               src={proxiedImageUrl(activeImage, recipe.sourceUrl)}
-              crossOrigin={shouldUseImageCrossOrigin(activeImage, recipe.sourceUrl) ? "anonymous" : undefined}
+              onError={(event) => retryImageDirectly(event, activeImage, recipe.sourceUrl)}
+              crossOrigin={
+                shouldUseImageCrossOrigin(activeImage, recipe.sourceUrl) ? "anonymous" : undefined
+              }
               alt=""
             />
             {hasSeveralImages && (
@@ -103,7 +154,9 @@ export function RecipeDetail({
                 <button
                   className="recipe-carousel__nav recipe-carousel__nav--prev"
                   type="button"
-                  onClick={() => setActiveImageIndex((current) => (current - 1 + images.length) % images.length)}
+                  onClick={() =>
+                    setActiveImageIndex((current) => (current - 1 + images.length) % images.length)
+                  }
                   aria-label={t("recipe.detail.prevImage")}
                 >
                   ‹
@@ -116,14 +169,23 @@ export function RecipeDetail({
                 >
                   ›
                 </button>
-                <div className="recipe-carousel__dots" role="tablist" aria-label={t("recipe.detail.imagesNav")}>
+                <div
+                  className="recipe-carousel__dots"
+                  role="group"
+                  aria-label={t("recipe.detail.imagesNav")}
+                >
                   {images.map((_, index) => (
                     <button
                       key={index}
-                      className={index === activeImageIndex ? "recipe-carousel__dot recipe-carousel__dot--active" : "recipe-carousel__dot"}
+                      className={
+                        index === activeImageIndex
+                          ? "recipe-carousel__dot recipe-carousel__dot--active"
+                          : "recipe-carousel__dot"
+                      }
                       type="button"
                       onClick={() => setActiveImageIndex(index)}
                       aria-label={t("recipe.detail.goImage", { index: index + 1 })}
+                      aria-pressed={index === activeImageIndex}
                     />
                   ))}
                 </div>
@@ -145,35 +207,60 @@ export function RecipeDetail({
         </div>
         <div className="meta-list" role="list" aria-label={t("recipe.detail.infoAria")}>
           {hasValue(recipe.servings) && (
-            <span className="meta-pill" role="listitem" title={t("recipe.detail.servings")} aria-label={`${recipe.servings} ${t("recipe.detail.parts")}`}>
+            <span
+              className="meta-pill"
+              role="listitem"
+              title={t("recipe.detail.servings")}
+              aria-label={`${recipe.servings} ${t("recipe.detail.parts")}`}
+            >
               <Users size={15} />
               <strong>{recipe.servings}</strong>
               <span className="meta-pill__label">{t("recipe.detail.parts")}</span>
             </span>
           )}
           {hasPositiveValue(recipe.prepTime) && (
-            <span className="meta-pill" role="listitem" title={t("recipe.detail.prep")} aria-label={`${t("recipe.detail.prep")} ${recipe.prepTime} min`}>
+            <span
+              className="meta-pill"
+              role="listitem"
+              title={t("recipe.detail.prep")}
+              aria-label={`${t("recipe.detail.prep")} ${recipe.prepTime} min`}
+            >
               <ChefHat size={15} />
               <strong>{recipe.prepTime} min</strong>
               <span className="meta-pill__label">{t("recipe.detail.prepShort")}</span>
             </span>
           )}
           {hasPositiveValue(recipe.restTime) && (
-            <span className="meta-pill" role="listitem" title={t("recipe.detail.rest")} aria-label={`${t("recipe.detail.rest")} ${recipe.restTime} min`}>
+            <span
+              className="meta-pill"
+              role="listitem"
+              title={t("recipe.detail.rest")}
+              aria-label={`${t("recipe.detail.rest")} ${recipe.restTime} min`}
+            >
               <Hourglass size={15} />
               <strong>{recipe.restTime} min</strong>
               <span className="meta-pill__label">{t("recipe.detail.rest")}</span>
             </span>
           )}
           {hasPositiveValue(recipe.cookTime) && (
-            <span className="meta-pill" role="listitem" title={t("recipe.detail.cook")} aria-label={`${t("recipe.detail.cook")} ${recipe.cookTime} min`}>
+            <span
+              className="meta-pill"
+              role="listitem"
+              title={t("recipe.detail.cook")}
+              aria-label={`${t("recipe.detail.cook")} ${recipe.cookTime} min`}
+            >
               <Flame size={15} />
               <strong>{recipe.cookTime} min</strong>
               <span className="meta-pill__label">{t("recipe.detail.cook")}</span>
             </span>
           )}
           {hasPositiveValue(recipe.totalTime) && (
-            <span className="meta-pill" role="listitem" title={t("recipe.detail.total")} aria-label={`${t("recipe.detail.total")} ${recipe.totalTime} min`}>
+            <span
+              className="meta-pill"
+              role="listitem"
+              title={t("recipe.detail.total")}
+              aria-label={`${t("recipe.detail.total")} ${recipe.totalTime} min`}
+            >
               <Clock3 size={15} />
               <strong>{recipe.totalTime} min</strong>
               <span className="meta-pill__label">{t("recipe.detail.total")}</span>
@@ -186,16 +273,25 @@ export function RecipeDetail({
               <h3>{t("recipe.detail.ingredients")}</h3>
               {hasPositiveValue(numericServings) && (
                 <div className="ingredient-scale-control">
-                  <label>{t("recipe.detail.targetServings")}
+                  <label>
+                    {t("recipe.detail.targetServings")}
                     <input
                       type="number"
                       min="1"
                       value={targetServings ?? ""}
-                      onChange={(event) => setTargetServings(Number(event.target.value) || undefined)}
+                      onChange={(event) =>
+                        setTargetServings(Number(event.target.value) || undefined)
+                      }
                     />
                   </label>
-                  <label>{t("recipe.detail.unitSystem")}
-                    <select value={unitSystem} onChange={(event) => setUnitSystem(event.target.value as "metric" | "imperial")}>
+                  <label>
+                    {t("recipe.detail.unitSystem")}
+                    <select
+                      value={unitSystem}
+                      onChange={(event) =>
+                        setUnitSystem(event.target.value as "metric" | "imperial")
+                      }
+                    >
                       <option value="metric">{t("recipe.detail.unitSystem.metric")}</option>
                       <option value="imperial">{t("recipe.detail.unitSystem.imperial")}</option>
                     </select>
@@ -206,12 +302,18 @@ export function RecipeDetail({
             <ul>
               {recipe.ingredients.map((ingredient) => (
                 <li className="ingredient-status-row" key={ingredient.id}>
-                  <span>- {scaledIngredientLabel(ingredient, numericServings, targetServings, unitSystem)}</span>
+                  <span>
+                    -{" "}
+                    {scaledIngredientLabel(ingredient, numericServings, targetServings, unitSystem)}
+                  </span>
                   <span className="ingredient-badges">
-                    {recipeContainsSeasonalIngredient([ingredient.name], currentSeasonalIngredients()) && (
-                      <span className="chip chip--seasonal">{t("recipe.detail.seasonal")}</span>
+                    {recipeContainsSeasonalIngredient(
+                      [ingredient.name],
+                      currentSeasonalIngredients()
+                    ) && <span className="chip chip--seasonal">{t("recipe.detail.seasonal")}</span>}
+                    {isPantryIngredient(ingredient) && (
+                      <span className="chip chip--pantry">{t("recipe.detail.pantry")}</span>
                     )}
-                    {isPantryIngredient(ingredient) && <span className="chip chip--pantry">{t("recipe.detail.pantry")}</span>}
                   </span>
                 </li>
               ))}
@@ -248,73 +350,42 @@ function scaledIngredientLabel(
   ingredient: Recipe["ingredients"][number],
   baseServings?: number,
   targetServings?: number,
-  unitSystem: "metric" | "imperial" = "metric",
+  unitSystem: "metric" | "imperial" = "metric"
 ) {
-  const ratio = hasPositiveValue(baseServings) && hasPositiveValue(targetServings)
-    ? (targetServings as number) / (baseServings as number)
-    : 1;
-  const parsedQuantity = parseQuantityValue(ingredient.quantity);
-  if (!parsedQuantity) return ingredientLabel(ingredient);
+  const ratio =
+    hasPositiveValue(baseServings) && hasPositiveValue(targetServings)
+      ? (targetServings as number) / (baseServings as number)
+      : 1;
+  const parsedQuantity = parseQuantity(ingredient.quantity);
+  if (parsedQuantity === undefined) return ingredientLabel(ingredient);
 
-  const scaled = parsedQuantity.value * ratio;
+  const scaled = parsedQuantity * ratio;
   const converted = convertUnit(scaled, ingredient.unit, unitSystem);
   const quantity = formatQuantity(converted.value);
   const unit = converted.unit ?? ingredient.unit;
-  return [quantity, unit, ingredient.name, ingredient.note && `(${ingredient.note})`].filter(Boolean).join(" ");
-}
-
-function parseQuantityValue(value?: string) {
-  if (!value) return undefined;
-  const cleaned = value.trim().replace(",", ".");
-  const mixed = cleaned.match(/^(\d+)\s+(\d+)\/(\d+)$/);
-  if (mixed) {
-    const den = Number(mixed[3]);
-    if (!den) return undefined;
-    return { value: Number(mixed[1]) + Number(mixed[2]) / den };
-  }
-  const fraction = cleaned.match(/^(\d+)\/(\d+)$/);
-  if (fraction) {
-    const den = Number(fraction[2]);
-    if (!den) return undefined;
-    return { value: Number(fraction[1]) / den };
-  }
-  const mapped = cleaned.replace("½", ".5").replace("¼", ".25").replace("¾", ".75");
-  const parsed = Number(mapped.match(/\d+(?:\.\d+)?/)?.[0]);
-  if (!Number.isFinite(parsed)) return undefined;
-  return { value: parsed };
+  return [quantity, unit, ingredient.name, ingredient.note && `(${ingredient.note})`]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function convertUnit(value: number, unit: string | undefined, system: "metric" | "imperial") {
   const normalized = (unit ?? "").toLowerCase();
   if (system === "metric") {
-    if (["oz", "ounce", "ounces"].includes(normalized)) return { value: value * 28.3495, unit: "g" };
-    if (["lb", "lbs", "pound", "pounds"].includes(normalized)) return { value: value * 453.592, unit: "g" };
+    if (["oz", "ounce", "ounces"].includes(normalized))
+      return { value: value * 28.3495, unit: "g" };
+    if (["lb", "lbs", "pound", "pounds"].includes(normalized))
+      return { value: value * 453.592, unit: "g" };
     if (["cup", "cups"].includes(normalized)) return { value: value * 240, unit: "ml" };
     return { value, unit };
   }
-  if (["g", "gramme", "grammes"].includes(normalized)) return { value: value / 28.3495, unit: "oz" };
+  if (["g", "gramme", "grammes"].includes(normalized))
+    return { value: value / 28.3495, unit: "oz" };
   if (["kg", "kilo", "kilos"].includes(normalized)) return { value: value * 2.20462, unit: "lb" };
   if (["ml"].includes(normalized)) return { value: value / 240, unit: "cup" };
   if (["cl"].includes(normalized)) return { value: value / 24, unit: "cup" };
-  if (["l", "litre", "litres"].includes(normalized)) return { value: (value * 1000) / 240, unit: "cup" };
+  if (["l", "litre", "litres"].includes(normalized))
+    return { value: (value * 1000) / 240, unit: "cup" };
   return { value, unit };
-}
-
-function formatQuantity(value: number) {
-  const rounded = Math.round(value * 100) / 100;
-  if (Math.abs(rounded - Math.round(rounded)) < 0.01) return String(Math.round(rounded));
-  const fractions: Array<[number, string]> = [
-    [0.25, "1/4"],
-    [1 / 3, "1/3"],
-    [0.5, "1/2"],
-    [2 / 3, "2/3"],
-    [0.75, "3/4"],
-  ];
-  const whole = Math.floor(rounded);
-  const remainder = rounded - whole;
-  const fraction = fractions.find(([candidate]) => Math.abs(candidate - remainder) < 0.04)?.[1];
-  if (fraction) return whole > 0 ? `${whole} ${fraction}` : fraction;
-  return rounded.toFixed(2).replace(/\.?0+$/, "");
 }
 
 function VideoEmbed({ url }: { url: string }) {
@@ -333,7 +404,9 @@ function VideoEmbed({ url }: { url: string }) {
 }
 
 function youtubeEmbedUrl(url: string) {
-  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
+  const match = url.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/
+  );
   return match ? `https://www.youtube.com/embed/${match[1]}` : null;
 }
 

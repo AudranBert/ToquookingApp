@@ -24,7 +24,7 @@ export type LibraryFilterPreset = {
   };
 };
 
-export const LIBRARY_FILTER_PRESETS: LibraryFilterPreset[] = [
+const LIBRARY_FILTER_PRESETS: LibraryFilterPreset[] = [
   {
     id: "quick-dinner",
     labelKey: "library.presets.quickDinner",
@@ -85,7 +85,9 @@ function tagMatchesFilter(tag: string, filter: string) {
 }
 
 function queryRequestsDraft(query: string) {
-  return normalizeText(query).split(/\s+/).some((word) => DRAFT_TAG_KEYS.has(word));
+  return normalizeText(query)
+    .split(/\s+/)
+    .some((word) => DRAFT_TAG_KEYS.has(word));
 }
 
 function queryWithoutDraftTerms(query: string) {
@@ -123,30 +125,35 @@ export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
           recipe.id,
           countSeasonalIngredientMatches(
             recipe.ingredients.map((ingredient) => ingredient.name),
-            seasonalIngredients,
+            seasonalIngredients
           ),
-        ]),
+        ])
       ),
-    [recipes, seasonalIngredients],
+    [recipes, seasonalIngredients]
   );
 
   const seasonalRecipeIds = useMemo(
     () => new Set([...seasonalMatchCounts].filter(([, count]) => count > 0).map(([id]) => id)),
-    [seasonalMatchCounts],
+    [seasonalMatchCounts]
   );
 
   const filteredRecipes = useMemo(
     () =>
       recipes.filter((recipe) => {
         const draftRecipe = isDraftRecipe(recipe);
-        const draftMatches = draftRequestedByQuery ? draftRecipe : !draftRecipe || draftRequested;
+        const draftMatches = draftRequestedByQuery
+          ? draftRecipe
+          : Boolean(recipe.importStatus) || !draftRecipe || draftRequested;
         const queryMatches = recipeMatchesQuery(recipe, queryForMatching);
         const tagMatches = tagFilters.every((tag) => recipe.tags.includes(tag));
-        const excludedTagMatches = excludedTagFilters.every((tag) => !recipe.tags.some((recipeTag) => tagMatchesFilter(recipeTag, tag)));
+        const excludedTagMatches = excludedTagFilters.every(
+          (tag) => !recipe.tags.some((recipeTag) => tagMatchesFilter(recipeTag, tag))
+        );
         const originMatches = originMatchesFilter(recipe.origin, originFilter);
         const regimeMatches = !regimeFilter || recipe.tags.includes(regimeFilter);
         const heatingMatches = !noHeatingOnly || !recipe.cookTime;
-        const totalTimeMatches = !maxTotalTime || Boolean(recipe.totalTime && recipe.totalTime <= maxTotalTime);
+        const totalTimeMatches =
+          !maxTotalTime || Boolean(recipe.totalTime && recipe.totalTime <= maxTotalTime);
         const seasonMatches =
           seasonalThreshold === 0 || (seasonalMatchCounts.get(recipe.id) ?? 0) >= seasonalThreshold;
         return (
@@ -174,7 +181,7 @@ export function useRecipeFilters(recipes: Recipe[], globalTags: string[]) {
       maxTotalTime,
       seasonalThreshold,
       seasonalMatchCounts,
-    ],
+    ]
   );
 
   function applyPreset(preset: LibraryFilterPreset) {

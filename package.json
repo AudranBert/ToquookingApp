@@ -14,10 +14,11 @@
     "test:features": "node scripts/test-features.mjs",
     "test:features:network": "node scripts/test-features.mjs --with-network",
     "preview": "vite preview --host 0.0.0.0",
-    "predeploy": "npm run build",
+    "predeploy": "npm run lint && npm run format:check && npm test && npm run build:budget",
     "deploy": "gh-pages -d dist",
     "start:cloud": "node backend/start.mjs",
-    "test:cloud": "node --test tests/cloud*.test.mjs"
+    "test:cloud": "node --test tests/cloud*.test.mjs",
+    "test": "npm run test:features && node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

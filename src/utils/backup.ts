@@ -1,7 +1,8 @@
 import { normalizeText } from "../seasonal";
 import type { BackupFile, Ingredient, Recipe, RecipeTag } from "../types";
 import { createId } from "./id";
-import JSZip from "jszip";
+import type JSZip from "jszip";
+import { downloadBlob } from "./sharing";
 import { mergedRecipeImageUrls } from "./images";
 
 type RecipeDatabaseJson = {
@@ -15,27 +16,32 @@ type RecipeDatabaseJson = {
 type RecipeImportExampleFile = Omit<Partial<BackupFile>, "recipes"> & {
   version: 1;
   exportedAt: string;
-  recipes: Array<Omit<Partial<Recipe>, "ingredients"> & {
-    name: string;
-    tags: string[];
-    ingredients: Array<Partial<Ingredient> & { name: string }>;
-    instructions: string[];
-  }>;
+  recipes: Array<
+    Omit<Partial<Recipe>, "ingredients"> & {
+      name: string;
+      tags: string[];
+      ingredients: Array<Partial<Ingredient> & { name: string }>;
+      instructions: string[];
+    }
+  >;
 };
 
-export function downloadRecipesBackup(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
-  void recipesBackupZipBlob(recipes, tags).then((blob) => downloadBlob(blob, recipesBackupFileName()));
+export async function downloadRecipeImportExample() {
+  const blob = await recipeImportExampleZipBlob();
+  downloadBlob(blob, "toque-exemple-import.zip");
 }
 
-export function downloadRecipeImportExample() {
-  void recipeImportExampleZipBlob().then((blob) => downloadBlob(blob, "toque-exemple-import.zip"));
-}
-
-export function downloadRecipeDatabaseJson(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
+export function downloadRecipeDatabaseJson(
+  recipes: Recipe[],
+  tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []
+) {
   downloadBlob(recipeDatabaseBlob(recipes, tags), "toque-base-recettes.json");
 }
 
-export async function shareRecipesBackup(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
+export async function shareRecipesBackup(
+  recipes: Recipe[],
+  tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []
+) {
   const filename = recipesBackupFileName();
   const blob = await recipesBackupZipBlob(recipes, tags);
   const zipFile = new File([blob], filename, { type: "application/zip" });
@@ -43,11 +49,14 @@ export async function shareRecipesBackup(recipes: Recipe[], tags: Array<Pick<Rec
     return "shared";
   }
 
-  downloadRecipesBackup(recipes, tags);
+  downloadBlob(blob, filename);
   return "downloaded";
 }
 
-function recipesBackupTextBlob(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
+function recipesBackupTextBlob(
+  recipes: Recipe[],
+  tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []
+) {
   const globalTags = normalizeTagRecords([
     ...tags,
     ...recipes.flatMap((recipe) => recipe.tags.map((name) => ({ name }))),
@@ -61,7 +70,11 @@ function recipesBackupTextBlob(recipes: Recipe[], tags: Array<Pick<RecipeTag, "n
   return new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
 }
 
-async function recipesBackupZipBlob(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
+async function recipesBackupZipBlob(
+  recipes: Recipe[],
+  tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []
+) {
+  const { default: JSZip } = await import("jszip");
   const zip = new JSZip();
   const recipeFolder = zip.folder("recipes");
   const imageFolder = zip.folder("images");
@@ -73,13 +86,33 @@ async function recipesBackupZipBlob(recipes: Recipe[], tags: Array<Pick<RecipeTa
 
   for (const recipe of recipes) {
     const recipeForFile: Recipe = { ...recipe };
-    recipeForFile.imageUrl = await exportImageToZip(recipe.imageUrl, imageFolder, imagePathByDataUrl, recipe.id, "image");
+    recipeForFile.imageUrl = await exportImageToZip(
+      recipe.imageUrl,
+      imageFolder,
+      imagePathByDataUrl,
+      recipe.id,
+      "image"
+    );
     recipeForFile.imageUrls = (
-      await Promise.all((recipe.imageUrls ?? []).map((url) => exportImageToZip(url, imageFolder, imagePathByDataUrl, recipe.id, "image")))
+      await Promise.all(
+        (recipe.imageUrls ?? []).map((url) =>
+          exportImageToZip(url, imageFolder, imagePathByDataUrl, recipe.id, "image")
+        )
+      )
     ).filter((url): url is string => Boolean(url));
-    recipeForFile.sourceImageUrl = await exportImageToZip(recipe.sourceImageUrl, imageFolder, imagePathByDataUrl, recipe.id, "source");
+    recipeForFile.sourceImageUrl = await exportImageToZip(
+      recipe.sourceImageUrl,
+      imageFolder,
+      imagePathByDataUrl,
+      recipe.id,
+      "source"
+    );
     recipeForFile.sourceImageUrls = (
-      await Promise.all((recipe.sourceImageUrls ?? []).map((url) => exportImageToZip(url, imageFolder, imagePathByDataUrl, recipe.id, "source")))
+      await Promise.all(
+        (recipe.sourceImageUrls ?? []).map((url) =>
+          exportImageToZip(url, imageFolder, imagePathByDataUrl, recipe.id, "source")
+        )
+      )
     ).filter((url): url is string => Boolean(url));
     const name = `${safeSlug(recipe.name)}-${recipe.id}.json`;
     recipeFolder?.file(name, JSON.stringify(recipeForFile, null, 2));
@@ -88,49 +121,28 @@ async function recipesBackupZipBlob(recipes: Recipe[], tags: Array<Pick<RecipeTa
   return zip.generateAsync({ type: "blob" });
 }
 
-export function downloadSingleRecipeBackup(recipe: Recipe) {
-  void singleRecipeBackupZipBlob(recipe).then((blob) => downloadBlob(blob, recipeBackupFileName(recipe)));
-}
-
-export async function shareSingleRecipeBackup(recipe: Recipe) {
-  const filename = recipeBackupFileName(recipe);
-  const blob = await singleRecipeBackupZipBlob(recipe);
-  const zipFile = new File([blob], filename, { type: "application/zip" });
-  if (await tryShare({ files: [zipFile] })) {
-    return "shared";
-  }
-
-  downloadSingleRecipeBackup(recipe);
-  return "downloaded";
-}
-
-async function singleRecipeBackupZipBlob(recipe: Recipe) {
-  return recipesBackupZipBlob([recipe], normalizeTagRecords(recipe.tags.map((name) => ({ name }))));
-}
-
-function downloadBlob(blob: Blob, filename: string) {
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(link.href);
-}
-
 export async function parseBackupFile(file: File, existingRecipes: Recipe[]) {
   const parsed = file.name.toLowerCase().endsWith(".zip")
     ? await parseZipBackup(file)
     : parseJsonBackup(await file.text());
   if (!Array.isArray(parsed.recipes)) throw new Error("Invalid backup format");
 
-  const existingKeys = new Set(existingRecipes.map((recipe) => normalizeText(`${recipe.name} ${recipe.sourceUrl ?? ""}`)));
+  const existingKeys = new Set(
+    existingRecipes.map((recipe) => normalizeText(`${recipe.name} ${recipe.sourceUrl ?? ""}`))
+  );
+  const usedIds = new Set(existingRecipes.map((recipe) => recipe.id));
   const now = new Date().toISOString();
 
   const recipes = parsed.recipes.map((rawRecipe) => {
     const recipe = normalizeImportedRecipe(rawRecipe, now);
     const key = normalizeText(`${recipe.name} ${recipe.sourceUrl ?? ""}`);
-    return existingKeys.has(key)
+    const duplicate = usedIds.has(recipe.id) || existingKeys.has(key);
+    const imported = duplicate
       ? { ...recipe, id: createId(), name: `${recipe.name} (import)` }
       : recipe;
+    usedIds.add(imported.id);
+    existingKeys.add(key);
+    return imported;
   });
 
   return {
@@ -142,13 +154,22 @@ export async function parseBackupFile(file: File, existingRecipes: Recipe[]) {
 export async function summarizeBackupImport(file: File, existingRecipes: Recipe[]) {
   const imported = await parseBackupFile(file, []);
   const existingNames = new Set(existingRecipes.map((recipe) => normalizeText(recipe.name)));
+  const existingIds = new Set(existingRecipes.map((recipe) => recipe.id));
+  const seenImportedIds = new Set<string>();
   const seenImportedNames = new Set<string>();
   const duplicateNames = new Set<string>();
 
   for (const recipe of imported.recipes) {
     const key = normalizeText(recipe.name);
     if (!key) continue;
-    if (existingNames.has(key) || seenImportedNames.has(key)) duplicateNames.add(recipe.name);
+    if (
+      existingIds.has(recipe.id) ||
+      seenImportedIds.has(recipe.id) ||
+      existingNames.has(key) ||
+      seenImportedNames.has(key)
+    )
+      duplicateNames.add(recipe.name);
+    seenImportedIds.add(recipe.id);
     seenImportedNames.add(key);
   }
 
@@ -162,20 +183,15 @@ export async function summarizeBackupImport(file: File, existingRecipes: Recipe[
 function countBackupImages(recipes: Recipe[]) {
   const images = new Set<string>();
   recipes.forEach((recipe) => {
-    mergedRecipeImageUrls({ imageUrl: recipe.imageUrl, imageUrls: recipe.imageUrls }).forEach((url) => images.add(url));
-    mergedRecipeImageUrls({ imageUrl: recipe.sourceImageUrl, imageUrls: recipe.sourceImageUrls }).forEach((url) => images.add(url));
+    mergedRecipeImageUrls({ imageUrl: recipe.imageUrl, imageUrls: recipe.imageUrls }).forEach(
+      (url) => images.add(url)
+    );
+    mergedRecipeImageUrls({
+      imageUrl: recipe.sourceImageUrl,
+      imageUrls: recipe.sourceImageUrls,
+    }).forEach((url) => images.add(url));
   });
   return images.size;
-}
-
-function recipeBackupFileName(recipe: Recipe) {
-  const slug = recipe.name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-  return `toque-recette-${slug || "recette"}.zip`;
 }
 
 function recipesBackupFileName() {
@@ -210,12 +226,15 @@ function parseImportedTags(tags: unknown) {
   return normalizeTagRecords(normalized);
 }
 
-function recipeDatabaseBlob(recipes: Recipe[], tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []) {
+function recipeDatabaseBlob(
+  recipes: Recipe[],
+  tags: Array<Pick<RecipeTag, "name" | "category" | "color">> = []
+) {
   const knownTags = new Set(
     tags
       .map((tag) => tag.name)
       .map((tag) => tag.trim())
-      .filter(Boolean),
+      .filter(Boolean)
   );
   const ingredientNames = new Set<string>();
   const recipeNames = new Set<string>();
@@ -282,7 +301,8 @@ function recipeImportExampleBlob() {
         restTime: 0,
         cookTime: 25,
         totalTime: 40,
-        notes: "Exemple adapté à une génération par IA depuis une photo ou une capture. L'application ajoute automatiquement les identifiants et dates manquants à l'import.",
+        notes:
+          "Exemple adapté à une génération par IA depuis une photo ou une capture. L'application ajoute automatiquement les identifiants et dates manquants à l'import.",
         imageUrl: "",
         imageUrls: [],
         sourceImageUrl: "",
@@ -294,6 +314,7 @@ function recipeImportExampleBlob() {
 }
 
 async function recipeImportExampleZipBlob() {
+  const { default: JSZip } = await import("jszip");
   const zip = new JSZip();
   const recipeFolder = zip.folder("recipes");
   zip.folder("images");
@@ -312,38 +333,63 @@ function normalizeImportedRecipe(input: unknown, now: string): Recipe {
   return {
     id: typeof record.id === "string" && record.id.trim() ? record.id : createId(),
     name,
-    tags: Array.isArray(record.tags) ? record.tags.map((tag) => `${tag}`.trim()).filter(Boolean) : [],
-    origin: typeof record.origin === "string" && record.origin.trim() ? record.origin.trim() : undefined,
+    tags: Array.isArray(record.tags)
+      ? record.tags.map((tag) => `${tag}`.trim()).filter(Boolean)
+      : [],
+    origin:
+      typeof record.origin === "string" && record.origin.trim() ? record.origin.trim() : undefined,
     ingredients: Array.isArray(record.ingredients)
       ? record.ingredients.map((ingredient) => ({
-          id: typeof ingredient?.id === "string" && ingredient.id.trim() ? ingredient.id : createId(),
+          id:
+            typeof ingredient?.id === "string" && ingredient.id.trim() ? ingredient.id : createId(),
           name: typeof ingredient?.name === "string" ? ingredient.name : "",
           quantity: typeof ingredient?.quantity === "string" ? ingredient.quantity : undefined,
           unit: typeof ingredient?.unit === "string" ? ingredient.unit : undefined,
           note: typeof ingredient?.note === "string" ? ingredient.note : undefined,
         }))
       : [],
-    instructions: Array.isArray(record.instructions) ? record.instructions.map((step) => `${step}`.trim()).filter(Boolean) : [],
-    sourceUrl: typeof record.sourceUrl === "string" && record.sourceUrl.trim() ? record.sourceUrl.trim() : undefined,
-    videoUrl: typeof record.videoUrl === "string" && record.videoUrl.trim() ? record.videoUrl.trim() : undefined,
-    servings: typeof record.servings === "number" || typeof record.servings === "string" ? record.servings : undefined,
+    instructions: Array.isArray(record.instructions)
+      ? record.instructions.map((step) => `${step}`.trim()).filter(Boolean)
+      : [],
+    sourceUrl:
+      typeof record.sourceUrl === "string" && record.sourceUrl.trim()
+        ? record.sourceUrl.trim()
+        : undefined,
+    videoUrl:
+      typeof record.videoUrl === "string" && record.videoUrl.trim()
+        ? record.videoUrl.trim()
+        : undefined,
+    servings:
+      typeof record.servings === "number" || typeof record.servings === "string"
+        ? record.servings
+        : undefined,
     prepTime: typeof record.prepTime === "number" ? record.prepTime : undefined,
     restTime: typeof record.restTime === "number" ? record.restTime : undefined,
     cookTime: typeof record.cookTime === "number" ? record.cookTime : undefined,
     totalTime: typeof record.totalTime === "number" ? record.totalTime : undefined,
     notes: typeof record.notes === "string" && record.notes.trim() ? record.notes : undefined,
-    imageUrl: typeof record.imageUrl === "string" && record.imageUrl.trim() ? record.imageUrl.trim() : undefined,
+    imageUrl:
+      typeof record.imageUrl === "string" && record.imageUrl.trim()
+        ? record.imageUrl.trim()
+        : undefined,
     imageUrls: mergedRecipeImageUrls({
       imageUrl: typeof record.imageUrl === "string" ? record.imageUrl : undefined,
       imageUrls: Array.isArray(record.imageUrls) ? record.imageUrls.map((value) => `${value}`) : [],
     }),
-    sourceImageUrl: typeof record.sourceImageUrl === "string" && record.sourceImageUrl.trim() ? record.sourceImageUrl.trim() : undefined,
+    sourceImageUrl:
+      typeof record.sourceImageUrl === "string" && record.sourceImageUrl.trim()
+        ? record.sourceImageUrl.trim()
+        : undefined,
     sourceImageUrls: mergedRecipeImageUrls({
       imageUrl: typeof record.sourceImageUrl === "string" ? record.sourceImageUrl : undefined,
-      imageUrls: Array.isArray(record.sourceImageUrls) ? record.sourceImageUrls.map((value) => `${value}`) : [],
+      imageUrls: Array.isArray(record.sourceImageUrls)
+        ? record.sourceImageUrls.map((value) => `${value}`)
+        : [],
     }),
-    createdAt: typeof record.createdAt === "string" && record.createdAt.trim() ? record.createdAt : now,
-    updatedAt: typeof record.updatedAt === "string" && record.updatedAt.trim() ? record.updatedAt : now,
+    createdAt:
+      typeof record.createdAt === "string" && record.createdAt.trim() ? record.createdAt : now,
+    updatedAt:
+      typeof record.updatedAt === "string" && record.updatedAt.trim() ? record.updatedAt : now,
   };
 }
 
@@ -365,20 +411,28 @@ async function tryShare(shareData: ShareData) {
 
 function parseJsonBackup(text: string) {
   const backup = JSON.parse(text) as Partial<BackupFile> & { recipes?: unknown[] };
-  if (backup.version !== 1 || !Array.isArray(backup.recipes)) throw new Error("Invalid backup format");
+  if (backup.version !== 1 || !Array.isArray(backup.recipes))
+    throw new Error("Invalid backup format");
   return backup;
 }
 
 async function parseZipBackup(file: File) {
-  const zip = await JSZip.loadAsync(file);
+  const { default: JSZip } = await import("jszip");
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
   const backupFile = zip.file("backup.json");
-  const recipeFiles = Object.values(zip.files).filter((entry) => /^recipes\/.+\.json$/i.test(entry.name));
+  const recipeFiles = Object.values(zip.files).filter((entry) =>
+    /^recipes\/.+\.json$/i.test(entry.name)
+  );
 
-  const base = backupFile ? parseJsonBackup(await backupFile.async("string")) : ({ version: 1 } as Partial<BackupFile>);
+  const base = backupFile
+    ? parseJsonBackup(await backupFile.async("string"))
+    : ({ version: 1 } as Partial<BackupFile>);
   let recipes: unknown[];
 
   if (recipeFiles.length > 0) {
-    recipes = await Promise.all(recipeFiles.map(async (entry) => JSON.parse(await entry.async("string")) as unknown));
+    recipes = await Promise.all(
+      recipeFiles.map(async (entry) => JSON.parse(await entry.async("string")) as unknown)
+    );
   } else if (Array.isArray(base.recipes)) {
     recipes = base.recipes;
   } else {
@@ -391,7 +445,7 @@ async function parseZipBackup(file: File) {
     imageFiles.map(async (entry) => {
       const bytes = await entry.async("uint8array");
       images.set(entry.name, uint8ToDataUrl(bytes, guessMimeType(entry.name)));
-    }),
+    })
   );
 
   const hydratedRecipes = recipes.map((raw) => hydrateRecipeImageRefs(raw, images));
@@ -404,9 +458,13 @@ function hydrateRecipeImageRefs(raw: unknown, images: Map<string, string>) {
   return {
     ...record,
     imageUrl: hydrateImageRef(record.imageUrl, images),
-    imageUrls: Array.isArray(record.imageUrls) ? record.imageUrls.map((url) => hydrateImageRef(url, images) ?? "").filter(Boolean) : undefined,
+    imageUrls: Array.isArray(record.imageUrls)
+      ? record.imageUrls.map((url) => hydrateImageRef(url, images) ?? "").filter(Boolean)
+      : undefined,
     sourceImageUrl: hydrateImageRef(record.sourceImageUrl, images),
-    sourceImageUrls: Array.isArray(record.sourceImageUrls) ? record.sourceImageUrls.map((url) => hydrateImageRef(url, images) ?? "").filter(Boolean) : undefined,
+    sourceImageUrls: Array.isArray(record.sourceImageUrls)
+      ? record.sourceImageUrls.map((url) => hydrateImageRef(url, images) ?? "").filter(Boolean)
+      : undefined,
   };
 }
 
@@ -422,7 +480,7 @@ async function exportImageToZip(
   folder: JSZip | null,
   imagePathByDataUrl: Map<string, string>,
   recipeId: string,
-  role: "image" | "source",
+  role: "image" | "source"
 ) {
   if (!value) return value;
   if (/^https?:\/\//i.test(value)) return value;
@@ -434,8 +492,8 @@ async function exportImageToZip(
   const parsed = parseDataUrl(value);
   if (!parsed) return value;
   const extension = extensionFromMime(parsed.mimeType);
-  const path = `images/${recipeId}-${role}.${extension}`;
-  folder?.file(`${recipeId}-${role}.${extension}`, parsed.bytes);
+  const path = `images/${recipeId}-${role}-${imagePathByDataUrl.size}.${extension}`;
+  folder?.file(path.slice("images/".length), parsed.bytes);
   imagePathByDataUrl.set(value, path);
   return path;
 }
@@ -484,10 +542,12 @@ function uint8ToDataUrl(bytes: Uint8Array, mimeType: string) {
 }
 
 function safeSlug(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "") || "recette";
+  return (
+    value
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || "recette"
+  );
 }

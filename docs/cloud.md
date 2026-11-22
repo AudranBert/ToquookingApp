@@ -1,8 +1,8 @@
 # Cloud optionnel et partage par lien
 
-Le frontend reste un site statique GitHub Pages. Sans serveur configuré, toutes
-les fonctions locales et les sauvegardes ZIP restent disponibles. L'importeur
-`src/importer.ts` ne dépend pas de ce backend.
+Le frontend reste un site statique GitHub Pages. Les fonctions locales et les
+sauvegardes ZIP restent disponibles sans base de données. L'import par URL passe
+par le serveur configuré ; l'import de texte et de fichiers reste local.
 
 ## Service commun Toquooking
 
@@ -59,6 +59,10 @@ autre espace (elle ne produit pas une erreur d'authentification).
 
 Sans `DATABASE_URL`, le serveur démarre mais les opérations cloud répondent 503.
 `GET /health` indique séparément si le serveur et la base sont accessibles.
+`POST /import` reste disponible sans base : il reçoit `{ "url": "https://…" }`,
+récupère la page et renvoie `{ "recipe": { … } }`. Cette route ne demande pas
+la clé privée, mais applique la limite de débit générale et refuse les adresses
+du réseau privé.
 Les indicateurs se mettent à jour toutes les dix secondes uniquement quand le
 menu Sauvegarde est ouvert, indépendamment des transferts et sans vérifications
 simultanées. La file de sauvegarde conserve sa propre reprise toutes les 30 s.
@@ -104,7 +108,10 @@ Les fichiers locaux du serveur ne servent jamais de stockage de production.
   ne déclenche pas de nouvel upload. Les noms des tags sont inclus dans chaque
   recette ; les catégories/couleurs des tags restent locales.
 - Il ne s'agit pas d'une synchronisation collaborative en temps réel : entre
-  appareils, la dernière version envoyée au serveur remplace la précédente.
+  appareils, la version dont `updatedAt` est la plus récente est conservée,
+  y compris lors de la création d’un lien public. À date égale, le dernier envoi
+  gagne pour rester compatible avec les anciens clients. Cette politique dépend
+  des horloges des appareils ; elle ne fusionne pas les modifications champ par champ.
   Les recettes cloud sont chargées explicitement avec le bouton de chargement.
   Deux recettes d'identifiants différents restent distinctes même si leur nom
   est identique.
@@ -174,12 +181,14 @@ photos et le contenu complet sont récupérés uniquement à la restauration.
 
 ```powershell
 npm run build
-npm run test:features
-npm run test:cloud
+npm test
 ```
 
 Les tests cloud utilisent IndexedDB simulé côté navigateur et un véritable
-moteur PostgreSQL embarqué (PGlite) pour les requêtes SQL du serveur. Pour tester
+moteur PostgreSQL embarqué (PGlite) pour les requêtes SQL du serveur. Les routes
+HTTP sont testées en mémoire ; pour ajouter le transport réseau réel, lancer
+`$env:TEST_HTTP="1"; npm run test:cloud` dans PowerShell (ou
+`TEST_HTTP=1 npm run test:cloud` sous Linux). Pour tester
 une instance PostgreSQL externe, définir `TEST_DATABASE_URL` vers une **base de
 test dédiée et vide** ; ne jamais utiliser une base de production.
 

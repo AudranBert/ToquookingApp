@@ -14,7 +14,7 @@ const toolNameByKey = new Map(DEFAULT_RECIPE_TOOLS.map((tool) => [normalizeText(
 
 const localizedTagKeys = new Set(["preparation", "brouillon", "needs review"]);
 
-export function repairTagName(value: string) {
+function repairTagName(value: string) {
   const trimmed = value.trim();
   return TAG_MOJIBAKE_FIXES[trimmed] ?? trimmed;
 }
