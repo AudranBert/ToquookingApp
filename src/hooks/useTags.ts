@@ -59,12 +59,16 @@ function uniqueRecipeTags(recipes: Recipe[]) {
   return uniqueByNormalized(recipes.flatMap((recipe) => recipe.tags.map(formatTagName)));
 }
 
-export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: () => Promise<unknown>) {
+export function useTags(
+  recipes: Recipe[],
+  status: StatusApi,
+  onRecipesChanged: () => Promise<unknown>
+) {
   const [tags, setTags] = useState<RecipeTag[]>([]);
-  const protectedDefaults = defaultProtectedTags();
+  const protectedDefaults = useMemo(() => defaultProtectedTags(), []);
   const protectedTagKeys = useMemo(
     () => new Set(protectedDefaults.map((tag) => normalizeText(tag.name))),
-    [protectedDefaults],
+    [protectedDefaults]
   );
 
   const refresh = useCallback(async () => {
@@ -97,7 +101,9 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
           .map((recipe) => {
             const nextTags = recipe.tags.map(formatTagName);
             const changed = nextTags.some((value, index) => value !== recipe.tags[index]);
-            return changed ? { ...recipe, tags: uniqueByNormalized(nextTags), updatedAt: now } : null;
+            return changed
+              ? { ...recipe, tags: uniqueByNormalized(nextTags), updatedAt: now }
+              : null;
           })
           .filter((recipe): recipe is Recipe => Boolean(recipe));
         if (repairedRecipes.length > 0) await putRecipes(repairedRecipes);
@@ -121,7 +127,12 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
             });
             queuedKeys.add(key);
           } else if (current.name !== defaultTag.name || current.category !== defaultTag.category) {
-            toUpsert.push({ ...current, name: defaultTag.name, category: defaultTag.category, updatedAt: now });
+            toUpsert.push({
+              ...current,
+              name: defaultTag.name,
+              category: defaultTag.category,
+              updatedAt: now,
+            });
             queuedKeys.add(key);
           }
         }
@@ -157,11 +168,17 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
       groups.set(key, group);
     }
     return [...groups.values()]
-      .map((group) => ({ ...group, tags: group.tags.sort((a, b) => a.name.localeCompare(b.name, "fr")) }))
+      .map((group) => ({
+        ...group,
+        tags: group.tags.sort((a, b) => a.name.localeCompare(b.name, "fr")),
+      }))
       .sort((a, b) => a.name.localeCompare(b.name, "fr"));
   }, [tags]);
 
-  const isProtectedTag = useCallback((name: string) => protectedTagKeys.has(normalizeText(name)), [protectedTagKeys]);
+  const isProtectedTag = useCallback(
+    (name: string) => protectedTagKeys.has(normalizeText(name)),
+    [protectedTagKeys]
+  );
 
   const createTag = useCallback(
     async (rawName: string, category?: string) => {
@@ -180,7 +197,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
       status.setStatus(t("manage.status.tagAdded"));
       return name;
     },
-    [refresh, status, tags],
+    [refresh, status, tags]
   );
 
   const renameTag = useCallback(
@@ -198,14 +215,16 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
 
       await db.transaction("rw", db.tags, db.recipes, db.cloudQueue, async () => {
         await db.tags.put({ ...source, name: newName, updatedAt: nowIso() });
-        const affected = await db.recipes.filter((recipe) => recipe.tags.includes(oldName)).toArray();
+        const affected = await db.recipes
+          .filter((recipe) => recipe.tags.includes(oldName))
+          .toArray();
         if (affected.length > 0) {
           await putRecipes(
             affected.map((recipe) => ({
               ...recipe,
               tags: recipe.tags.map((tag) => (tag === oldName ? newName : tag)),
               updatedAt: nowIso(),
-            })),
+            }))
           );
         }
       });
@@ -214,7 +233,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
       status.setStatus(t("manage.status.tagRenamed"));
       return newName;
     },
-    [onRecipesChanged, refresh, status, tags],
+    [onRecipesChanged, refresh, status, tags]
   );
 
   const mergeTags = useCallback(
@@ -223,7 +242,9 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
       if (!source) return;
       const nextTarget = formatTagName(targetName);
       if (!nextTarget) return;
-      const existingTarget = tags.find((tag) => normalizeText(tag.name) === normalizeText(nextTarget));
+      const existingTarget = tags.find(
+        (tag) => normalizeText(tag.name) === normalizeText(nextTarget)
+      );
       const resolvedTargetName = existingTarget?.name ?? nextTarget;
       if (normalizeText(source.name) === normalizeText(resolvedTargetName)) return;
 
@@ -239,17 +260,21 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
           });
         }
 
-        const affected = await db.recipes.filter((recipe) => recipe.tags.includes(source.name)).toArray();
+        const affected = await db.recipes
+          .filter((recipe) => recipe.tags.includes(source.name))
+          .toArray();
         if (affected.length > 0) {
           await putRecipes(
             affected.map((recipe) => {
-              const replaced = recipe.tags.map((tag) => (tag === source.name ? resolvedTargetName : tag));
+              const replaced = recipe.tags.map((tag) =>
+                tag === source.name ? resolvedTargetName : tag
+              );
               return {
                 ...recipe,
                 tags: uniqueByNormalized(replaced),
                 updatedAt: nowIso(),
               };
-            }),
+            })
           );
         }
         await db.tags.delete(source.id);
@@ -259,7 +284,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
       await onRecipesChanged();
       status.setStatus(t("manage.status.tagsMerged"));
     },
-    [onRecipesChanged, refresh, status, tags],
+    [onRecipesChanged, refresh, status, tags]
   );
 
   const deleteTag = useCallback(
@@ -272,14 +297,16 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
       }
       await db.transaction("rw", db.tags, db.recipes, db.cloudQueue, async () => {
         await db.tags.delete(source.id);
-        const affected = await db.recipes.filter((recipe) => recipe.tags.includes(source.name)).toArray();
+        const affected = await db.recipes
+          .filter((recipe) => recipe.tags.includes(source.name))
+          .toArray();
         if (affected.length > 0) {
           await putRecipes(
             affected.map((recipe) => ({
               ...recipe,
               tags: recipe.tags.filter((tag) => tag !== source.name),
               updatedAt: nowIso(),
-            })),
+            }))
           );
         }
       });
@@ -287,7 +314,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
       await onRecipesChanged();
       status.setStatus(t("manage.status.tagDeletedFromRecipes"));
     },
-    [isProtectedTag, onRecipesChanged, refresh, status, tags],
+    [isProtectedTag, onRecipesChanged, refresh, status, tags]
   );
 
   const updateTagMeta = useCallback(
@@ -303,7 +330,7 @@ export function useTags(recipes: Recipe[], status: StatusApi, onRecipesChanged: 
       await refresh();
       status.setStatus(t("manage.status.tagUpdated"));
     },
-    [refresh, status, tags],
+    [refresh, status, tags]
   );
 
   return {

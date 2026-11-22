@@ -1,18 +1,10 @@
 import { build } from "esbuild";
+import { BASELINE_URLS } from "./lib/importer-baseline.mjs";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { importRecipeFromUrl as importOnServer } from "../backend/recipe-importer.mjs";
-
-const DEFAULT_URLS = [
-  "https://www.cuisine-libre.org/osso-bucco-lombard",
-  "https://www.marmiton.org/recettes/recette_pot-au-feu-facile_44578.aspx",
-  "https://www.cuisineaz.com/recettes/tzatziki-facile-17295.aspx",
-  "https://www.papillesetpupilles.fr/2026/05/cotes-de-porc-au-citron-et-au-thym-cuisson-douce-au-four.html/",
-  "https://www.cuisineactuelle.fr/recettes/pizza-facile-106483.aspx",
-  "https://www.youtube.com/shorts/eEB6pkC4X5o",
-];
 
 function parseArgs(argv) {
   const args = { json: false, urls: [] };
@@ -41,7 +33,12 @@ function hasPartialWarning(warnings) {
 function hasInvalidTitle(name, url) {
   const title = String(name ?? "").trim();
   if (!title) return true;
-  if (/^(?:noname|404\b|403\b|not found\b|page introuvable\b|Cuisine Actuelle\s*:\s*toutes vos recettes)/i.test(title)) return true;
+  if (
+    /^(?:noname|404\b|403\b|not found\b|page introuvable\b|Cuisine Actuelle\s*:\s*toutes vos recettes)/i.test(
+      title
+    )
+  )
+    return true;
   if (/^just a moment\b/i.test(title)) return true;
   if (/attention required|cloudflare|checking your browser/i.test(title)) return true;
   if (/youtube\.com|youtu\.be/i.test(url) && /^(subscribe|s['’]abonner)$/i.test(title)) return true;
@@ -50,7 +47,7 @@ function hasInvalidTitle(name, url) {
 
 async function run() {
   const args = parseArgs(process.argv.slice(2));
-  const urls = args.urls.length > 0 ? args.urls : DEFAULT_URLS;
+  const urls = args.urls.length > 0 ? args.urls : BASELINE_URLS;
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "toquooking-import-check-"));
   const outFile = path.join(tempDir, "importer.bundle.mjs");
   const apiUrl = "https://import.test";
@@ -96,13 +93,17 @@ async function run() {
         const recipe = await importRecipeFromUrl(url);
         const warnings = recipe.warnings ?? [];
         const invalidTitle = hasInvalidTitle(recipe.name, url);
-        const suspicious = (recipe.ingredients?.length ?? 0) > 40 || (recipe.instructions?.length ?? 0) > 40;
+        const suspicious =
+          (recipe.ingredients?.length ?? 0) > 40 || (recipe.instructions?.length ?? 0) > 40;
         results.push({
           url,
           suspicious,
           ok:
-            !invalidTitle && !suspicious &&
-            ((recipe.ingredients?.length ?? 0) > 0 || (recipe.instructions?.length ?? 0) > 0 || /youtube\.com|youtu\.be/i.test(url)),
+            !invalidTitle &&
+            !suspicious &&
+            ((recipe.ingredients?.length ?? 0) > 0 ||
+              (recipe.instructions?.length ?? 0) > 0 ||
+              /youtube\.com|youtu\.be/i.test(url)),
           name: recipe.name ?? "",
           ingredients: recipe.ingredients?.length ?? 0,
           instructions: recipe.instructions?.length ?? 0,
@@ -140,13 +141,14 @@ async function run() {
       const status = result.ok ? (result.partial ? "PARTIAL" : "OK") : "FAIL";
       lines.push(`- ${status} ${result.url}`);
       lines.push(`  name: ${result.name || "(none)"}`);
-      lines.push(`  ingredients: ${result.ingredients}, instructions: ${result.instructions}, image: ${result.hasImage ? "yes" : "no"}`);
+      lines.push(
+        `  ingredients: ${result.ingredients}, instructions: ${result.instructions}, image: ${result.hasImage ? "yes" : "no"}`
+      );
       if (result.suspicious) lines.push("  suspicious-counts: yes");
       if (result.invalidTitle) lines.push("  invalid-title: yes");
       if (result.warnings.length > 0) lines.push(`  warnings: ${result.warnings.join(" | ")}`);
     }
     process.stdout.write(`${lines.join("\n")}\n`);
-
   } finally {
     globalThis.fetch = originalFetch;
     await rm(tempDir, { recursive: true, force: true });

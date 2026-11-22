@@ -20,16 +20,7 @@ function detectLocale(): Locale {
   return language.startsWith("fr") ? "fr" : "en";
 }
 
-let currentLocale: Locale = detectLocale();
-
-export function setLocale(locale: Locale) {
-  currentLocale = locale;
-  try {
-    localStorage.setItem("toque.locale", locale);
-  } catch {
-    // ignore
-  }
-}
+const currentLocale: Locale = detectLocale();
 
 export function getLocale() {
   return currentLocale;

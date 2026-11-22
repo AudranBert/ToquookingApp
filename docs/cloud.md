@@ -108,7 +108,10 @@ Les fichiers locaux du serveur ne servent jamais de stockage de production.
   ne déclenche pas de nouvel upload. Les noms des tags sont inclus dans chaque
   recette ; les catégories/couleurs des tags restent locales.
 - Il ne s'agit pas d'une synchronisation collaborative en temps réel : entre
-  appareils, la dernière version envoyée au serveur remplace la précédente.
+  appareils, la version dont `updatedAt` est la plus récente est conservée,
+  y compris lors de la création d’un lien public. À date égale, le dernier envoi
+  gagne pour rester compatible avec les anciens clients. Cette politique dépend
+  des horloges des appareils ; elle ne fusionne pas les modifications champ par champ.
   Les recettes cloud sont chargées explicitement avec le bouton de chargement.
   Deux recettes d'identifiants différents restent distinctes même si leur nom
   est identique.
@@ -178,12 +181,14 @@ photos et le contenu complet sont récupérés uniquement à la restauration.
 
 ```powershell
 npm run build
-npm run test:features
-npm run test:cloud
+npm test
 ```
 
 Les tests cloud utilisent IndexedDB simulé côté navigateur et un véritable
-moteur PostgreSQL embarqué (PGlite) pour les requêtes SQL du serveur. Pour tester
+moteur PostgreSQL embarqué (PGlite) pour les requêtes SQL du serveur. Les routes
+HTTP sont testées en mémoire ; pour ajouter le transport réseau réel, lancer
+`$env:TEST_HTTP="1"; npm run test:cloud` dans PowerShell (ou
+`TEST_HTTP=1 npm run test:cloud` sous Linux). Pour tester
 une instance PostgreSQL externe, définir `TEST_DATABASE_URL` vers une **base de
 test dédiée et vide** ; ne jamais utiliser une base de production.
 

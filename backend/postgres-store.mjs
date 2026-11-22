@@ -58,14 +58,22 @@ export class PostgresStore {
             [owner, mutation.recipeId]
           );
         } else {
-          await client.query(
-            `INSERT INTO toque_recipes(owner, id, payload) VALUES ($1, $2, $3)
-            ON CONFLICT (owner, id) DO UPDATE SET payload = EXCLUDED.payload WHERE toque_recipes.deleted_at IS NULL`,
-            [owner, mutation.recipeId, JSON.stringify(mutation.recipe)]
-          );
+          await this.putRecipe(client, owner, mutation.recipe);
         }
       }
     });
+  }
+
+  /** Newer modification timestamps win across devices; equal timestamps keep legacy compatibility. */
+  async putRecipe(client, owner, recipe) {
+    return client.query(
+      `INSERT INTO toque_recipes(owner, id, payload) VALUES ($1, $2, $3)
+      ON CONFLICT (owner, id) DO UPDATE SET payload = CASE
+        WHEN (EXCLUDED.payload->>'updatedAt')::timestamptz >= (toque_recipes.payload->>'updatedAt')::timestamptz
+        THEN EXCLUDED.payload ELSE toque_recipes.payload END
+      WHERE toque_recipes.deleted_at IS NULL RETURNING id`,
+      [owner, recipe.id, JSON.stringify(recipe)]
+    );
   }
 
   async recipes(owner) {
@@ -171,11 +179,7 @@ export class PostgresStore {
 
   async share(owner, recipe) {
     return this.transaction(async (client) => {
-      const result = await client.query(
-        `INSERT INTO toque_recipes(owner, id, payload) VALUES ($1, $2, $3)
-        ON CONFLICT (owner, id) DO UPDATE SET payload = EXCLUDED.payload WHERE toque_recipes.deleted_at IS NULL RETURNING id`,
-        [owner, recipe.id, JSON.stringify(recipe)]
-      );
+      const result = await this.putRecipe(client, owner, recipe);
       if (!result.rowCount) throw new HttpError(410, "Recipe in trash");
       const { rows } = await client.query(
         `INSERT INTO toque_shares(id, owner, recipe_id) VALUES ($1, $2, $3)

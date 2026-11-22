@@ -62,7 +62,15 @@ Rules:
 - Leave image fields empty unless you have a real web image URL.
 - Do not add id, createdAt, or updatedAt fields.`;
 
-export function BackupScreen({ cloud, onConfirm, onExport, onImport, onDownloadExample, onDownloadDatabase, onStatus }: Props) {
+export function BackupScreen({
+  cloud,
+  onConfirm,
+  onExport,
+  onImport,
+  onDownloadExample,
+  onDownloadDatabase,
+  onStatus,
+}: Props) {
   async function copyAiPrompt() {
     try {
       await copyText(AI_RECIPE_IMPORT_PROMPT);
@@ -85,8 +93,13 @@ export function BackupScreen({ cloud, onConfirm, onExport, onImport, onDownloadE
 
       <section className="backup-card" aria-labelledby="local-backup-title">
         <div className="backup-card-heading">
-          <span className="backup-card-icon"><FolderArchive size={21} aria-hidden="true" /></span>
-          <div><h3 id="local-backup-title">{t("backup.localTitle")}</h3><span className="muted cloud-provider">{t("backup.localSubtitle")}</span></div>
+          <span className="backup-card-icon">
+            <FolderArchive size={21} aria-hidden="true" />
+          </span>
+          <div>
+            <h3 id="local-backup-title">{t("backup.localTitle")}</h3>
+            <span className="muted cloud-provider">{t("backup.localSubtitle")}</span>
+          </div>
         </div>
         <div className="action-bar">
           <button className="button button--primary" onClick={onExport}>
@@ -105,11 +118,13 @@ export function BackupScreen({ cloud, onConfirm, onExport, onImport, onDownloadE
             />
           </label>
         </div>
-
       </section>
 
       <details className="backup-card backup-tools">
-        <summary><FileJson size={19} aria-hidden="true" />{t("backup.toolsTitle")}</summary>
+        <summary>
+          <FileJson size={19} aria-hidden="true" />
+          {t("backup.toolsTitle")}
+        </summary>
         <div className="action-bar">
           <button className="button" onClick={onDownloadExample}>
             <FileJson size={18} /> {t("backup.action.downloadExample")}
@@ -121,7 +136,6 @@ export function BackupScreen({ cloud, onConfirm, onExport, onImport, onDownloadE
             <FileJson size={18} /> {t("backup.action.downloadDatabase")}
           </button>
         </div>
-
       </details>
 
       <SeasonalReference />

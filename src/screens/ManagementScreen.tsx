@@ -21,7 +21,12 @@ type Props = {
   onMergeIngredients: (sourceName: string, targetName: string) => Promise<unknown>;
   onDeleteIngredient: (name: string) => Promise<unknown>;
   onConfirm: (title: string, message?: string, danger?: boolean) => Promise<boolean>;
-  onPrompt: (title: string, defaultValue?: string, message?: string, suggestions?: string[]) => Promise<string | null>;
+  onPrompt: (
+    title: string,
+    defaultValue?: string,
+    message?: string,
+    suggestions?: string[]
+  ) => Promise<string | null>;
 };
 
 export function ManagementScreen({
@@ -44,11 +49,19 @@ export function ManagementScreen({
   const [newTagCategory, setNewTagCategory] = useState("");
   const [tagsVisible, setTagsVisible] = useState(true);
   const [ingredientsVisible, setIngredientsVisible] = useState(false);
-  const protectedSet = useMemo(() => new Set(protectedTags.map((tag) => tag.toLowerCase())), [protectedTags]);
-  const categoryOptions = useMemo(() => [...new Set(categories.map((category) => category.name))], [categories]);
+  const protectedSet = useMemo(
+    () => new Set(protectedTags.map((tag) => tag.toLowerCase())),
+    [protectedTags]
+  );
+  const categoryOptions = useMemo(
+    () => [...new Set(categories.map((category) => category.name))],
+    [categories]
+  );
 
   async function setCategoryColor(category: TagCategory, color: string) {
-    await Promise.all(category.tags.map((tag) => onUpdateTagMeta(tag.name, { category: tag.category, color })));
+    await Promise.all(
+      category.tags.map((tag) => onUpdateTagMeta(tag.name, { category: tag.category, color }))
+    );
   }
 
   return (
@@ -61,17 +74,42 @@ export function ManagementScreen({
       </div>
 
       <section className="form-section">
-        <SectionToggleHeader className="management-section-title" open={tagsVisible} onToggle={() => setTagsVisible((c) => !c)} title={<h3>{t("manage.tags")}</h3>} />
+        <SectionToggleHeader
+          className="management-section-title"
+          open={tagsVisible}
+          onToggle={() => setTagsVisible((c) => !c)}
+          title={<h3>{t("manage.tags")}</h3>}
+        />
         {tagsVisible && (
           <>
             <div className="management-row">
-              <input value={newTagName} onChange={(event) => setNewTagName(event.target.value)} placeholder="Nom du tag" />
-              <input list="management-categories" value={newTagCategory} onChange={(event) => setNewTagCategory(event.target.value)} placeholder="Catégorie" />
-              <button className="button button--primary" type="button" onClick={async () => { await onCreateTag(newTagName, newTagCategory); setNewTagName(""); }}>
+              <input
+                value={newTagName}
+                onChange={(event) => setNewTagName(event.target.value)}
+                placeholder="Nom du tag"
+              />
+              <input
+                list="management-categories"
+                value={newTagCategory}
+                onChange={(event) => setNewTagCategory(event.target.value)}
+                placeholder="Catégorie"
+              />
+              <button
+                className="button button--primary"
+                type="button"
+                onClick={async () => {
+                  await onCreateTag(newTagName, newTagCategory);
+                  setNewTagName("");
+                }}
+              >
                 {t("manage.tag.create")}
               </button>
             </div>
-            <datalist id="management-categories">{categoryOptions.map((category) => <option key={category} value={category} />)}</datalist>
+            <datalist id="management-categories">
+              {categoryOptions.map((category) => (
+                <option key={category} value={category} />
+              ))}
+            </datalist>
             <div className="management-categories">
               {categories.map((category) => (
                 <details className="panel management-category" key={category.name} open>
@@ -80,9 +118,16 @@ export function ManagementScreen({
                       <strong>{category.name}</strong>
                       <span className="muted">{category.tags.length} tag(s)</span>
                     </div>
-                    <label className="management-category__color" onClick={(event) => event.stopPropagation()}>
+                    <label
+                      className="management-category__color"
+                      onClick={(event) => event.stopPropagation()}
+                    >
                       {t("manage.tag.categoryColor")}
-                      <input type="color" value={category.color ?? "#f6ead8"} onChange={(event) => void setCategoryColor(category, event.target.value)} />
+                      <input
+                        type="color"
+                        value={category.color ?? "#f6ead8"}
+                        onChange={(event) => void setCategoryColor(category, event.target.value)}
+                      />
                     </label>
                   </summary>
                   <div className="management-tags-grid">
@@ -110,21 +155,76 @@ export function ManagementScreen({
       </section>
 
       <section className="form-section">
-        <SectionToggleHeader className="management-section-title" open={ingredientsVisible} onToggle={() => setIngredientsVisible((c) => !c)} title={<h3>{t("manage.ingredients")}</h3>} />
+        <SectionToggleHeader
+          className="management-section-title"
+          open={ingredientsVisible}
+          onToggle={() => setIngredientsVisible((c) => !c)}
+          title={<h3>{t("manage.ingredients")}</h3>}
+        />
         {ingredientsVisible && (
           <div className="stack">
             {ingredients.map((ingredient) => (
               <div className="panel management-line" key={ingredient.name}>
-                <span className="management-line__label">{ingredient.name} <span className="muted">({ingredient.usageCount})</span></span>
+                <span className="management-line__label">
+                  {ingredient.name} <span className="muted">({ingredient.usageCount})</span>
+                </span>
                 <div className="action-bar management-line__actions">
-                  <button className="button button--ghost management-action-button" aria-label={t("manage.tag.rename")} title={t("manage.tag.rename")} type="button" onClick={async () => { const next = await onPrompt(t("manage.prompt.newName"), ingredient.name); if (next) await onRenameIngredient(ingredient.name, next); }}>
-                    <Pencil size={16} /><span className="management-action-button__label">{t("manage.tag.rename")}</span>
+                  <button
+                    className="button button--ghost management-action-button"
+                    aria-label={t("manage.tag.rename")}
+                    title={t("manage.tag.rename")}
+                    type="button"
+                    onClick={async () => {
+                      const next = await onPrompt(t("manage.prompt.newName"), ingredient.name);
+                      if (next) await onRenameIngredient(ingredient.name, next);
+                    }}
+                  >
+                    <Pencil size={16} />
+                    <span className="management-action-button__label">
+                      {t("manage.tag.rename")}
+                    </span>
                   </button>
-                  <button className="button button--ghost management-action-button" aria-label={t("manage.tag.merge")} title={t("manage.tag.merge")} type="button" onClick={async () => { const target = await onPrompt(t("manage.prompt.mergeTo", { name: ingredient.name }), "", undefined, ingredients.filter((item) => item.name !== ingredient.name).map((item) => item.name)); if (target) await onMergeIngredients(ingredient.name, target); }}>
-                    <GitMerge size={16} /><span className="management-action-button__label">{t("manage.tag.merge")}</span>
+                  <button
+                    className="button button--ghost management-action-button"
+                    aria-label={t("manage.tag.merge")}
+                    title={t("manage.tag.merge")}
+                    type="button"
+                    onClick={async () => {
+                      const target = await onPrompt(
+                        t("manage.prompt.mergeTo", { name: ingredient.name }),
+                        "",
+                        undefined,
+                        ingredients
+                          .filter((item) => item.name !== ingredient.name)
+                          .map((item) => item.name)
+                      );
+                      if (target) await onMergeIngredients(ingredient.name, target);
+                    }}
+                  >
+                    <GitMerge size={16} />
+                    <span className="management-action-button__label">{t("manage.tag.merge")}</span>
                   </button>
-                  <button className="button button--danger management-action-button" aria-label={t("manage.tag.delete")} title={t("manage.tag.delete")} type="button" onClick={async () => { if (!await onConfirm(t("manage.confirm.deleteIngredientGlobal", { name: ingredient.name }), undefined, true)) return; await onDeleteIngredient(ingredient.name); }}>
-                    <Trash2 size={16} /><span className="management-action-button__label">{t("manage.tag.delete")}</span>
+                  <button
+                    className="button button--danger management-action-button"
+                    aria-label={t("manage.tag.delete")}
+                    title={t("manage.tag.delete")}
+                    type="button"
+                    onClick={async () => {
+                      if (
+                        !(await onConfirm(
+                          t("manage.confirm.deleteIngredientGlobal", { name: ingredient.name }),
+                          undefined,
+                          true
+                        ))
+                      )
+                        return;
+                      await onDeleteIngredient(ingredient.name);
+                    }}
+                  >
+                    <Trash2 size={16} />
+                    <span className="management-action-button__label">
+                      {t("manage.tag.delete")}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -137,7 +237,17 @@ export function ManagementScreen({
   );
 }
 
-function TagRow({ tag, allTags, protectedTag, onRenameTag, onMergeTags, onDeleteTag, onUpdateTagMeta, onConfirm, onPrompt }: {
+function TagRow({
+  tag,
+  allTags,
+  protectedTag,
+  onRenameTag,
+  onMergeTags,
+  onDeleteTag,
+  onUpdateTagMeta,
+  onConfirm,
+  onPrompt,
+}: {
   tag: RecipeTag;
   allTags: RecipeTag[];
   protectedTag: boolean;
@@ -146,26 +256,94 @@ function TagRow({ tag, allTags, protectedTag, onRenameTag, onMergeTags, onDelete
   onDeleteTag: (name: string) => Promise<unknown>;
   onUpdateTagMeta: (name: string, meta: { category?: string; color?: string }) => Promise<unknown>;
   onConfirm: (title: string, message?: string, danger?: boolean) => Promise<boolean>;
-  onPrompt: (title: string, defaultValue?: string, message?: string, suggestions?: string[]) => Promise<string | null>;
+  onPrompt: (
+    title: string,
+    defaultValue?: string,
+    message?: string,
+    suggestions?: string[]
+  ) => Promise<string | null>;
 }) {
   return (
     <div className="panel management-tag-card">
-      <span className="management-tag-name">{displayTagName(tag.name)}{tag.color && <span className="chip" style={{ background: tag.color, color: "#111", borderColor: tag.color }} />}</span>
+      <span className="management-tag-name">
+        {displayTagName(tag.name)}
+        {tag.color && (
+          <span
+            className="chip"
+            style={{ background: tag.color, color: "#111", borderColor: tag.color }}
+          />
+        )}
+      </span>
       <div className="action-bar">
-        <select value={tag.category ?? ""} onChange={(event) => void onUpdateTagMeta(tag.name, { category: event.target.value, color: tag.color })}>
+        <select
+          value={tag.category ?? ""}
+          onChange={(event) =>
+            void onUpdateTagMeta(tag.name, { category: event.target.value, color: tag.color })
+          }
+        >
           <option value="">{t("manage.tag.none")}</option>
-          {allTags.map((item) => item.category).filter((category, index, source) => Boolean(category) && source.indexOf(category) === index).map((category) => (
-            <option key={category} value={category}>{category}</option>
-          ))}
+          {allTags
+            .map((item) => item.category)
+            .filter(
+              (category, index, source) => Boolean(category) && source.indexOf(category) === index
+            )
+            .map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
         </select>
-        <button className="button button--ghost management-action-button" aria-label={t("manage.tag.rename")} title={t("manage.tag.rename")} type="button" onClick={async () => { const next = await onPrompt(t("manage.prompt.newName"), tag.name); if (next) await onRenameTag(tag.name, next); }}>
-          <Pencil size={16} /><span className="management-action-button__label">{t("manage.tag.rename")}</span>
+        <button
+          className="button button--ghost management-action-button"
+          aria-label={t("manage.tag.rename")}
+          title={t("manage.tag.rename")}
+          type="button"
+          onClick={async () => {
+            const next = await onPrompt(t("manage.prompt.newName"), tag.name);
+            if (next) await onRenameTag(tag.name, next);
+          }}
+        >
+          <Pencil size={16} />
+          <span className="management-action-button__label">{t("manage.tag.rename")}</span>
         </button>
-        <button className="button button--ghost management-action-button" aria-label={t("manage.tag.merge")} title={t("manage.tag.merge")} type="button" onClick={async () => { const target = await onPrompt(t("manage.prompt.mergeTo", { name: tag.name }), "", undefined, allTags.filter((item) => item.name !== tag.name).map((item) => item.name)); if (target) await onMergeTags(tag.name, target); }}>
-          <GitMerge size={16} /><span className="management-action-button__label">{t("manage.tag.merge")}</span>
+        <button
+          className="button button--ghost management-action-button"
+          aria-label={t("manage.tag.merge")}
+          title={t("manage.tag.merge")}
+          type="button"
+          onClick={async () => {
+            const target = await onPrompt(
+              t("manage.prompt.mergeTo", { name: tag.name }),
+              "",
+              undefined,
+              allTags.filter((item) => item.name !== tag.name).map((item) => item.name)
+            );
+            if (target) await onMergeTags(tag.name, target);
+          }}
+        >
+          <GitMerge size={16} />
+          <span className="management-action-button__label">{t("manage.tag.merge")}</span>
         </button>
-        <button className="button button--danger management-action-button" aria-label={t("manage.tag.delete")} title={t("manage.tag.delete")} type="button" disabled={protectedTag} onClick={async () => { if (!await onConfirm(t("manage.confirm.deleteTagGlobal", { name: tag.name }), undefined, true)) return; await onDeleteTag(tag.name); }}>
-          <Trash2 size={16} /><span className="management-action-button__label">{t("manage.tag.delete")}</span>
+        <button
+          className="button button--danger management-action-button"
+          aria-label={t("manage.tag.delete")}
+          title={t("manage.tag.delete")}
+          type="button"
+          disabled={protectedTag}
+          onClick={async () => {
+            if (
+              !(await onConfirm(
+                t("manage.confirm.deleteTagGlobal", { name: tag.name }),
+                undefined,
+                true
+              ))
+            )
+              return;
+            await onDeleteTag(tag.name);
+          }}
+        >
+          <Trash2 size={16} />
+          <span className="management-action-button__label">{t("manage.tag.delete")}</span>
         </button>
       </div>
     </div>

@@ -2,110 +2,79 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to verify and deploy (empty uses the selected branch)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  lint-and-format:
-    name: Lint and Format Check
+  checks:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build:budget
+      - uses: actions/upload-artifact@v4
+        with:
+          name: github-pages
+          path: dist
+          retention-days: 1
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run ESLint
-        run: npm run lint
-
-  build-and-importers:
-    name: Build
+  deploy:
+    needs: checks
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write
+    concurrency:
+      group: deploy-pages
+      cancel-in-progress: false
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: dist
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          force_orphan: true
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+  importer-network:
+    if: github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-  feature-tests:
-    name: Feature Tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run feature tests
-        run: npm run test:features
-
-  importer-checks:
-    name: Importer Check - ${{ matrix.label }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - label: cuisine-libre
-            url: https://www.cuisine-libre.org/osso-bucco-lombard
-          - label: marmiton
-            url: https://www.marmiton.org/recettes/recette_pot-au-feu-facile_44578.aspx
-          - label: cuisineaz
-            url: https://www.cuisineaz.com/recettes/tzatziki-facile-17295.aspx
-          - label: papillesetpupilles
-            url: https://www.papillesetpupilles.fr/2026/05/cotes-de-porc-au-citron-et-au-thym-cuisson-douce-au-four.html/
-          - label: cuisineactuelle
-            url: https://www.cuisineactuelle.fr/recettes/pizza-facile-106483.aspx
-          - label: youtube-shorts
-            url: https://www.youtube.com/shorts/eEB6pkC4X5o
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run importer check for URL
-        run: npm run check:importers -- --url "${{ matrix.url }}"
+      - run: npm ci
+      - run: npm run check:importers

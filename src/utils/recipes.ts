@@ -4,7 +4,7 @@ import { formatIngredientName, ingredientSearchText } from "./ingredients";
 import { formatTagName } from "./tags";
 import { normalizeText } from "./text";
 
-export const emptyRecipeDraft: RecipeDraft = {
+const emptyRecipeDraft: RecipeDraft = {
   name: "",
   tags: [],
   ingredients: [{ id: createId(), name: "" }],

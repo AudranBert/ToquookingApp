@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { importRecipeFromText, importRecipeFromUrl } from "../importer";
-import type { ParsedRecipe, Recipe, RecipeDraft, ReimportMode } from "../types";
+import type { Recipe, RecipeDraft, ReimportMode } from "../types";
 import { mergedRecipeImageUrls } from "../utils/images";
-import { createId } from "../utils/id";
 import { createEmptyDraft, recipeToDraft } from "../utils/recipes";
-import { normalizeText } from "../utils/text";
+import { parsedToDraft } from "../import/recipeDraft";
 import type { StatusApi } from "./useStatus";
 
 export function useRecipeDraft(status: StatusApi, allTags: string[]) {
@@ -17,11 +16,15 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
   const [isImporting, setIsImporting] = useState(false);
   const importVersion = useRef(0);
   const baseline = useRef(JSON.stringify(draft));
-  const hasChanges = JSON.stringify(draft) !== baseline.current || Boolean(importText.trim() || importUrl.trim());
+  const hasChanges =
+    JSON.stringify(draft) !== baseline.current || Boolean(importText.trim() || importUrl.trim());
 
   useEffect(() => {
     if (!hasChanges) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [hasChanges]);
@@ -60,9 +63,13 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
     await runImport({
       url,
       loadingStatus: t("import.status.reimportLoading"),
-      successStatus: mode === "replace" ? t("import.status.reimportReplaceSuccess") : t("import.status.reimportFillSuccess"),
+      successStatus:
+        mode === "replace"
+          ? t("import.status.reimportReplaceSuccess")
+          : t("import.status.reimportFillSuccess"),
       errorStatus: t("import.status.reimportError"),
-      apply: (imported) => setDraft((current) => (mode === "replace" ? imported : mergeBlanks(current, imported))),
+      apply: (imported) =>
+        setDraft((current) => (mode === "replace" ? imported : mergeBlanks(current, imported))),
     });
   }
 
@@ -123,7 +130,9 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
       const imported = parsedToDraft(parsed, url, allTags);
       apply(imported);
       setImportWarnings(parsed.warnings ?? []);
-      status.setStatus(parsed.ingredients?.length || parsed.instructions?.length ? successStatus : errorStatus);
+      status.setStatus(
+        parsed.ingredients?.length || parsed.instructions?.length ? successStatus : errorStatus
+      );
       return true;
     } catch (error) {
       if (version !== importVersion.current) return false;
@@ -154,25 +163,6 @@ export function useRecipeDraft(status: StatusApi, allTags: string[]) {
   };
 }
 
-function parsedToDraft(parsed: ParsedRecipe, fallbackUrl: string, allTags: string[]): RecipeDraft {
-  const imageUrl = parsed.imageUrl;
-  const imageUrls = mergedRecipeImageUrls({ imageUrl, imageUrls: parsed.imageUrls });
-
-  return {
-    ...createEmptyDraft(),
-    ...parsed,
-    sourceUrl: parsed.sourceUrl ?? fallbackUrl,
-    videoUrl: parsed.videoUrl,
-    imageUrl,
-    imageUrls,
-    sourceImageUrl: imageUrl,
-    sourceImageUrls: imageUrls,
-    tags: matchKnownTags(parsed.tags ?? [], allTags),
-    ingredients: parsed.ingredients?.length ? parsed.ingredients : [{ id: createId(), name: "" }],
-    instructions: parsed.instructions?.length ? parsed.instructions : [""],
-  };
-}
-
 function mergeBlanks(current: RecipeDraft, imported: RecipeDraft): RecipeDraft {
   return {
     ...current,
@@ -193,35 +183,34 @@ function mergeBlanks(current: RecipeDraft, imported: RecipeDraft): RecipeDraft {
     sourceImageUrl: current.sourceImageUrl || imported.sourceImageUrl,
     sourceImageUrls: mergedRecipeImageUrls({
       imageUrl: current.sourceImageUrl || imported.sourceImageUrl,
-      imageUrls: (current.sourceImageUrls?.length ? current.sourceImageUrls : imported.sourceImageUrls) ?? [],
+      imageUrls:
+        (current.sourceImageUrls?.length ? current.sourceImageUrls : imported.sourceImageUrls) ??
+        [],
     }),
     origin: current.origin || imported.origin,
     tags: current.tags.length ? current.tags : imported.tags,
     ingredients: hasFilledIngredients(current) ? current.ingredients : imported.ingredients,
-    instructions: current.instructions.some((step) => step.trim()) ? current.instructions : imported.instructions,
+    instructions: current.instructions.some((step) => step.trim())
+      ? current.instructions
+      : imported.instructions,
   };
-}
-
-function matchKnownTags(importedTags: string[], allTags: string[]) {
-  const known = new Map(allTags.map((tag) => [normalizeText(tag), tag]));
-  const matched = new Map<string, string>();
-  importedTags.forEach((tag) => {
-    const exact = known.get(normalizeText(tag));
-    if (exact) matched.set(normalizeText(exact), exact);
-  });
-  return [...matched.values()];
 }
 
 function hasFilledIngredients(draft: RecipeDraft) {
   return draft.ingredients.some((ingredient) =>
-    [ingredient.quantity, ingredient.unit, ingredient.name, ingredient.note].some((value) => value?.trim()),
+    [ingredient.quantity, ingredient.unit, ingredient.name, ingredient.note].some((value) =>
+      value?.trim()
+    )
   );
 }
 
 function classifyImportError(error: unknown) {
-  const message = error instanceof Error ? error.message.toLowerCase() : String(error ?? "").toLowerCase();
-  if (/failed to fetch|network|cors|timeout|dns|internet/.test(message)) return t("import.error.network");
-  if (/unsupported|not supported|no recipe|introuvable|aucune recette/.test(message)) return t("import.error.unsupported");
+  const message =
+    error instanceof Error ? error.message.toLowerCase() : String(error ?? "").toLowerCase();
+  if (/failed to fetch|network|cors|timeout|dns|internet/.test(message))
+    return t("import.error.network");
+  if (/unsupported|not supported|no recipe|introuvable|aucune recette/.test(message))
+    return t("import.error.unsupported");
   if (/json|parse|syntax/.test(message)) return t("import.error.parse");
   return t("import.error.unknown");
 }

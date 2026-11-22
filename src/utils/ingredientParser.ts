@@ -7,7 +7,7 @@ export type ParsedIngredient = {
   unit?: string;
 };
 
-export const KNOWN_UNITS = [
+const KNOWN_UNITS = [
   "cuillères à soupe",
   "cuillère à soupe",
   "cuillères à café",
@@ -60,6 +60,9 @@ export function parseIngredientLine(line: string): ParsedIngredient {
     id: createId(),
     quantity,
     unit,
-    name: rest.slice(unit.length).trim().replace(/^d['’]\s*|^de\s+|^du\s+|^des\s+/, ""),
+    name: rest
+      .slice(unit.length)
+      .trim()
+      .replace(/^d['’]\s*|^de\s+|^du\s+|^des\s+/, ""),
   };
 }

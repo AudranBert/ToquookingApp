@@ -11,12 +11,15 @@ export function useStatus() {
     setOnActivate(undefined);
   }, []);
 
-  const show = useCallback((message: string, action?: () => void, durationMs?: number) => {
-    clearTimeout(timer.current);
-    setStatus(message);
-    setOnActivate(() => action);
-    if (durationMs) timer.current = setTimeout(clear, durationMs);
-  }, [clear]);
+  const show = useCallback(
+    (message: string, action?: () => void, durationMs?: number) => {
+      clearTimeout(timer.current);
+      setStatus(message);
+      setOnActivate(() => action);
+      if (durationMs) timer.current = setTimeout(clear, durationMs);
+    },
+    [clear]
+  );
 
   useEffect(() => () => clearTimeout(timer.current), []);
   return { status, onActivate, setStatus: show, clear };

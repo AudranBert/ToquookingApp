@@ -1,4 +1,4 @@
-export const IMAGE_COMPRESSION = {
+const IMAGE_COMPRESSION = {
   maxDimension: 1600,
   quality: 0.8,
   mimeType: "image/webp",

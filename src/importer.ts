@@ -21,9 +21,10 @@ export async function importRecipeFromUrl(url: string): Promise<ParsedRecipe> {
     body: JSON.stringify({ url }),
     signal: AbortSignal.timeout(CLOUD_CONFIG.requestTimeoutMs),
   });
-  const payload = await response.json().catch(() => null) as
-    | { recipe?: ParsedRecipe; error?: string }
-    | null;
+  const payload = (await response.json().catch(() => null)) as {
+    recipe?: ParsedRecipe;
+    error?: string;
+  } | null;
   if (!response.ok || !payload?.recipe) {
     throw new Error(payload?.error || `Import failed (${response.status})`);
   }
@@ -51,8 +52,12 @@ export function importRecipeFromText(text: string): ParsedRecipe {
     };
   }
 
-  return defaultMarkdownFallback(content, sourceUrl ?? "https://import.local/text") ?? {
-    sourceUrl,
-    warnings: ["Import partiel depuis un texte non structuré. Vérifie les champs avant d’enregistrer."],
-  };
+  return (
+    defaultMarkdownFallback(content, sourceUrl ?? "https://import.local/text") ?? {
+      sourceUrl,
+      warnings: [
+        "Import partiel depuis un texte non structuré. Vérifie les champs avant d’enregistrer.",
+      ],
+    }
+  );
 }

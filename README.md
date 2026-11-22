@@ -5,6 +5,7 @@ Toquooking is a local-first digital recipe book for importing, personalizing, se
 ## Overview
 
 Main capabilities:
+
 - Import recipes from websites through the Toquooking server, and from free text locally.
 - Edit imported content (title, ingredients, steps, images, tags, notes).
 - Search by name, ingredient, tags, origin, and seasonal hints.
@@ -12,6 +13,7 @@ Main capabilities:
 - Build shopping lists from selected recipes.
 
 Supported import sources (expected good or near-good extraction):
+
 - `marmiton.org`
 - `cuisineaz.com`
 - `cuisine-libre.org`
@@ -45,33 +47,39 @@ npm run preview
 Open the preview URL (usually `http://localhost:4173/ToquookingApp/`).
 
 This matches GitHub Pages behavior:
+
 - Static files served from `dist/`.
 - URL imports sent to the server configured in `public/online-config.json`.
 - A small frontend client in `src/importer.ts`; website fetching and parsing run in `backend/recipe-importer.mjs`.
 
 Note for local development:
+
 - Start the backend with `npm run start:cloud` to test URL imports.
 - `npm run dev` exposes `/api/image` via Vite middleware for local image loading.
 
 ## Offline Test Flow
 
 To validate offline-like behavior:
+
 1. Run `npm run build` then `npm run preview`.
 2. Open browser DevTools Network tab.
 3. Switch network to `Offline`.
 4. Reload and verify fallback UX/messages.
 
 Expected behavior:
+
 - App shell should still load if already cached by browser/service worker policy.
 - External URL imports fail gracefully offline and keep manual-entry workflow usable.
 
 ## Deployment
 
 Automatic deploy:
-- On every push/merge to `main`, `.github/workflows/deploy-pages.yml` builds and deploys to `gh-pages`.
+
+- On every push/merge to `main`, `.github/workflows/ci.yml` verifies lint, formatting, offline tests and bundle budgets before deploying the checked build to `gh-pages`.
 
 Manual deploy from GitHub Actions:
-- Run the `Deploy GitHub Pages` workflow.
+
+- Run the `CI` workflow.
 - Optional input `ref` lets you deploy a specific branch, tag, or commit SHA.
 
 Manual local deploy (including local uncommitted changes):
@@ -109,15 +117,17 @@ npm run check:importers -- --url "https://www.cuisineaz.com/recettes/poulet-teri
 The historical Cuisine Libre osso-bucco and Cuisine Actuelle pizza URLs can return 404 pages. The frontend now rejects these pages and keeps the source link with a manual-entry warning. They remain in the regression list; `check:importers` reports their unavailability as a failure, including with `--json`.
 
 A live Cuisine Actuelle check can also use:
+
 ```powershell
 npm run check:importers -- --url "https://www.cuisineactuelle.fr/recettes/la-vraie-soupe-a-l-oignon-super-simple-106587"
 ```
 
-Plain text section boundaries, proxy error pages and structured-data priority are covered by `npm run test:features`. Network results can still vary with source/proxy availability; partial warnings remain visible even when several fields were extracted.
+Plain text section boundaries, error pages and structured-data priority are covered by `npm run test:features`. Network results can still vary with source/proxy availability; partial warnings remain visible even when several fields were extracted.
 
 ## What is next
 
 TO DO:
+
 - ✔️ HTTPS/Phone App
 - ✔️ Change page remove Message headband
 - ✔️ Better shopping list recipe selection
@@ -153,3 +163,9 @@ TO DO:
 Cloud browser settings are in `src/cloud/config.ts`; server limits and maintenance settings are in `backend/config.mjs`. Image compression settings remain in `src/utils/imageCompression.ts`. Private keys and database identifiers retain their existing storage names for compatibility.
 
 See [cloud documentation](docs/cloud.md) for configuration and deployment.
+
+## Quality checks
+
+Run `npm run lint`, `npm run format:check`, `npm test`, and `npm run build:budget`.
+`npm run check:importers` additionally checks the live source sites through the frontend client and server parser. Live checks depend on network access and source anti-bot protection; they remain separate from deterministic offline regression tests.
+Backup imports preserve local recipes when IDs collide and create an imported copy.

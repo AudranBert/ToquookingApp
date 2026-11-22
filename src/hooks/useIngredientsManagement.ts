@@ -12,7 +12,11 @@ export type IngredientUsage = {
   usageCount: number;
 };
 
-export function useIngredientsManagement(recipes: Recipe[], status: StatusApi, onRecipesChanged: () => Promise<unknown>) {
+export function useIngredientsManagement(
+  recipes: Recipe[],
+  status: StatusApi,
+  onRecipesChanged: () => Promise<unknown>
+) {
   const allIngredients = useMemo(() => {
     const aggregate = new Map<string, IngredientUsage>();
     recipes.forEach((recipe) => {
@@ -36,17 +40,19 @@ export function useIngredientsManagement(recipes: Recipe[], status: StatusApi, o
     if (!newName || normalizeText(oldName) === normalizeText(newName)) return;
     const oldKey = normalizeText(oldName);
 
-    const affected = recipes.filter((recipe) => recipe.ingredients.some((ingredient) => normalizeText(ingredient.name) === oldKey));
+    const affected = recipes.filter((recipe) =>
+      recipe.ingredients.some((ingredient) => normalizeText(ingredient.name) === oldKey)
+    );
     if (affected.length === 0) return;
 
     await putRecipes(
       affected.map((recipe) => ({
         ...recipe,
         ingredients: recipe.ingredients.map((ingredient) =>
-          normalizeText(ingredient.name) === oldKey ? { ...ingredient, name: newName } : ingredient,
+          normalizeText(ingredient.name) === oldKey ? { ...ingredient, name: newName } : ingredient
         ),
         updatedAt: nowIso(),
-      })),
+      }))
     );
     await onRecipesChanged();
     status.setStatus(t("manage.status.ingredientRenamed"));
@@ -59,14 +65,18 @@ export function useIngredientsManagement(recipes: Recipe[], status: StatusApi, o
 
   async function deleteIngredient(name: string) {
     const key = normalizeText(name);
-    const affected = recipes.filter((recipe) => recipe.ingredients.some((ingredient) => normalizeText(ingredient.name) === key));
+    const affected = recipes.filter((recipe) =>
+      recipe.ingredients.some((ingredient) => normalizeText(ingredient.name) === key)
+    );
     if (affected.length === 0) return;
     await putRecipes(
       affected.map((recipe) => ({
         ...recipe,
-        ingredients: recipe.ingredients.filter((ingredient) => normalizeText(ingredient.name) !== key),
+        ingredients: recipe.ingredients.filter(
+          (ingredient) => normalizeText(ingredient.name) !== key
+        ),
         updatedAt: nowIso(),
-      })),
+      }))
     );
     await onRecipesChanged();
     status.setStatus(t("manage.status.ingredientDeletedFromRecipes"));

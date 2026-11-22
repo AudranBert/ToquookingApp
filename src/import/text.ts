@@ -69,14 +69,15 @@ function repairMojibake(value: string) {
     const repaired = new TextDecoder("utf-8").decode(bytes);
     const originalNoise = (value.match(/[ÃÂâï¿\u0019]/g) ?? []).length;
     const repairedNoise = (repaired.match(/[ÃÂâï¿\u0019]/g) ?? []).length;
-    const addsReplacementCharacters = (repaired.match(/\uFFFD/g) ?? []).length > (value.match(/\uFFFD/g) ?? []).length;
+    const addsReplacementCharacters =
+      (repaired.match(/\uFFFD/g) ?? []).length > (value.match(/\uFFFD/g) ?? []).length;
     return repairedNoise < originalNoise && !addsReplacementCharacters ? repaired : value;
   } catch {
     return value;
   }
 }
 
-export function decodeHtmlEntities(value: string) {
+function decodeHtmlEntities(value: string) {
   let decoded = value;
   for (let pass = 0; pass < 3; pass += 1) {
     const next = decoded.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (entity, code: string) => {
@@ -130,20 +131,4 @@ function stripWrappingQuotes(value: string) {
     }
   }
   return trimmed;
-}
-
-export function isImageMarkdownLine(value: string) {
-  return /^!?\[.*image/i.test(value);
-}
-
-export function isInstructionNoise(value: string) {
-  return (
-    !value ||
-    /^https?:\/\//i.test(value) ||
-    isImageMarkdownLine(value) ||
-    /^\*+\s*\*+$/.test(value.trim()) ||
-    /value=|formulaire_action|jQuery|autosave|_gaq|trackingParams|commandMetadata|navigationEndpoint/i.test(
-      value
-    )
-  );
 }

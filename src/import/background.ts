@@ -3,6 +3,7 @@ import { createId } from "../utils/id";
 import { mergedRecipeImageUrls } from "../utils/images";
 import { nowIso } from "../utils/recipes";
 import { normalizeText } from "../utils/text";
+import { matchKnownTags } from "./recipeDraft";
 
 export function createPendingImport(url: string): Recipe {
   const name = nameFromUrl(url);
@@ -24,7 +25,7 @@ export function createPendingImport(url: string): Recipe {
 export function completePendingImport(
   current: Recipe,
   parsed: ParsedRecipe,
-  knownTags: string[],
+  knownTags: string[]
 ): Recipe {
   const importedImages = mergedRecipeImageUrls({
     imageUrl: parsed.imageUrl,
@@ -46,7 +47,12 @@ export function completePendingImport(
     totalTime: current.totalTime ?? parsed.totalTime,
     notes: current.notes || parsed.notes,
     origin: current.origin || parsed.origin,
-    tags: [...new Set([...current.tags, ...importedTags])],
+    tags: [
+      ...new Set([
+        ...current.tags.filter((tag) => !["brouillon", "draft"].includes(normalizeText(tag))),
+        ...importedTags,
+      ]),
+    ],
     ingredients: current.ingredients.length ? current.ingredients : (parsed.ingredients ?? []),
     instructions: current.instructions.length ? current.instructions : (parsed.instructions ?? []),
     imageUrl: current.imageUrl || importedImages[0],
@@ -75,7 +81,7 @@ export function hasImportedContent(parsed: ParsedRecipe) {
     parsed.instructions?.length ||
     parsed.name ||
     parsed.videoUrl ||
-    parsed.imageUrl,
+    parsed.imageUrl
   );
 }
 
@@ -88,13 +94,10 @@ function nameFromUrl(sourceUrl: string) {
       .replace(/\.(?:aspx|html?)$/i, "")
       .replace(/[-_]+/g, " ")
       .trim();
-    return name ? name.replace(/\b\p{L}/gu, (letter) => letter.toUpperCase()) : "Recette à importer";
+    return name
+      ? name.replace(/\b\p{L}/gu, (letter) => letter.toUpperCase())
+      : "Recette à importer";
   } catch {
     return "Recette à importer";
   }
-}
-
-function matchKnownTags(imported: string[], known: string[]) {
-  const knownByName = new Map(known.map((tag) => [normalizeText(tag), tag]));
-  return [...new Set(imported.map((tag) => knownByName.get(normalizeText(tag))).filter((tag): tag is string => Boolean(tag)))];
 }

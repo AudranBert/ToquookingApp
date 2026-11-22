@@ -8,13 +8,18 @@ import { AppHeader } from "./components/AppHeader";
 import { LibraryScreen } from "./screens/LibraryScreen";
 import { RecipeForm } from "./screens/RecipeForm";
 import { ShoppingScreen } from "./screens/ShoppingScreen";
-import { downloadRecipeDatabaseJson, downloadRecipeImportExample, parseBackupFile, shareRecipesBackup, summarizeBackupImport } from "./utils/backup";
 import {
-  copyRecipeShareLink,
-  shareRecipeText,
-  sharedRecipeToImport,
-} from "./utils/recipeSharing";
-import { clearRecipeShareFromLocation, readRecipeShareFromLocation } from "./utils/legacyRecipeLink";
+  downloadRecipeDatabaseJson,
+  downloadRecipeImportExample,
+  parseBackupFile,
+  shareRecipesBackup,
+  summarizeBackupImport,
+} from "./utils/backup";
+import { copyRecipeShareLink, shareRecipeText, sharedRecipeToImport } from "./utils/recipeSharing";
+import {
+  clearRecipeShareFromLocation,
+  readRecipeShareFromLocation,
+} from "./utils/legacyRecipeLink";
 import { useStatus } from "./hooks/useStatus";
 import { useRecipes } from "./hooks/useRecipes";
 import { useRecipeFilters } from "./hooks/useRecipeFilters";
@@ -30,16 +35,14 @@ import { putRecipe } from "./data/recipeRepository";
 import { useCloudBackup } from "./hooks/useCloudBackup";
 import { createCloudShare, readCloudShareFromLocation } from "./cloud/sharing";
 import { AppDialog } from "./components/AppDialog";
-import { importRecipeFromUrl } from "./importer";
-import {
-  completePendingImport,
-  createPendingImport,
-  failPendingImport,
-  hasImportedContent,
-} from "./import/background";
+import { useBackgroundImports } from "./hooks/useBackgroundImports";
 
-const BackupScreen = lazy(async () => import("./screens/BackupScreen").then((module) => ({ default: module.BackupScreen })));
-const ManagementScreen = lazy(async () => import("./screens/ManagementScreen").then((module) => ({ default: module.ManagementScreen })));
+const BackupScreen = lazy(async () =>
+  import("./screens/BackupScreen").then((module) => ({ default: module.BackupScreen }))
+);
+const ManagementScreen = lazy(async () =>
+  import("./screens/ManagementScreen").then((module) => ({ default: module.ManagementScreen }))
+);
 
 function isZipFile(file: File) {
   return file.name.toLowerCase().endsWith(".zip");
@@ -47,7 +50,7 @@ function isZipFile(file: File) {
 
 export function App() {
   const status = useStatus();
-  const { recipes, refresh, save, remove, duplicate, importBackup } = useRecipes(status);
+  const { recipes, isSaving, refresh, save, remove, duplicate, importBackup } = useRecipes(status);
   const tagApi = useTags(recipes, status, refresh);
   const ingredientApi = useIngredientsManagement(recipes, status, refresh);
   const filters = useRecipeFilters(recipes, tagApi.allTags);
@@ -58,7 +61,6 @@ export function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<Panel>("library");
   const cloud = useCloudBackup(refresh, status.setStatus, activePanel === "backup");
-  const activeImports = useRef(new Set<string>());
   const handledSharedRecipe = useRef(false);
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [creatingShare, setCreatingShare] = useState(false);
@@ -66,10 +68,12 @@ export function App() {
   const tagColorByName = useMemo(() => buildTagColorMap(tagApi.tags), [tagApi.tags]);
   const dialogState = dialog.dialogState;
   const dialogPromptValue = dialogState.kind === "prompt" ? dialogState.promptValue : undefined;
-  const dialogPromptSuggestions = dialogState.kind === "prompt" ? dialogState.suggestions : undefined;
+  const dialogPromptSuggestions =
+    dialogState.kind === "prompt" ? dialogState.suggestions : undefined;
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
+      if (import.meta.env.DEV) return;
       navigator.serviceWorker
         .register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL })
         .catch(() => undefined);
@@ -77,21 +81,15 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    for (const recipe of recipes) {
-      if (recipe.importStatus !== "pending" || activeImports.current.has(recipe.id)) continue;
-      activeImports.current.add(recipe.id);
-      void runBackgroundImport(recipe.id, recipe.sourceUrl ?? "");
-    }
-  }, [recipes]);
-
-  useEffect(() => {
     if (handledSharedRecipe.current) return;
     handledSharedRecipe.current = true;
     void (async () => {
       try {
-        const sharedRecipe = readRecipeShareFromLocation() ?? await readCloudShareFromLocation();
+        const sharedRecipe = readRecipeShareFromLocation() ?? (await readCloudShareFromLocation());
         if (!sharedRecipe) return;
-        const accepted = await dialog.confirm(t("app.confirm.importShared", { name: sharedRecipe.name }));
+        const accepted = await dialog.confirm(
+          t("app.confirm.importShared", { name: sharedRecipe.name })
+        );
         if (!accepted) return;
         const importedRecipe = sharedRecipeToImport(sharedRecipe, await db.recipes.toArray());
         await putRecipe(importedRecipe);
@@ -107,11 +105,37 @@ export function App() {
     })();
   }, [dialog, refresh, status]);
 
-  const selectedRecipe = selectedId ? recipes.find((recipe) => recipe.id === selectedId) : undefined;
-  const seasonMonthName = MONTH_NAMES[new Date().getMonth()];
-  const isAbortError = (error: unknown) => error instanceof DOMException && error.name === "AbortError";
+  const backgroundImports = useBackgroundImports(
+    recipes,
+    tagApi.allTags,
+    refresh,
+    status,
+    (recipe) => {
+      setSelectedId(recipe.id);
+      setActivePanel("library");
+    },
+    async (recipe) => {
+      if (
+        draftApi.hasChanges &&
+        !(await dialog.confirm(t("recipe.form.discardTitle"), t("recipe.form.discardBody")))
+      )
+        return;
+      draftApi.startEdit(recipe);
+      setActivePanel("form");
+    }
+  );
 
-  async function withShareStatus(action: () => Promise<"shared" | "downloaded" | "copied" | "sms" | "manual" | "too_long">, fallbackError: string) {
+  const selectedRecipe = selectedId
+    ? recipes.find((recipe) => recipe.id === selectedId)
+    : undefined;
+  const seasonMonthName = MONTH_NAMES[new Date().getMonth()];
+  const isAbortError = (error: unknown) =>
+    error instanceof DOMException && error.name === "AbortError";
+
+  async function withShareStatus(
+    action: () => Promise<"shared" | "downloaded" | "copied" | "sms" | "manual" | "too_long">,
+    fallbackError: string
+  ) {
     try {
       return await action();
     } catch (error) {
@@ -121,7 +145,13 @@ export function App() {
     }
   }
 
-  function startNewRecipe() {
+  async function startNewRecipe() {
+    if (
+      draftApi.hasChanges &&
+      !(await dialog.confirm(t("recipe.form.discardTitle"), t("recipe.form.discardBody")))
+    )
+      return;
+    draftApi.startNew();
     status.clear();
     setActivePanel("form");
   }
@@ -133,7 +163,11 @@ export function App() {
   }
 
   async function startEdit(recipe: Recipe) {
-    if (draftApi.hasChanges && !await dialog.confirm(t("recipe.form.discardTitle"), t("recipe.form.discardBody"))) return;
+    if (
+      draftApi.hasChanges &&
+      !(await dialog.confirm(t("recipe.form.discardTitle"), t("recipe.form.discardBody")))
+    )
+      return;
     draftApi.startEdit(recipe);
     setActivePanel("form");
   }
@@ -148,7 +182,11 @@ export function App() {
   }
 
   async function handleDelete(recipe: Recipe) {
-    const accepted = await dialog.confirm(t("recipe.confirm.delete", { name: recipe.name }), undefined, true);
+    const accepted = await dialog.confirm(
+      t("recipe.confirm.delete", { name: recipe.name }),
+      undefined,
+      true
+    );
     if (!accepted) return;
     if (await remove(recipe)) setSelectedId(null);
   }
@@ -161,69 +199,15 @@ export function App() {
   async function handleAssistedImport() {
     const url = draftApi.importUrl.trim();
     if (!url) return;
-    const pending = createPendingImport(url);
     try {
-      activeImports.current.add(pending.id);
-      await db.recipes.put(pending);
-      await refresh();
+      const pending = await backgroundImports.enqueue(url);
       draftApi.startNew();
       setSelectedId(null);
       setActivePanel("library");
       status.setStatus(t("import.background.started", { name: pending.name }));
-      void runBackgroundImport(pending.id, url);
     } catch {
-      activeImports.current.delete(pending.id);
       status.setStatus(t("import.background.createFailed"));
     }
-  }
-
-  async function runBackgroundImport(recipeId: string, url: string) {
-    try {
-      const parsed = await importRecipeFromUrl(url);
-      const current = await db.recipes.get(recipeId);
-      if (!current) return;
-      if (!hasImportedContent(parsed)) {
-        const reason = parsed.warnings?.join(" ") || t("import.background.noContent");
-        await db.recipes.put(failPendingImport(current, reason));
-        await refresh();
-        showImportFailure(recipeId, current.name);
-        return;
-      }
-      const completed = completePendingImport(current, parsed, tagApi.allTags);
-      await putRecipe(completed);
-      await refresh();
-      status.setStatus(
-        t("import.background.completed", { name: completed.name }),
-        () => {
-          setSelectedId(completed.id);
-          setActivePanel("library");
-          status.clear();
-        },
-        8_000,
-      );
-    } catch (error) {
-      const current = await db.recipes.get(recipeId);
-      if (!current) return;
-      const message = error instanceof Error ? error.message : t("import.background.noContent");
-      await db.recipes.put(failPendingImport(current, message));
-      await refresh();
-      showImportFailure(recipeId, current.name);
-    }
-  }
-
-  function showImportFailure(recipeId: string, name: string) {
-    status.setStatus(
-      t("import.background.failed", { name }),
-      () => {
-        void db.recipes.get(recipeId).then((recipe) => {
-          if (!recipe) return;
-          draftApi.startEdit(recipe);
-          setActivePanel("form");
-          status.clear();
-        });
-      },
-      8_000,
-    );
   }
 
   function handleTextImport() {
@@ -262,12 +246,14 @@ export function App() {
   async function handleBackupImport(file: File) {
     try {
       const summary = await summarizeBackupImport(file, recipes);
-      const duplicateSummary = summary.duplicateNames.length > 0
-        ? summary.duplicateNames.slice(0, 6).join(", ")
-        : t("backup.importSummary.duplicates.none");
-      const overflow = summary.duplicateNames.length > 6
-        ? `\n${t("backup.importSummary.duplicates.more", { count: summary.duplicateNames.length - 6 })}`
-        : "";
+      const duplicateSummary =
+        summary.duplicateNames.length > 0
+          ? summary.duplicateNames.slice(0, 6).join(", ")
+          : t("backup.importSummary.duplicates.none");
+      const overflow =
+        summary.duplicateNames.length > 6
+          ? `\n${t("backup.importSummary.duplicates.more", { count: summary.duplicateNames.length - 6 })}`
+          : "";
       const accepted = await dialog.confirm(
         t("backup.importSummary.title"),
         [
@@ -275,9 +261,11 @@ export function App() {
           t("backup.importSummary.images", { count: summary.imageCount }),
           t("backup.importSummary.duplicates", { names: duplicateSummary }),
           overflow,
-        ].filter(Boolean).join("\n"),
+        ]
+          .filter(Boolean)
+          .join("\n"),
         false,
-        t("backup.action.import"),
+        t("backup.action.import")
       );
       if (!accepted) return;
     } catch {
@@ -292,8 +280,13 @@ export function App() {
   async function exportSelectedPdf() {
     if (!selectedRecipe || !printRef.current) return;
     const result = await withShareStatus(
-      () => shareElementAsPdf(printRef.current!, recipeFileName(selectedRecipe, "pdf"), selectedRecipe.name),
-      t("share.error.pdf"),
+      () =>
+        shareElementAsPdf(
+          printRef.current!,
+          recipeFileName(selectedRecipe, "pdf"),
+          selectedRecipe.name
+        ),
+      t("share.error.pdf")
     );
     if (result === "downloaded") status.setStatus(t("share.status.pdfDownloaded"));
   }
@@ -304,8 +297,13 @@ export function App() {
 
     const result = await withShareStatus(
       () =>
-        shareElementAsPng(target, recipeFileName(selectedRecipe, "png"), selectedRecipe.name, t("share.text.recipeTitle", { name: selectedRecipe.name })),
-      t("share.error.generic"),
+        shareElementAsPng(
+          target,
+          recipeFileName(selectedRecipe, "png"),
+          selectedRecipe.name,
+          t("share.text.recipeTitle", { name: selectedRecipe.name })
+        ),
+      t("share.error.generic")
     );
     if (result === "downloaded") status.setStatus(t("share.status.pngDownloaded"));
   }
@@ -313,7 +311,10 @@ export function App() {
   async function shareSelectedText() {
     if (!selectedRecipe) return;
 
-    const result = await withShareStatus(() => shareRecipeText(selectedRecipe), t("share.error.text"));
+    const result = await withShareStatus(
+      () => shareRecipeText(selectedRecipe),
+      t("share.error.text")
+    );
     if (result === "downloaded") status.setStatus(t("share.status.txtDownloaded"));
     if (result === "copied") status.setStatus(t("share.status.recipeTextCopied"));
     if (result === "sms") status.setStatus(t("share.status.smsOpen"));
@@ -337,14 +338,18 @@ export function App() {
   async function exportRecipesFile() {
     const result = await withShareStatus(
       () => shareRecipesBackup(recipes, tagApi.tags),
-      t("backup.status.shareFailed"),
+      t("backup.status.shareFailed")
     );
     if (result === "downloaded") status.setStatus(t("backup.status.downloadedNoNativeShare"));
   }
 
-  function downloadImportExampleFile() {
-    downloadRecipeImportExample();
-    status.setStatus(t("backup.status.exampleDownloaded"));
+  async function downloadImportExampleFile() {
+    try {
+      await downloadRecipeImportExample();
+      status.setStatus(t("backup.status.exampleDownloaded"));
+    } catch {
+      status.setStatus(t("backup.status.shareFailed"));
+    }
   }
 
   function downloadDatabaseJsonFile() {
@@ -356,7 +361,10 @@ export function App() {
     <main className="app-shell">
       <AppHeader
         activePanel={activePanel}
-        onPanelChange={(panel) => { status.clear(); setActivePanel(panel); }}
+        onPanelChange={(panel) => {
+          status.clear();
+          setActivePanel(panel);
+        }}
         onShowRecipes={showRecipesList}
         onNewRecipe={startNewRecipe}
       />
@@ -367,8 +375,14 @@ export function App() {
             <button className="notice__content" type="button" onClick={status.onActivate}>
               {status.status}
             </button>
-          ) : <span>{status.status}</span>}
-          <button className="button button--icon" onClick={status.clear} aria-label={t("app.status.close")}>
+          ) : (
+            <span>{status.status}</span>
+          )}
+          <button
+            className="button button--icon"
+            onClick={status.clear}
+            aria-label={t("app.status.close")}
+          >
             <X size={16} />
           </button>
         </div>
@@ -427,6 +441,7 @@ export function App() {
         <RecipeForm
           draft={draftApi.draft}
           importing={draftApi.isImporting}
+          saving={isSaving}
           editing={Boolean(draftApi.editingId)}
           warnings={draftApi.importWarnings}
           allTags={tagApi.allTags}
@@ -445,7 +460,11 @@ export function App() {
           onImportText={handleTextImport}
           onImportFile={handleRecipeFileImport}
           onCancel={async () => {
-            if (draftApi.hasChanges && !await dialog.confirm(t("recipe.form.discardTitle"), t("recipe.form.discardBody"))) return;
+            if (
+              draftApi.hasChanges &&
+              !(await dialog.confirm(t("recipe.form.discardTitle"), t("recipe.form.discardBody")))
+            )
+              return;
             draftApi.startNew();
             status.clear();
             setActivePanel("library");
@@ -471,7 +490,13 @@ export function App() {
       )}
 
       {activePanel === "backup" && (
-        <Suspense fallback={<section className="panel workspace"><p>{t("app.loading")}</p></section>}>
+        <Suspense
+          fallback={
+            <section className="panel workspace">
+              <p>{t("app.loading")}</p>
+            </section>
+          }
+        >
           <BackupScreen
             cloud={cloud}
             onConfirm={dialog.confirm}
@@ -485,7 +510,13 @@ export function App() {
       )}
 
       {activePanel === "management" && (
-        <Suspense fallback={<section className="panel workspace"><p>{t("app.loading")}</p></section>}>
+        <Suspense
+          fallback={
+            <section className="panel workspace">
+              <p>{t("app.loading")}</p>
+            </section>
+          }
+        >
           <ManagementScreen
             tags={tagApi.tags}
             categories={tagApi.categories}
@@ -505,22 +536,26 @@ export function App() {
         </Suspense>
       )}
 
-      {shareLink && <AppDialog
-        open
-        title={t("cloud.shareReady")}
-        message={t("cloud.shareHelp")}
-        promptValue={shareLink}
-        promptReadOnly
-        confirmLabel={t("cloud.copyLink")}
-        cancelLabel={t("cloud.close")}
-        onCancel={() => setShareLink(null)}
-        onConfirm={() => {
-          void copyRecipeShareLink(shareLink).then((result) => {
-            status.setStatus(t(result === "copied" ? "share.status.linkCopied" : "cloud.copyManually"));
-            if (result === "copied") setShareLink(null);
-          });
-        }}
-      />}
+      {shareLink && (
+        <AppDialog
+          open
+          title={t("cloud.shareReady")}
+          message={t("cloud.shareHelp")}
+          promptValue={shareLink}
+          promptReadOnly
+          confirmLabel={t("cloud.copyLink")}
+          cancelLabel={t("cloud.close")}
+          onCancel={() => setShareLink(null)}
+          onConfirm={() => {
+            void copyRecipeShareLink(shareLink).then((result) => {
+              status.setStatus(
+                t(result === "copied" ? "share.status.linkCopied" : "cloud.copyManually")
+              );
+              if (result === "copied") setShareLink(null);
+            });
+          }}
+        />
+      )}
 
       <AppDialog
         open={dialogState.open}
@@ -533,7 +568,9 @@ export function App() {
         cancelLabel={"cancelLabel" in dialogState ? dialogState.cancelLabel : undefined}
         onPromptValueChange={dialog.setPromptValue}
         onCancel={() => dialog.closeWith(null)}
-        onConfirm={() => dialog.closeWith(typeof dialogPromptValue === "string" ? dialogPromptValue : true)}
+        onConfirm={() =>
+          dialog.closeWith(typeof dialogPromptValue === "string" ? dialogPromptValue : true)
+        }
       />
     </main>
   );

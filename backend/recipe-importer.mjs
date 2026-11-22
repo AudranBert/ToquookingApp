@@ -5,7 +5,66 @@ import { randomUUID } from "node:crypto";
 const MAX_PAGE_BYTES = 4 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 15_000;
 
-const entities = { amp: "&", apos: "'", quot: '"', nbsp: " ", eacute: "é", egrave: "è", ecirc: "ê", agrave: "à", ccedil: "ç" };
+/** Enforce the size limit during reading, including chunked/compressed responses. */
+export async function readPageText(response, maxBytes = MAX_PAGE_BYTES) {
+  if (Number(response.headers.get("content-length")) > maxBytes) {
+    await response.body?.cancel();
+    throw new Error("Page trop volumineuse");
+  }
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let size = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > maxBytes) {
+        await reader.cancel();
+        throw new Error("Page trop volumineuse");
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    return text + decoder.decode();
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+/** Pure parsing entry point, shared by real URL imports and offline fixtures. */
+export function parseRecipePage(content, sourceUrl) {
+  const title =
+    content.match(/<title[^>]*>([^<]*)/i)?.[1] ?? content.match(/^Title:\s*(.+)$/im)?.[1] ?? "";
+  if (
+    !/^(?:404|403|not found|page introuvable|just a moment|attention required)\b/i.test(
+      title.trim()
+    ) &&
+    !/Cuisine Actuelle\s*:\s*toutes vos recettes/i.test(title)
+  ) {
+    const structured = fromJsonLd(content, sourceUrl);
+    if (structured?.ingredients?.length || structured?.instructions?.length) return structured;
+    const fallback = fromReadableText(content, sourceUrl);
+    if (fallback) return fallback;
+  }
+  return {
+    sourceUrl,
+    warnings: ["Aucune recette exploitable détectée. Complète la fiche manuellement."],
+  };
+}
+
+const entities = {
+  amp: "&",
+  apos: "'",
+  quot: '"',
+  nbsp: " ",
+  eacute: "é",
+  egrave: "è",
+  ecirc: "ê",
+  agrave: "à",
+  ccedil: "ç",
+};
 
 function decodeEntities(value = "") {
   return String(value).replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (match, code) => {
@@ -17,20 +76,25 @@ function decodeEntities(value = "") {
 }
 
 function clean(value) {
-  return decodeEntities(value).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return decodeEntities(value)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function values(value) {
   if (Array.isArray(value)) return value.flatMap(values).filter(Boolean);
   if (typeof value === "string" || typeof value === "number") return [clean(value)].filter(Boolean);
-  if (value && typeof value === "object") return values(value.url ?? value.contentUrl ?? value.embedUrl ?? value.text ?? value.name);
+  if (value && typeof value === "object")
+    return values(value.url ?? value.contentUrl ?? value.embedUrl ?? value.text ?? value.name);
   return [];
 }
 
 function minutes(value) {
   if (typeof value !== "string") return undefined;
   const iso = value.match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/i);
-  if (iso) return Number(iso[1] || 0) * 1440 + Number(iso[2] || 0) * 60 + Number(iso[3] || 0) || undefined;
+  if (iso)
+    return Number(iso[1] || 0) * 1440 + Number(iso[2] || 0) * 60 + Number(iso[3] || 0) || undefined;
   const hours = Number(value.match(/(\d+)\s*h/i)?.[1] ?? 0);
   const mins = Number(value.match(/(\d+)\s*(?:min|mn)/i)?.[1] ?? 0);
   return hours * 60 + mins || undefined;
@@ -39,13 +103,27 @@ function minutes(value) {
 function ingredient(line) {
   const text = clean(line);
   const match = text.match(/^(\d+(?:[,.]\d+)?|[¼½¾⅓⅔])\s+(.+)$/);
-  if (!match) return { id: randomUUID(), name: text };
-  const unitMatch = match[2].match(/^(kg|g|l|cl|ml|c\.\s*à\s*(?:soupe|café)|cuillères?\s+à\s+(?:soupe|café)|gousses?|pincées?|sachets?|tranches?)\b\s*/i);
+  if (!match) {
+    const trailing = text.match(/^(.+?)\s+(\d+(?:[,.]\d+)?)\s*(kg|g|l|cl|ml)?$/i);
+    return trailing
+      ? {
+          id: randomUUID(),
+          name: trailing[1],
+          quantity: trailing[2],
+          ...(trailing[3] ? { unit: trailing[3] } : {}),
+        }
+      : { id: randomUUID(), name: text };
+  }
+  const unitMatch = match[2].match(
+    /^(kg|g|l|cl|ml|c\.\s*à\s*(?:soupe|café)|cuillères?\s+à\s+(?:soupe|café)|gousses?|pincées?|sachets?|tranches?)\b\s*/i
+  );
   return {
     id: randomUUID(),
     quantity: match[1],
     ...(unitMatch ? { unit: unitMatch[1] } : {}),
-    name: clean(match[2].slice(unitMatch?.[0].length ?? 0).replace(/^(?:de |du |des |d['’])+/i, "")),
+    name: clean(
+      match[2].slice(unitMatch?.[0].length ?? 0).replace(/^(?:de |du |des |d['’])+/i, "")
+    ),
   };
 }
 
@@ -53,7 +131,10 @@ function instructionLines(value) {
   if (Array.isArray(value)) return value.flatMap(instructionLines).filter(Boolean);
   if (typeof value === "string") return value.split(/\n+/).map(clean).filter(Boolean);
   if (!value || typeof value !== "object") return [];
-  return [...values(value.text ?? value.name), ...instructionLines(value.itemListElement ?? value.steps)];
+  return [
+    ...values(value.text ?? value.name),
+    ...instructionLines(value.itemListElement ?? value.steps),
+  ];
 }
 
 function findRecipe(value) {
@@ -72,11 +153,17 @@ function findRecipe(value) {
 
 function absoluteUrl(value, sourceUrl) {
   if (!value) return undefined;
-  try { return new URL(value, sourceUrl).href; } catch { return undefined; }
+  try {
+    return new URL(value, sourceUrl).href;
+  } catch {
+    return undefined;
+  }
 }
 
 function fromJsonLd(html, sourceUrl) {
-  const scripts = html.matchAll(/<script[^>]+type=["'](?:application\/ld\+json|application&#x2F;ld&#x2B;json)["'][^>]*>([\s\S]*?)<\/script>/gi);
+  const scripts = html.matchAll(
+    /<script[^>]+type=["'](?:application\/ld\+json|application&#x2F;ld&#x2B;json)["'][^>]*>([\s\S]*?)<\/script>/gi
+  );
   for (const match of scripts) {
     for (const body of [match[1], decodeEntities(match[1])]) {
       try {
@@ -98,56 +185,128 @@ function fromJsonLd(html, sourceUrl) {
           cookTime: minutes(recipe.cookTime),
           totalTime: minutes(recipe.totalTime),
         };
-      } catch { /* Try the next JSON-LD block. */ }
+      } catch {
+        /* Try the next JSON-LD block. */
+      }
     }
   }
   return null;
 }
 
-function collectSection(lines, header, otherHeader) {
-  const start = lines.findIndex((line) => header.test(line.trim()));
+function collectSection(lines, header, otherHeader, instructions = false) {
+  const after = instructions ? lines.findIndex((line) => otherHeader.test(line.trim())) : -1;
+  const start = lines.findIndex((line, index) => index > after && header.test(line.trim()));
   if (start < 0) return [];
+  const level = lines[start].match(/^(#+)\s/)?.[1].length;
   const result = [];
   for (const line of lines.slice(start + 1)) {
     const trimmed = line.trim();
-    if ((otherHeader.test(trimmed) || /^#{1,6}\s+/.test(trimmed)) && result.length) break;
-    const item = clean(trimmed.replace(/^[-*+]\s+|^\d+[.)]\s+/, ""));
-    if (item) result.push(item);
+    if (otherHeader.test(trimmed)) break;
+    const heading = trimmed.match(/^(#+)\s/);
+    if (heading) {
+      if (level && heading[1].length <= level) break;
+      if (instructions) continue;
+      break;
+    }
+    if (/^(?:temps|pour \d|\d+\s*pers|[*-]\s*ingr|pr[ée]paration\s*:|cuisson\s*:)/i.test(trimmed))
+      continue;
+    const item = clean(
+      trimmed
+        .replace(/^[-*+]\s+|^\d+[.)]\s+/, "")
+        .replace(/!\[[^\]]*\]\([^)]+\)/g, "")
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    );
+    if (item && !/^\d+\s*:$/.test(item)) result.push(item);
   }
   return result.slice(0, 50);
 }
 
 function fromReadableText(content, sourceUrl) {
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const readable = content
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(
+      /<h([1-6])\b[^>]*>([\s\S]*?)<\/h[1-6]>/gi,
+      (_, level, title) => "\n" + "#".repeat(Number(level)) + " " + clean(title) + "\n"
+    )
+    .replace(/<\/?(?:p|div|li|ul|ol|section|br)\b[^>]*>/gi, "\n");
+  const lines = readable.replace(/\r\n/g, "\n").split("\n");
   const ingredientsHeader = /^(?:#{1,6}\s*)?(?:les\s+)?ingr[eé]dients?\s*:?$/i;
-  const instructionsHeader = /^(?:#{1,6}\s*)?(?:instructions?|[eé]tapes?|pr[eé]paration|m[eé]thode)\s*:?$/i;
+  const instructionsHeader =
+    /^(?:#{1,6}\s*)?(?:instructions?|[eé]tapes?|pr[eé]paration|m[eé]thode)\s*:?$/i;
   const ingredients = collectSection(lines, ingredientsHeader, instructionsHeader).map(ingredient);
-  const instructions = collectSection(lines, instructionsHeader, ingredientsHeader);
+  const instructions = collectSection(lines, instructionsHeader, ingredientsHeader, true);
   if (!ingredients.length && !instructions.length) return null;
-  const name = clean(content.match(/^\s*(?:Title:|#)\s*(.+)$/im)?.[1] ?? "");
-  const image = content.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)/i)?.[1]
-    ?? content.match(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)/i)?.[1];
+  const name = clean(
+    readable.match(/^\s*#\s+(.+)$/im)?.[1] ??
+      readable.match(/^\s*Title:\s*(.+)$/im)?.[1] ??
+      content.match(/<title[^>]*>([^<]*)/i)?.[1] ??
+      ""
+  );
+  const recipeBody = readable.slice(Math.max(0, readable.search(/^#\s+/m)));
+  const image =
+    content.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)/i)?.[1] ??
+    recipeBody.match(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)/i)?.[1];
+  const timing = (label) =>
+    minutes(
+      readable.match(
+        new RegExp(
+          label + "\\s*:?\\s*(\\d+\\s*(?:h(?:eures?)?\\s*)?\\d*\\s*(?:min(?:utes?)?|mn)?)",
+          "i"
+        )
+      )?.[1]
+    );
   return {
     sourceUrl,
     name: name || undefined,
     imageUrl: absoluteUrl(image, sourceUrl),
+    servings:
+      Number(readable.match(/(?:pour\s+)?(\d+)\s*(?:personnes?|portions?|pers\.?)/i)?.[1]) ||
+      undefined,
+    prepTime: timing("pr[ée]paration"),
+    cookTime: timing("cuisson"),
+    totalTime: timing("total"),
     ingredients: ingredients.length ? ingredients : undefined,
     instructions: instructions.length ? instructions : undefined,
-    warnings: ["Import partiel : vérifie les ingrédients et les étapes avant d’enregistrer."],
+    warnings: ["Import partiel : vérifie les ingrédients et les étapes avant d'enregistrer."],
   };
 }
 
 function isPrivateAddress(address) {
-  if (address.includes(":")) return address === "::1" || address.startsWith("fc") || address.startsWith("fd") || address.startsWith("fe8") || address.startsWith("fe9") || address.startsWith("fea") || address.startsWith("feb");
+  if (address.includes(":"))
+    return (
+      address === "::1" ||
+      address.startsWith("fc") ||
+      address.startsWith("fd") ||
+      address.startsWith("fe8") ||
+      address.startsWith("fe9") ||
+      address.startsWith("fea") ||
+      address.startsWith("feb")
+    );
   const [a, b] = address.split(".").map(Number);
-  return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+  return (
+    a === 10 ||
+    a === 127 ||
+    a === 0 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168)
+  );
 }
 
 async function assertPublicUrl(rawUrl) {
   let url;
-  try { url = new URL(rawUrl); } catch { throw new Error("URL invalide"); }
-  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new Error("URL invalide");
-  if (isIP(url.hostname) ? isPrivateAddress(url.hostname) : (await lookup(url.hostname, { all: true })).some(({ address }) => isPrivateAddress(address))) {
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error("URL invalide");
+  }
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password)
+    throw new Error("URL invalide");
+  if (
+    isIP(url.hostname)
+      ? isPrivateAddress(url.hostname)
+      : (await lookup(url.hostname, { all: true })).some(({ address }) => isPrivateAddress(address))
+  ) {
     throw new Error("Adresse privée interdite");
   }
   return url;
@@ -155,10 +314,15 @@ async function assertPublicUrl(rawUrl) {
 
 function parseSourceUrl(rawUrl) {
   let url;
-  try { url = new URL(rawUrl); } catch { throw new Error("URL invalide"); }
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error("URL invalide");
+  }
   if (!["http:", "https:"].includes(url.protocol) || url.username || url.password)
     throw new Error("URL invalide");
-  if (isIP(url.hostname) && isPrivateAddress(url.hostname)) throw new Error("Adresse privée interdite");
+  if (isIP(url.hostname) && isPrivateAddress(url.hostname))
+    throw new Error("Adresse privée interdite");
   return url;
 }
 
@@ -168,33 +332,40 @@ async function fetchPage(rawUrl) {
     const response = await fetch(url, {
       redirect: "manual",
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      headers: { "user-agent": "Toquooking/1.0 recipe importer", accept: "text/html,text/plain,text/markdown;q=0.9" },
+      headers: {
+        "user-agent": "Toquooking/1.0 recipe importer",
+        accept: "text/html,text/plain,text/markdown;q=0.9",
+      },
     });
     if (response.status >= 300 && response.status < 400 && response.headers.get("location")) {
+      await response.body?.cancel();
       url = await assertPublicUrl(new URL(response.headers.get("location"), url).href);
       continue;
     }
     if (!response.ok) throw new Error(`Source HTTP ${response.status}`);
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.byteLength > MAX_PAGE_BYTES) throw new Error("Page trop volumineuse");
-    return new TextDecoder().decode(bytes);
+    return readPageText(response);
   }
   throw new Error("Trop de redirections");
 }
 
 export async function importRecipeFromUrl(rawUrl) {
   const url = parseSourceUrl(rawUrl).href;
-  if (/youtu\.be|youtube\.com/i.test(new URL(url).hostname)) {
-    return { sourceUrl: url, videoUrl: url, name: "Recette YouTube", warnings: ["Import YouTube partiel : complète les ingrédients et les étapes manuellement."] };
+  if (/^(?:www\.|m\.)?(?:youtu\.be|youtube\.com)$/i.test(new URL(url).hostname)) {
+    return {
+      sourceUrl: url,
+      videoUrl: url,
+      name: "Recette YouTube",
+      warnings: ["Import YouTube partiel : complète les ingrédients et les étapes manuellement."],
+    };
   }
   try {
     const content = await fetchPage(url);
-    const structured = fromJsonLd(content, url);
-    if (structured?.ingredients?.length || structured?.instructions?.length) return structured;
-    const fallback = fromReadableText(content, url);
-    if (fallback) return fallback;
+    return parseRecipePage(content, url);
   } catch {
     /* Return a useful partial result when the source blocks the server. */
   }
-  return { sourceUrl: url, warnings: ["Aucune recette exploitable détectée. Complète la fiche manuellement."] };
+  return {
+    sourceUrl: url,
+    warnings: ["Aucune recette exploitable détectée. Complète la fiche manuellement."],
+  };
 }

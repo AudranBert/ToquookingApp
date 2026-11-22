@@ -6,7 +6,12 @@ function normalizeBasePath(pathname) {
 }
 
 const BASE_PATH = normalizeBasePath(new URL(self.registration.scope).pathname);
-const ASSETS = [BASE_PATH, `${BASE_PATH}index.html`, `${BASE_PATH}manifest.webmanifest`, `${BASE_PATH}icon.svg`];
+const ASSETS = [
+  BASE_PATH,
+  `${BASE_PATH}index.html`,
+  `${BASE_PATH}manifest.webmanifest`,
+  `${BASE_PATH}icon.svg`,
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
@@ -18,8 +23,8 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))),
-      ),
+        Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
+      )
   );
   self.clients.claim();
 });
@@ -37,6 +42,6 @@ self.addEventListener("fetch", (event) => {
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         return response;
       })
-      .catch(() => caches.match(event.request).then((cached) => cached || caches.match(BASE_PATH))),
+      .catch(() => caches.match(event.request).then((cached) => cached || caches.match(BASE_PATH)))
   );
 });

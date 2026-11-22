@@ -92,7 +92,16 @@ export const RECIPE_ORIGIN_GROUPS = [
   },
   {
     label: "Afrique & Moyen-Orient",
-    origins: ["Afrique", "Méditerranée", "Moyen-Orient", "Algérie", "Liban", "Maroc", "Tunisie", "Turquie"],
+    origins: [
+      "Afrique",
+      "Méditerranée",
+      "Moyen-Orient",
+      "Algérie",
+      "Liban",
+      "Maroc",
+      "Tunisie",
+      "Turquie",
+    ],
   },
   {
     label: "Asie",
@@ -107,23 +116,6 @@ export const RECIPE_ORIGIN_GROUPS = [
     origins: ["Antilles", "Guadeloupe", "Guyane", "La Réunion", "Martinique", "Mayotte"],
   },
 ];
-
-export function findKnownRecipeOrigin(values: string[]) {
-  const normalizedOrigins = new Map(RECIPE_ORIGINS.map((origin) => [normalizeText(origin), origin]));
-
-  for (const value of values) {
-    const direct = normalizedOrigins.get(normalizeText(value));
-    if (direct) return direct;
-  }
-
-  for (const value of values) {
-    const normalizedValue = normalizeText(value);
-    const contained = RECIPE_ORIGINS.find((origin) => normalizedValue.includes(normalizeText(origin)));
-    if (contained) return contained;
-  }
-
-  return undefined;
-}
 
 const ORIGIN_PARENTS: Record<string, string[]> = {
   Afrique: ["Algérie", "Maroc", "Tunisie"],
@@ -145,7 +137,17 @@ const ORIGIN_PARENTS: Record<string, string[]> = {
     ...FRENCH_REGIONS,
   ],
   France: FRENCH_REGIONS,
-  Méditerranée: ["Espagne", "France", "Grèce", "Italie", "Liban", "Maroc", "Portugal", "Tunisie", "Turquie"],
+  Méditerranée: [
+    "Espagne",
+    "France",
+    "Grèce",
+    "Italie",
+    "Liban",
+    "Maroc",
+    "Portugal",
+    "Tunisie",
+    "Turquie",
+  ],
   "Moyen-Orient": ["Liban", "Turquie"],
 };
 
