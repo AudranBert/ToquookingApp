@@ -75,29 +75,23 @@ Expected behavior:
 
 Automatic deploy:
 
-- On every push/merge to `main`, `.github/workflows/ci.yml` verifies lint, formatting, offline tests and bundle budgets before deploying the checked build to `gh-pages`.
+- On every push/merge to `main`, `.github/workflows/ci.yml` verifies lint, formatting, offline tests and bundle budgets before deploying the checked build directly to GitHub Pages with `actions/deploy-pages`.
+- Deployment status and the site URL are available in the `github-pages` environment.
+
+Repository setup (once):
+
+1. In **Settings > Pages > Build and deployment**, set **Source** to **GitHub Actions**.
+2. In **Settings > Environments > github-pages**, ensure deployment branch rules allow `main`. If rules currently allow only `gh-pages`, replace that rule with `main`.
+3. Merge the workflow changes into `main`, or run the `CI` workflow manually after the changes are on GitHub.
+
+The old `gh-pages` branch is no longer used and can be kept or deleted after the first successful deployment. No additional secret is required.
 
 Manual deploy from GitHub Actions:
 
 - Run the `CI` workflow.
 - Optional input `ref` lets you deploy a specific branch, tag, or commit SHA.
-
-Manual local deploy (including local uncommitted changes):
-
-```powershell
-npm run build
-npm run deploy
-```
-
-Manual local deploy from a specific commit:
-
-```powershell
-git checkout <commit-sha>
-npm ci
-npm run build
-npm run deploy
-git checkout -
-```
+- Environment deployment rules apply to the branch selected for the workflow run. With a `main`-only rule, select `main` and use `ref` to choose the revision to build.
+- Local changes must be committed and pushed before they can be deployed through GitHub Actions.
 
 ## Useful Commands
 
